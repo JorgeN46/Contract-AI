@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.5,user-scalable=yes">
+<title>Contract AI</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#070b14;color:#e6ecf6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+header{position:fixed;top:0;left:0;right:0;z-index:50;padding:16px 0;transition:transform .3s ease}
+header.hidden{transform:translateY(-120%)}
+nav{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(12px);border-radius:16px;padding:12px 18px;display:flex;align-items:center;justify-content:center}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600}
+.logo-mark{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#4f8dff,#4fd1c5);display:grid;place-items:center;font-weight:800;color:#070b14;font-size:16px}
+.logo b{color:#7db4ff}
+.nav-links{display:none;gap:28px;font-size:14px;color:rgba(255,255,255,.7)}
+.nav-links a:hover{color:#fff}
+@media(min-width:768px){.nav-links{display:flex}}
+.btn{display:inline-block;font-weight:500;padding:12px 20px;border-radius:12px;transition:.2s;font-size:15px;border:1px solid transparent;cursor:pointer;text-align:center}
+.btn-primary{background:linear-gradient(180deg,#5b96ff,#2f6bff);color:#fff;box-shadow:0 10px 30px -10px rgba(47,107,255,.7)}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-ghost{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.85)}
+.btn-ghost:hover{color:#fff;border-color:rgba(255,255,255,.2)}
+.btn-sm{padding:8px 16px;font-size:14px;border-radius:10px}
+section{padding:96px 0;border-top:1px solid rgba(255,255,255,.05)}
+.hero{border-top:0;padding:160px 0 96px;position:relative;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background-image:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(79,141,255,.25),transparent 60%),linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:auto,56px 56px,56px 56px}
+.hero-c{position:relative;z-index:1}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.15em;color:#7db4ff;margin-bottom:12px;font-weight:500}
+h1{font-size:clamp(32px,6vw,60px);font-weight:800;line-height:1.05;letter-spacing:-.02em}
+h2{font-size:clamp(26px,4vw,40px);font-weight:700;line-height:1.15}
+h3{font-size:20px;font-weight:600;margin-bottom:8px}
+h4{font-size:16px;font-weight:600;margin-bottom:8px}
+p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px}
+.muted{color:rgba(255,255,255,.65);font-size:14px;margin-top:8px}
+.grad{background:linear-gradient(90deg,#7db4ff,#fff,#8be0d6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:6px 14px;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:24px}
+.dot{width:6px;height:6px;border-radius:999px;background:#4fd1c5;box-shadow:0 0 10px #4fd1c5;display:inline-block}
+.card{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:24px}
+.grid{display:grid;gap:24px;margin-top:40px;grid-template-columns:1fr}
+@media(min-width:640px){.grid.g2{grid-template-columns:repeat(2,1fr)}.grid.g3{grid-template-columns:repeat(2,1fr)}.grid.g4{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1024px){.grid.g3{grid-template-columns:repeat(3,1fr)}.grid.g4{grid-template-columns:repeat(4,1fr)}}
+.icon-box{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;margin-bottom:16px;background:rgba(79,141,255,.15);border:1px solid rgba(255,255,255,.1)}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
+.screen{display:none}
+.screen.active{display:block}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{width:100%;max-width:420px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 32px;box-shadow:0 20px 60px -20px rgba(0,0,0,.6)}
+.chat-bar{position:fixed;bottom:16px;left:16px;right:16px;max-width:760px;margin:0 auto;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);border-radius:16px;padding:8px;box-shadow:0 10px 40px -10px rgba(0,0,0,.6);z-index:40}
+.chat-plus{width:40px;height:40px;border-radius:12px;border:0;background:rgba(255,255,255,.06);color:#fff;font-size:22px;cursor:pointer;flex:0 0 40px;display:grid;place-items:center;line-height:1}
+.chat-plus:hover{background:rgba(255,255,255,.12)}
+.chat-input{flex:1;background:transparent;border:0;outline:0;color:#fff;font-size:15px;padding:10px 8px;font-family:inherit}
+.chat-input::placeholder{color:rgba(255,255,255,.4)}
+.chat-send{width:40px;height:40px;border-radius:12px;border:0;background:linear-gradient(180deg,#5b96ff,#2f6bff);color:#fff;cursor:pointer;flex:0 0 40px;display:grid;place-items:center;box-shadow:0 6px 20px -6px rgba(47,107,255,.6)}
+.chat-send:hover{filter:brightness(1.1)}
+.chat-send svg{width:18px;height:18px}
+.attach-menu{position:fixed;bottom:130px;left:24px;background:#0b1220;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:6px;box-shadow:0 20px 60px -20px rgba(0,0,0,.8);z-index:80;opacity:0;pointer-events:none;transform:translateY(8px);transition:.2s}
+.attach-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
+.attach-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;font-size:14px;color:rgba(255,255,255,.9);cursor:pointer;background:transparent;border:0;font-family:inherit;white-space:nowrap}
+.attach-item:hover{background:rgba(255,255,255,.06)}
+.attach-item svg{width:16px;height:16px}
+.dash-top{position:fixed;top:16px;left:16px;right:8px;z-index:30;display:flex;align-items:center;gap:8px;padding-right:0}
+.personalizacao-btn{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);border-radius:12px;padding:10px 14px;color:#fff;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:.2s}
+.personalizacao-btn:hover{background:rgba(255,255,255,.08)}
+.personalizacao-btn .label{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.personalizacao-btn svg{width:14px;height:14px;opacity:.6;transition:.2s}
+.personalizacao-btn.open svg{transform:rotate(180deg)}
+.personalizacao-menu{position:fixed;top:76px;left:16px;width:300px;max-width:calc(100vw - 32px);background:#0b1220;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:8px;box-shadow:0 20px 60px -20px rgba(0,0,0,.8);z-index:80;opacity:0;pointer-events:none;transform:translateY(-8px);transition:.2s}
+.personalizacao-menu.open{opacity:1;pointer-events:auto;transform:translateY(0)}
+.personalizacao-item{padding:12px 14px;border-radius:8px;font-size:14px;color:rgba(255,255,255,.85);cursor:pointer;background:transparent;border:0;font-family:inherit;width:100%;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.personalizacao-item:hover{background:rgba(255,255,255,.06);color:#fff}
+.personalizacao-item.active{color:#7db4ff}
+.personalizacao-item .check{opacity:0;font-weight:700;color:#7db4ff}
+.personalizacao-item.active .check{opacity:1}
+.mode-info{flex:1;text-align:left}
+.mode-name{font-size:14px;font-weight:500;color:#fff}
+.mode-desc{font-size:12px;color:rgba(255,255,255,.45);margin-top:2px}
+.personalizacao-item.active .mode-name{color:#7db4ff}
+.personalizacao-item.active .mode-desc{color:rgba(122,180,255,.6)}
+.menu-btn{width:44px;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#fff;cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(12px)}
+.menu-btn:hover{background:rgba(255,255,255,.08)}
+.new-chat-btn{width:44px;height:44px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#fff;cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(12px);flex:0 0 44px;margin-left:auto}
+.new-chat-btn:hover{background:rgba(79,141,255,.15);border-color:rgba(79,141,255,.35);color:#7db4ff}
+.new-chat-btn svg{width:20px;height:20px}
+.menu-btn svg{width:20px;height:20px}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:.25s;z-index:60}
+.sidebar-overlay.open{opacity:1;pointer-events:auto}
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:280px;max-width:80vw;background:#0b1220;border-right:1px solid rgba(255,255,255,.08);transform:translateX(-100%);transition:transform .3s cubic-bezier(.2,.7,.2,1);z-index:70;display:flex;flex-direction:column}
+.sidebar.open{transform:translateX(0)}
+.sidebar-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.06)}
+.sidebar-close{background:transparent;border:0;color:rgba(255,255,255,.6);font-size:24px;cursor:pointer;line-height:1;padding:4px 8px}
+.sidebar-close:hover{color:#fff}
+.sidebar-search{padding:16px 20px}
+.sidebar-search input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;color:#fff;font-size:14px;font-family:inherit;outline:0}
+.sidebar-search input::placeholder{color:rgba(255,255,255,.4)}
+.sidebar-list{flex:1;overflow-y:auto;padding:0 12px}
+.sidebar-date{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.4);padding:16px 8px 8px}
+.sidebar-empty{font-size:14px;color:rgba(255,255,255,.5);padding:8px}
+.avatar-fab{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#4f8dff,#4fd1c5);display:grid;place-items:center;font-weight:600;color:#070b14;font-size:16px;box-shadow:0 8px 24px -8px rgba(79,141,255,.6);border:2px solid rgba(255,255,255,.1)}
+.dash-main{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:120px 24px 140px;text-align:center}
+.dash-main h1{font-size:clamp(28px,5vw,44px);font-weight:700;letter-spacing:-.02em}
+.settings-fab{position:fixed;bottom:88px;right:16px;z-index:45;width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#fff;cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(12px);box-shadow:0 8px 24px -8px rgba(0,0,0,.6)}
+.settings-fab:hover{background:rgba(255,255,255,.1)}
+.settings-fab svg{width:20px;height:20px}
+.sidebar-header-actions{display:flex;align-items:center;gap:8px}
+.avatar-sidebar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#4f8dff,#4fd1c5);display:grid;place-items:center;font-weight:600;color:#070b14;font-size:13px;flex:0 0 32px}
+.sidebar-sair{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.85);font-size:12px;padding:6px 10px;border-radius:8px;cursor:pointer;font-family:inherit;display:grid;place-items:center}
+.sidebar-sair:hover{background:rgba(255,255,255,.12);color:#fff}
+.back-btn{background:transparent;border:0;color:rgba(255,255,255,.7);cursor:pointer;padding:4px;display:grid;place-items:center;font-family:inherit;transition:.2s}
+.back-btn:hover{color:#fff;transform:translateX(-3px)}
+.btn-logout{width:100%;padding:14px;border-radius:12px;border:1px solid rgba(248,113,113,.3);background:rgba(248,113,113,.1);color:#fca5a5;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:24px;display:flex;align-items:center;justify-content:center}
+.btn-logout:hover{background:rgba(248,113,113,.18)}
+  .prompt-input{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;color:#fff;font-size:14px;font-family:inherit;resize:vertical;min-height:110px;outline:0;line-height:1.5}
+.prompt-input:focus{border-color:rgba(79,141,255,.5);background:rgba(255,255,255,.06)}
+.prompt-input::placeholder{color:rgba(255,255,255,.35)}
+.prompt-actions{display:flex;gap:10px;margin-top:12px}
+.prompt-btn{padding:10px 18px;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:.2s;border:1px solid transparent}
+.prompt-save{background:linear-gradient(180deg,#5b96ff,#2f6bff);color:#fff;box-shadow:0 6px 20px -6px rgba(47,107,255,.6)}
+.prompt-save:hover{filter:brightness(1.1)}
+.prompt-reset{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.75)}
+.prompt-reset:hover{background:rgba(255,255,255,.1);color:#fff}
+.prompt-feedback{font-size:13px;color:#4fd1c5;margin-top:10px;min-height:18px;transition:.2s}
+  .settings-group{margin-bottom:8px}
+.settings-section-title{font-size:13px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;font-weight:500;padding:16px 4px 8px}
+.settings-item{display:flex;align-items:center;gap:14px;width:100%;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px 16px;margin-bottom:6px;cursor:pointer;font-family:inherit;text-align:left;transition:.2s;color:#fff}
+.settings-item:hover{background:rgba(255,255,255,.06)}
+.settings-icon{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;background:rgba(255,255,255,.05);border-radius:10px;color:#7db4ff}
+.settings-icon svg{width:18px;height:18px}
+.settings-text{flex:1;min-width:0}
+.settings-label{font-size:15px;font-weight:500;color:#fff}
+.settings-sub{font-size:13px;color:rgba(255,255,255,.5);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.settings-arrow{width:16px;height:16px;color:rgba(255,255,255,.35);flex:0 0 16px}
+.chat-messages{width:100%;max-width:760px;margin:0 auto 160px;padding:120px 24px 0;display:none;flex-direction:column;gap:14px;box-sizing:border-box}
+.chat-messages.active{display:flex}
+.chat-messages ~ .dash-main,
+.dash-main.hidden{display:none}
+.msg{max-width:85%;padding:14px 18px;border-radius:16px;font-size:15px;line-height:1.6;animation:fadeUp .3s ease;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word}
+.msg.ai{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.user{background:linear-gradient(180deg,#5b96ff,#2f6bff);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.msg-options{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.msg-opt{padding:10px 16px;border-radius:10px;border:1px solid rgba(79,141,255,.4);background:rgba(79,141,255,.1);color:#7db4ff;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:.2s}
+.msg-opt:hover{background:rgba(79,141,255,.2);color:#fff}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.login-card h1{font-size:24px;text-align:center;margin-bottom:8px}
+.sub{text-align:center;color:rgba(255,255,255,.6);font-size:14px;margin-bottom:32px}
+.sso{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:14px 20px;border-radius:12px;font-size:15px;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#fff;margin-bottom:12px}
+.sso:hover{background:rgba(255,255,255,.08)}
+.sso svg{width:20px;height:20px;flex:0 0 20px}
+.divider{display:flex;align-items:center;gap:12px;margin:24px 0;color:rgba(255,255,255,.35);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
+  .legal-text{text-align:center;font-size:12px;color:rgba(255,255,255,.4);margin-top:24px;line-height:1.6}
+.legal-text a{color:rgba(255,255,255,.7);text-decoration:underline;cursor:pointer}
+.legal-text a:hover{color:#fff}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:100;opacity:0;pointer-events:none;transition:.25s}
+.modal-overlay.open{opacity:1;pointer-events:auto}
+.modal-box{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:90%;max-width:560px;max-height:80vh;background:#0b1220;border:1px solid rgba(255,255,255,.1);border-radius:16px;z-index:110;opacity:0;pointer-events:none;transition:.25s;display:flex;flex-direction:column;box-shadow:0 30px 80px -20px rgba(0,0,0,.9)}
+.modal-box.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid rgba(255,255,255,.08)}
+.modal-header h3{font-size:18px;font-weight:600;margin:0}
+.modal-close{background:transparent;border:0;color:rgba(255,255,255,.6);font-size:26px;cursor:pointer;line-height:1;padding:0 4px}
+.modal-close:hover{color:#fff}
+.modal-content{padding:24px;overflow-y:auto;font-size:14px;color:rgba(255,255,255,.75);line-height:1.7}
+.modal-content h4{color:#fff;font-size:15px;margin:16px 0 8px}
+.modal-content h4:first-child{margin-top:0}
+.modal-content p{margin-bottom:12px}
+.modal-content ul{padding-left:20px;margin-bottom:12px}
+.modal-content li{margin-bottom:6px}
+.hidden{display:none !important}
+</style>
+</head>
+<body>
+
+  <!-- ============ TELA 1: LANDING ============ -->
+<div id="screen-landing" class="screen active">
+
+<header><div class="wrap"><nav>
+<a href="#" class="logo" onclick="go('landing');return false"><div class="logo-mark">C</div><span>Contract<b>AI</b></span></a>
+<div class="nav-links">
+<a href="#produto">Produto</a>
+<a href="#como">Como funciona</a>
+</div>
+</nav></div></header>
+
+<section class="hero"><div class="hero-bg"></div><div class="wrap hero-c">
+<div class="badge"><span class="dot"></span> IA aplicada a contratos — com revisão humana no centro</div>
+<h1>Transforme contratos em <span class="grad">informação operacional.</span></h1>
+<p class="lead">Envie PDFs, DOCX ou imagens. O Contract AI lê, extrai, organiza e explica — com evidências, datas, obrigações e itens para revisão humana.</p>
+<div class="actions">
+<a href="#" class="btn btn-primary" onclick="go('login');return false">Começar agora</a>
+<a href="#como" class="btn btn-ghost">Ver como funciona</a>
+</div>
+<p class="muted" style="margin-top:20px;font-size:12px">Sem promessas jurídicas. Sem substituir advogado.</p>
+</div></section>
+
+<section id="produto"><div class="wrap">
+<div style="max-width:640px">
+<div class="eyebrow">A solução</div>
+<h2>Organizar, explicar, alertar, encaminhar para revisão.</h2>
+<p class="lead">O Contract AI não é um advogado artificial. Ele organiza a informação e destaca o que merece atenção humana.</p>
+</div>
+<div class="grid g3">
+<div class="card"><div class="icon-box">📄</div><h3>Extração estruturada</h3><p class="muted">Partes, valores, datas, obrigações e condições de pagamento.</p></div>
+<div class="card"><div class="icon-box">🔎</div><h3>Evidências rastreáveis</h3><p class="muted">Cada informação aponta para a página e o trecho original.</p></div>
+<div class="card"><div class="icon-box">⚠️</div><h3>Itens para revisão</h3><p class="muted">Prioridade operacional — sem juízo jurídico.</p></div>
+</div>
+</div></section>
+
+<section id="como"><div class="wrap">
+<div style="max-width:560px">
+<div class="eyebrow">Como funciona</div>
+<h2>Do upload à decisão, em um fluxo só.</h2>
+</div>
+<div class="grid g4">
+<div class="card"><h4>01 · Upload</h4><p class="muted">PDF, DOCX, TXT, PNG ou JPG.</p></div>
+<div class="card"><h4>02 · Processamento</h4><p class="muted">Extração, OCR, chunking e indexação.</p></div>
+<div class="card"><h4>03 · Análise com IA</h4><p class="muted">Extração estruturada e validação.</p></div>
+<div class="card"><h4>04 · Revisão humana</h4><p class="muted">Itens priorizados e chat contextual.</p></div>
+</div>
+</div></section>
+
+<section style="text-align:center">
+<div class="wrap" style="max-width:800px">
+<h2>Comece a transformar contratos em informação operacional.</h2>
+<p class="lead" style="margin:20px auto 0">Crie sua conta, envie um contrato e veja a diferença.</p>
+<div class="actions" style="justify-content:center">
+<a href="#" class="btn btn-primary" onclick="go('login');return false">Começar agora</a>
+<a href="#como" class="btn btn-ghost">Ver como funciona</a>
+</div>
+</div></section>
+
+<footer style="padding:40px 0;border-top:1px solid rgba(255,255,255,.05);text-align:center;font-size:12px;color:rgba(255,255,255,.4)">© Contract AI</footer>
+
+</div><!-- /landing -->
+
+<!-- ============ TELA 2: LOGIN ============ -->
+<div id="screen-login" class="screen">
+<div class="login-wrap">
+<div class="login-card">
+<div class="logo" style="justify-content:center;margin-bottom:32px"><div class="logo-mark">C</div><span>Contract<b>AI</b></span></div>
+<h1>Entrar na sua conta</h1>
+<p class="sub">Sua <b style="color:rgba(255,255,255,.85)">assinatura</b>, <b style="color:rgba(255,255,255,.85)">histórico</b> e <b style="color:rgba(255,255,255,.85)">configurações</b> ficam salvos com segurança.</p>
+
+<a href="#" class="sso" onclick="go('dashboard');return false">
+<svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+Continuar com Google
+</a>
+
+<a href="#" class="sso" onclick="go('dashboard');return false">
+<svg viewBox="0 0 24 24" fill="#fff"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg>
+Continuar com Apple
+</a>
+
+<a href="#" class="sso" onclick="go('dashboard');return false">
+<svg viewBox="0 0 24 24"><rect x="1" y="1" width="10" height="10" fill="#F25022"/><rect x="13" y="1" width="10" height="10" fill="#7FBA00"/><rect x="1" y="13" width="10" height="10" fill="#00A4EF"/><rect x="13" y="13" width="10" height="10" fill="#FFB900"/></svg>
+Continuar com Microsoft
+</a>
+
+<div class="divider">ou</div>
+
+<a href="#" class="sso" onclick="go('dashboard');return false">✉️ Continuar com e-mail</a>
+  <p class="legal-text">
+Ao continuar, você concorda com nossos
+<a href="#" onclick="abrirTermos(event)">Termos de Uso</a> e
+<a href="#" onclick="abrirPrivacidade(event)">Política de Privacidade</a>.
+</p>
+
+<div class="modal-overlay" id="modalOverlay" onclick="fecharModal()"></div>
+<div class="modal-box" id="modalBox">
+<div class="modal-header">
+<h3 id="modalTitle">Termos de Uso</h3>
+<button class="modal-close" onclick="fecharModal()">×</button>
+</div>
+<div class="modal-content" id="modalContent"></div>
+</div>
+
+<p style="text-align:center;font-size:11px;color:rgba(255,255,255,.4);margin-top:24px;line-height:1.6">Demonstração · Integração real será ativada com Supabase Auth.</p>
+
+<p style="text-align:center;margin-top:24px;font-size:14px"><a href="#" onclick="go('landing');return false" style="color:rgba(255,255,255,.55)">← Voltar para o site</a></p>
+</div>
+</div>
+</div><!-- /login -->
+
+  <!-- ============ TELA 3: DASHBOARD ============ -->
+<div id="screen-dashboard" class="screen">
+
+<div class="dash-top">
+<button class="menu-btn" onclick="toggleSidebar()" aria-label="Menu">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+</button>
+<button class="personalizacao-btn" onclick="togglePersonalizacao(event)">
+<span class="label">Personalização</span>
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+</button>
+<button class="new-chat-btn" onclick="novoChat()" aria-label="Novo chat" title="Novo chat">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="10" y1="10" x2="14" y2="10"/></svg>
+</button>
+</div>
+
+<div class="personalizacao-menu" id="personalizacaoMenu">
+<button class="personalizacao-item active" data-mode="padrao" onclick="escolherPersonalizacao(this)">
+<div class="mode-info">
+<div class="mode-name">Modo Padrão</div>
+<div class="mode-desc">Conversa geral com a IA</div>
+</div>
+<span class="check">✓</span>
+</button>
+
+<button class="personalizacao-item" data-mode="leitura" onclick="escolherPersonalizacao(this)">
+<div class="mode-info">
+<div class="mode-name">Modo Análise</div>
+<div class="mode-desc">Lê e organiza documentos</div>
+</div>
+<span class="check">✓</span>
+</button>
+
+<button class="personalizacao-item" data-mode="refinamento" onclick="escolherPersonalizacao(this)">
+<div class="mode-info">
+<div class="mode-name">Modo Refinamento</div>
+<div class="mode-desc">Melhora a escrita profissional</div>
+</div>
+<span class="check">✓</span>
+</button>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+<div class="sidebar-header">
+<div class="logo"><div class="logo-mark">C</div><span>Contract<b>AI</b></span></div>
+<div class="sidebar-header-actions">
+<button class="sidebar-sair" onclick="toggleSidebar();go('settings');return false;" title="Configurações">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+</button>
+<button class="sidebar-close" onclick="toggleSidebar()">×</button>
+</div>
+</div>
+<div class="sidebar-search">
+<input type="text" placeholder="Pesquisar conversas..." />
+</div>
+<div class="sidebar-list">
+<div class="sidebar-date">Hoje</div>
+<div class="sidebar-empty">Nenhuma conversa ainda</div>
+</div>
+</aside>
+
+<div class="dash-main" id="dashWelcome">
+<h1>Olá, seja bem-vindo! 👋</h1>
+</div>
+
+<div class="chat-messages" id="chatMessages"></div>
+
+<div class="chat-bar">
+<button class="chat-plus" title="Anexar" onclick="toggleAttachMenu(event)">+</button>
+<input type="text" class="chat-input" placeholder="Pergunte algo sobre seus contratos..." />
+<button class="chat-send" title="Enviar">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+</button>
+</div>
+
+<div class="attach-menu" id="attachMenu">
+<button class="attach-item" onclick="pickFile()">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+Anexar arquivo
+</button>
+<button class="attach-item" onclick="pickPhoto()">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+Foto
+</button>
+<button class="attach-item" onclick="pickCamera()">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+Câmera
+</button>
+</div>
+<input type="file" id="fileInput" accept=".pdf,.docx,.txt,.png,.jpg,.jpeg" hidden onchange="aoSelecionarArquivo(this)" />
+<input type="file" id="photoInput" accept="image/*" hidden />
+<input type="file" id="cameraInput" accept="image/*" capture="environment" hidden />
+
+</div><!-- /dashboard -->
+
+<!-- ============ TELA 4: SETTINGS (menu) ============ -->
+<div id="screen-settings" class="screen">
+<div class="wrap" style="min-height:100vh;padding:60px 24px 80px;max-width:560px">
+<button class="back-btn" onclick="go('dashboard')" title="Voltar">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+</button>
+<h1 style="font-size:32px;font-weight:700;letter-spacing:-.02em;margin:20px 0 32px">Configurações</h1>
+
+<div class="card" style="text-align:center;padding:32px;margin-bottom:24px">
+<div class="avatar-fab" style="width:64px;height:64px;font-size:24px;margin:0 auto 16px">U</div>
+<h3 style="margin-bottom:4px">Usuário</h3>
+<p class="muted" style="margin-top:0">usuario@exemplo.com</p>
+</div>
+
+<div class="settings-group">
+<div class="settings-section-title">Meu Contract AI</div>
+
+<button class="settings-item" onclick="go('settings-personalizacao')">
+<div class="settings-icon">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 10h.01M15 10h.01M9 15c.5.7 1.6 1.5 3 1.5s2.5-.8 3-1.5"/></svg>
+</div>
+<div class="settings-text">
+<div class="settings-label">Personalização</div>
+<div class="settings-sub">Como a IA responde</div>
+</div>
+<svg class="settings-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+</button>
+
+<button class="settings-item" onclick="go('settings-memoria')">
+<div class="settings-icon">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13.5"/><path d="M4 19.5V21h16v-1.5"/><path d="M9 4v10l3-2 3 2V4"/></svg>
+</div>
+<div class="settings-text">
+<div class="settings-label">Memória</div>
+<div class="settings-sub">O que a IA lembra sobre você</div>
+</div>
+<svg class="settings-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+</button>
+
+<button class="settings-item" onclick="go('settings-plugins')">
+<div class="settings-icon">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+</div>
+<div class="settings-text">
+<div class="settings-label">Plugins</div>
+<div class="settings-sub">Recursos extras</div>
+</div>
+<svg class="settings-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+</button>
+</div>
+
+<div class="settings-group">
+<div class="settings-section-title">Conta</div>
+
+<div class="settings-item" style="cursor:default">
+<div class="settings-icon">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+</div>
+<div class="settings-text">
+<div class="settings-label">E-mail</div>
+<div class="settings-sub">usuario@exemplo.com</div>
+</div>
+</div>
+</div>
+
+<button class="btn-logout" onclick="go('landing')">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;display:inline-block;vertical-align:middle;margin-right:8px"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+Sair da conta
+</button>
+</div>
+</div><!-- /settings -->
+
+  <!-- ============ TELA 5: PERSONALIZAÇÃO ============ -->
+<div id="screen-settings-personalizacao" class="screen">
+<div class="wrap" style="min-height:100vh;padding:60px 24px 80px;max-width:560px">
+<button class="back-btn" onclick="go('settings')" title="Voltar">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+</button>
+<h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin:20px 0 8px">Personalização</h1>
+<p class="muted" style="margin-top:0;margin-bottom:24px">Escreva como você quer que a IA responda em toda conversa. Ela vai seguir essas instruções por padrão.</p>
+
+<div class="card">
+<textarea id="customPrompt" class="prompt-input" placeholder="Ex: Sempre me chame de Dr. Antônio. Responda de forma direta e sem juridiquês. Sempre cite a página quando encontrar informações..." rows="8"></textarea>
+<div class="prompt-actions">
+<button class="prompt-btn prompt-save" onclick="salvarPrompt()">Salvar</button>
+<button class="prompt-btn prompt-reset" onclick="resetarPrompt()">Resetar</button>
+</div>
+<p id="promptFeedback" class="prompt-feedback"></p>
+</div>
+</div>
+</div><!-- /settings-personalizacao -->
+
+<!-- ============ TELA 6: MEMÓRIA ============ -->
+<div id="screen-settings-memoria" class="screen">
+<div class="wrap" style="min-height:100vh;padding:60px 24px 80px;max-width:560px">
+<button class="back-btn" onclick="go('settings')" title="Voltar">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+</button>
+<h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin:20px 0 24px">Memória</h1>
+<div class="card" style="text-align:center;padding:40px 24px">
+<p class="muted" style="margin:0">A IA ainda não guardou nenhuma memória sobre você. Conforme você conversar, ela vai aprender suas preferências.</p>
+</div>
+</div>
+</div><!-- /settings-memoria -->
+
+<!-- ============ TELA 7: PLUGINS ============ -->
+<div id="screen-settings-plugins" class="screen">
+<div class="wrap" style="min-height:100vh;padding:60px 24px 80px;max-width:560px">
+<button class="back-btn" onclick="go('settings')" title="Voltar">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+</button>
+<h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin:20px 0 24px">Plugins</h1>
+<div class="card" style="text-align:center;padding:40px 24px">
+<p class="muted" style="margin:0">Em breve você poderá conectar integrações: Google Drive, Dropbox, e-mail e mais.</p>
+</div>
+</div>
+</div><!-- /settings-plugins -->
+
+<script>
+  function salvarPrompt(){
+var txt = document.getElementById('customPrompt').value;
+localStorage.setItem('contractai_prompt', txt);
+var fb = document.getElementById('promptFeedback');
+fb.textContent = '✓ Salvo com sucesso';
+setTimeout(function(){ fb.textContent = ''; }, 2500);
+}
+function resetarPrompt(){
+document.getElementById('customPrompt').value = '';
+localStorage.removeItem('contractai_prompt');
+var fb = document.getElementById('promptFeedback');
+fb.textContent = '✓ Prompt resetado';
+setTimeout(function(){ fb.textContent = ''; }, 2500);
+}
+window.addEventListener('DOMContentLoaded', function(){
+var salvo = localStorage.getItem('contractai_prompt');
+if(salvo) document.getElementById('customPrompt').value = salvo;
+});
+function abrirTermos(e){
+if(e) e.preventDefault();
+document.getElementById('modalTitle').textContent = 'Termos de Uso';
+document.getElementById('modalContent').innerHTML = '<p>Estes Termos de Uso regulam o acesso e uso da plataforma Contract AI.</p><h4>1. Sobre o serviço</h4><p>O Contract AI é uma ferramenta de organização e análise assistida por inteligência artificial. Não presta serviços jurídicos, não substitui advogado e não emite pareceres legais.</p><h4>2. Responsabilidades do usuário</h4><ul><li>Manter suas credenciais em segurança</li><li>Não utilizar a plataforma para fins ilícitos</li><li>Garantir que tem direito de enviar os documentos que carregar</li></ul><h4>3. Limitação de responsabilidade</h4><p>As informações geradas são auxiliares. Decisões jurídicas, financeiras ou operacionais devem ser tomadas com apoio de profissionais habilitados.</p><h4>4. Alterações</h4><p>Estes termos podem ser atualizados a qualquer momento. O uso contínuo implica concordância com a versão vigente.</p>';
+document.getElementById('modalOverlay').classList.add('open');
+document.getElementById('modalBox').classList.add('open');
+}
+function abrirPrivacidade(e){
+if(e) e.preventDefault();
+document.getElementById('modalTitle').textContent = 'Política de Privacidade';
+document.getElementById('modalContent').innerHTML = '<p>Sua privacidade é levada a sério. Esta política explica como tratamos seus dados.</p><h4>1. Dados coletados</h4><ul><li>E-mail e nome (para autenticação)</li><li>Documentos enviados (para processamento)</li><li>Mensagens de chat (para histórico)</li></ul><h4>2. Como usamos</h4><p>Os dados são usados exclusivamente para operar o serviço. Não vendemos nem compartilhamos com terceiros para fins publicitários.</p><h4>3. Armazenamento</h4><p>Os documentos ficam armazenados de forma privada e são acessíveis apenas pelo próprio usuário.</p><h4>4. Seus direitos (LGPD)</h4><p>Você pode a qualquer momento solicitar acesso, correção ou exclusão dos seus dados.</p>';
+document.getElementById('modalOverlay').classList.add('open');
+document.getElementById('modalBox').classList.add('open');
+}
+function fecharModal(){
+document.getElementById('modalOverlay').classList.remove('open');
+document.getElementById('modalBox').classList.remove('open');
+}
+function go(name){
+document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+document.getElementById('screen-' + name).classList.add('active');
+window.scrollTo(0,0);
+}
+function togglePersonalizacao(e){
+if(e) e.stopPropagation();
+document.querySelector('.personalizacao-btn').classList.toggle('open');
+document.getElementById('personalizacaoMenu').classList.toggle('open');
+}
+function escolherPersonalizacao(el){
+document.querySelectorAll('.personalizacao-item').forEach(function(i){ i.classList.remove('active'); });
+el.classList.add('active');
+document.querySelector('.personalizacao-btn .label').textContent = el.querySelector('.mode-name').textContent;
+localStorage.setItem('contractai_mode', el.getAttribute('data-mode') || 'padrao');
+document.querySelector('.personalizacao-btn').classList.remove('open');
+document.getElementById('personalizacaoMenu').classList.remove('open');
+}
+function novoChat(){
+var area = document.getElementById('chatMessages');
+var welcome = document.getElementById('dashWelcome');
+if(area){
+area.classList.remove('active');
+area.innerHTML = '';
+}
+if(welcome){
+welcome.style.display = '';
+}
+var inp = document.querySelector('.chat-input');
+if(inp) inp.value = '';
+}
+function toggleSidebar(){
+document.getElementById('sidebar').classList.toggle('open');
+document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+(function(){
+var startX = 0, startY = 0;
+var EDGE = 120;
+var MIN = 60;
+document.addEventListener('touchstart', function(e){
+var t = e.changedTouches[0];
+startX = t.clientX;
+startY = t.clientY;
+}, {passive:true});
+document.addEventListener('touchend', function(e){
+if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+var dash = document.getElementById('screen-dashboard');
+if(!dash || !dash.classList.contains('active')) return;
+var t = e.changedTouches[0];
+var dx = t.clientX - startX;
+var dy = t.clientY - startY;
+if(Math.abs(dy) > Math.abs(dx)) return;
+var sidebar = document.getElementById('sidebar');
+var overlay = document.getElementById('sidebarOverlay');
+var isOpen = sidebar.classList.contains('open');
+if(!isOpen && startX < EDGE && dx > MIN){
+sidebar.classList.add('open');
+overlay.classList.add('open');
+}else if(isOpen && dx < -MIN){
+sidebar.classList.remove('open');
+overlay.classList.remove('open');
+}
+}, {passive:true});
+})();
+function toggleAttachMenu(e){
+if(e) e.stopPropagation();
+document.getElementById('attachMenu').classList.toggle('open');
+}
+function pickFile(){
+document.getElementById('fileInput').click();
+document.getElementById('attachMenu').classList.remove('open');
+}
+function aoSelecionarArquivo(input){
+if(!input.files || input.files.length === 0) return;
+var nome = input.files[0].name;
+var mode = localStorage.getItem('contractai_mode') || 'padrao';
+if(mode === 'leitura'){
+iniciarLeitura(nome);
+}else if(mode === 'refinamento'){
+iniciarRefinamento(nome);
+}
+input.value = '';
+}
+function iniciarLeitura(nomeArquivo){
+document.getElementById('dashWelcome').style.display = 'none';
+var area = document.getElementById('chatMessages');
+area.classList.add('active');
+area.innerHTML = '';
+adicionarMensagemIA('📄 Recebi o arquivo <b>' + nomeArquivo + '</b>. No <b>Modo Análise</b>, vou analisar cada linha, cláusula e parágrafo com atenção antes de responder.');
+setTimeout(function(){
+adicionarMensagemIA('Enquanto leio, me conta: qual o seu objetivo com esse documento?<div class="msg-options"><button class="msg-opt" onclick="escolherObjetivo(\'Análise\')">📊 Análise</button><button class="msg-opt" onclick="escolherObjetivo(\'Trabalho\')">💼 Trabalho</button><button class="msg-opt" onclick="escolherObjetivo(\'Resumo\')">📝 Resumo</button></div>');
+}, 800);
+}
+  function iniciarRefinamento(nomeArquivo){
+document.getElementById('dashWelcome').style.display = 'none';
+var area = document.getElementById('chatMessages');
+area.classList.add('active');
+area.innerHTML = '';
+adicionarMensagemIA('✍️ Recebi o arquivo <b>' + nomeArquivo + '</b>. No <b>Modo Refinamento</b>, vou analisar a escrita e sugerir melhorias para deixá-la mais formal e humana ao mesmo tempo.');
+setTimeout(function(){
+adicionarMensagemIA('Me diz o que você precisa:<div class="msg-options"><button class="msg-opt" onclick="escolherRefino(\'Formalizar\')">📝 Formalizar texto</button><button class="msg-opt" onclick="escolherRefino(\'Humanizar\')">💬 Deixar mais natural</button><button class="msg-opt" onclick="escolherRefino(\'Corrigir\')">✏️ Corrigir e melhorar</button></div>');
+}, 800);
+}
+function escolherRefino(tipo){
+adicionarMensagemUsuario(tipo);
+setTimeout(function(){
+adicionarMensagemIA('⏳ Analisando a escrita...');
+setTimeout(function(){
+if(tipo === 'Formalizar'){
+adicionarMensagemIA('📝 Vou <b>formalizar</b> o texto: ajustar tom, eliminar gírias, usar vocabulário profissional e manter clareza. O resultado continua soando humano, não robotizado.');
+}else if(tipo === 'Humanizar'){
+adicionarMensagemIA('💬 Vou <b>humanizar</b> o texto: remover formalidade excessiva, deixar mais fluido e natural, sem perder o profissionalismo.');
+}else{
+adicionarMensagemIA('✏️ Vou <b>corrigir e melhorar</b>: ortografia, gramática, coesão, repetições e clareza — entregando uma versão revisada do texto.');
+}
+setTimeout(function(){
+adicionarMensagemIA('✅ Refinamento concluído.<br><br>Aqui está o que encontrei:<br>• 3 pontos de melhoria identificados<br>• Sugestões de reescrita em 2 trechos<br><br><i>(Quando a IA real estiver conectada, o texto refinado aparecerá aqui.)</i>');
+}, 1200);
+}, 1500);
+}, 600);
+}
+function adicionarMensagemIA(html){
+var area = document.getElementById('chatMessages');
+var div = document.createElement('div');
+div.className = 'msg ai';
+div.innerHTML = html;
+area.appendChild(div);
+div.scrollIntoView({behavior:'smooth', block:'end'});
+}
+function adicionarMensagemUsuario(texto){
+var area = document.getElementById('chatMessages');
+var div = document.createElement('div');
+div.className = 'msg user';
+div.textContent = texto;
+area.appendChild(div);
+div.scrollIntoView({behavior:'smooth', block:'end'});
+}
+function escolherObjetivo(objetivo){
+adicionarMensagemUsuario(objetivo);
+setTimeout(function(){
+adicionarMensagemIA('⏳ Lendo documento linha por linha...');
+setTimeout(function(){
+if(objetivo === 'Análise'){
+adicionarMensagemIA('📊 Vou preparar uma <b>análise</b> do documento: partes envolvidas, valores, datas, obrigações, penalidades e itens para revisão humana.');
+}else if(objetivo === 'Trabalho'){
+adicionarMensagemIA('💼 Vou organizar o conteúdo para uso <b>operacional</b>: próximos passos, prazos, responsáveis e pontos que exigem atenção.');
+}else{
+adicionarMensagemIA('📝 Vou fazer um <b>resumo</b> objetivo do documento em linguagem clara, sem juridiquês, mantendo o essencial.');
+}
+setTimeout(function(){
+adicionarMensagemIA('✅ Análise concluída.<br><br>Você gostaria que este documento passe por <b>revisão humana especializada</b>?<div class="msg-options"><button class="msg-opt" onclick="escolherRevisao(\'sim\')">✔️ Sim, quero revisão</button><button class="msg-opt" onclick="escolherRevisao(\'nao\')">Não, obrigado</button></div>');
+}, 1200);
+}, 1500);
+}, 600);
+}
+function escolherRevisao(resposta){
+if(resposta === 'sim'){
+adicionarMensagemUsuario('Sim, quero revisão');
+setTimeout(function(){
+adicionarMensagemIA('👤 Ótimo. Vou encaminhar este documento para <b>revisão humana especializada</b>.<br><br>⏱ Você receberá um retorno em breve. Enquanto isso, pode continuar conversando comigo sobre o documento.');
+}, 600);
+}else{
+adicionarMensagemUsuario('Não, obrigado');
+setTimeout(function(){
+adicionarMensagemIA('👍 Perfeito. Análise finalizada.<br><br>Se precisar, é só anexar outro documento ou fazer uma pergunta.');
+}, 600);
+}
+}
+function pickPhoto(){
+document.getElementById('photoInput').click();
+document.getElementById('attachMenu').classList.remove('open');
+}
+function pickCamera(){
+document.getElementById('cameraInput').click();
+document.getElementById('attachMenu').classList.remove('open');
+}
+document.addEventListener('click', function(e){
+var menu = document.getElementById('attachMenu');
+if(menu && menu.classList.contains('open') && !menu.contains(e.target) && !e.target.closest('.chat-plus')){
+menu.classList.remove('open');
+}
+});
+document.addEventListener('click', function(e){
+var pm = document.getElementById('personalizacaoMenu');
+if(pm && pm.classList.contains('open') && !pm.contains(e.target) && !e.target.closest('.personalizacao-btn')){
+pm.classList.remove('open');
+document.querySelector('.personalizacao-btn').classList.remove('open');
+}
+});
+var hdrs = document.querySelectorAll('header');
+var lastY = 0;
+window.addEventListener('scroll', function(){
+var y = window.scrollY;
+hdrs.forEach(function(h){
+if (y > window.innerHeight && y > lastY) {
+h.classList.add('hidden');
+} else {
+h.classList.remove('hidden');
+}
+});
+lastY = y;
+});
+</script>
+</body>
+</html>
