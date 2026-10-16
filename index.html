@@ -690,13 +690,13 @@ if(ultima && ultima.textContent.includes('Pensando')) ultima.remove();
 if(dados.reply){
 adicionarMensagemIA(dados.reply);
 } else {
-adicionarMensagemIA('❌ Não consegui responder agora. Tente novamente.');
+adicionarMensagemIA('❌ Erro da API: <code style="font-size:12px">' + JSON.stringify(dados) + '</code>');
 }
 } catch(err) {
 var area = document.getElementById('chatMessages');
 var ultima = area.lastElementChild;
 if(ultima && ultima.textContent.includes('Pensando')) ultima.remove();
-adicionarMensagemIA('❌ Erro de conexão. Verifique sua internet.');
+adicionarMensagemIA('❌ Erro de conexão: ' + err.message);
 }
 }
 function escolherObjetivo(objetivo){
