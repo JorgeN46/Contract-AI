@@ -701,21 +701,15 @@ adicionarMensagemIA('❌ Erro de conexão. Verifique sua internet.');
 }
 function escolherObjetivo(objetivo){
 adicionarMensagemUsuario(objetivo);
-setTimeout(function(){
-adicionarMensagemIA('⏳ Lendo documento linha por linha...');
-setTimeout(function(){
+var prompt = '';
 if(objetivo === 'Análise'){
-adicionarMensagemIA('📊 Vou preparar uma <b>análise</b> do documento: partes envolvidas, valores, datas, obrigações, penalidades e itens para revisão humana.');
-}else if(objetivo === 'Trabalho'){
-adicionarMensagemIA('💼 Vou organizar o conteúdo para uso <b>operacional</b>: próximos passos, prazos, responsáveis e pontos que exigem atenção.');
-}else{
-adicionarMensagemIA('📝 Vou fazer um <b>resumo</b> objetivo do documento em linguagem clara, sem juridiquês, mantendo o essencial.');
+prompt = 'Faça uma análise completa deste documento: partes envolvidas, valores, datas, obrigações, penalidades e itens que merecem revisão humana. Responda de forma organizada com tópicos.';
+} else if(objetivo === 'Trabalho'){
+prompt = 'Organize este documento para uso operacional: próximos passos, prazos, responsáveis e pontos que exigem atenção. Responda com tópicos práticos.';
+} else {
+prompt = 'Faça um resumo objetivo e claro deste documento em português, sem juridiquês, mantendo o essencial em tópicos.';
 }
-setTimeout(function(){
-adicionarMensagemIA('✅ Análise concluída.<br><br>Você gostaria que este documento passe por <b>revisão humana especializada</b>?<div class="msg-options"><button class="msg-opt" onclick="escolherRevisao(\'sim\')">✔️ Sim, quero revisão</button><button class="msg-opt" onclick="escolherRevisao(\'nao\')">Não, obrigado</button></div>');
-}, 1200);
-}, 1500);
-}, 600);
+chamarIA(prompt);
 }
 function escolherRevisao(resposta){
 if(resposta === 'sim'){
