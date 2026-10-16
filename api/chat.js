@@ -1,7 +1,6 @@
-import { GoogleGenAI } from '@google/genai';
+const { GoogleGenAI } = require('@google/genai');
 
-export default async function handler(req, res) {
-  // Permitir apenas POST
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -13,10 +12,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Mensagem vazia' });
     }
 
-    // Inicializa o cliente do Gemini com a chave da variável de ambiente
     const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
 
-    // Monta o prompt do sistema (regras + personalização do usuário)
     const systemInstruction = systemPrompt || 'Você é o Contract AI, um assistente que organiza informações de contratos. Nunca dá conclusões jurídicas. Sempre usa linguagem operacional e destaca itens para revisão humana.';
 
     const response = await ai.models.generateContent({
@@ -33,4 +30,4 @@ export default async function handler(req, res) {
     console.error('Erro na API Gemini:', error);
     res.status(500).json({ error: 'Não foi possível processar sua mensagem. Tente novamente.' });
   }
-}
+};
