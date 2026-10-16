@@ -671,6 +671,34 @@ div.textContent = texto;
 area.appendChild(div);
 div.scrollIntoView({behavior:'smooth', block:'end'});
 }
+async function chamarIA(mensagemUsuario){
+adicionarMensagemIA('⏳ Pensando...');
+try {
+var promptPersonalizado = localStorage.getItem('contractai_prompt') || '';
+var resposta = await fetch('/api/chat', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({
+message: mensagemUsuario,
+systemPrompt: promptPersonalizado
+})
+});
+var dados = await resposta.json();
+var area = document.getElementById('chatMessages');
+var ultima = area.lastElementChild;
+if(ultima && ultima.textContent.includes('Pensando')) ultima.remove();
+if(dados.reply){
+adicionarMensagemIA(dados.reply);
+} else {
+adicionarMensagemIA('❌ Não consegui responder agora. Tente novamente.');
+}
+} catch(err) {
+var area = document.getElementById('chatMessages');
+var ultima = area.lastElementChild;
+if(ultima && ultima.textContent.includes('Pensando')) ultima.remove();
+adicionarMensagemIA('❌ Erro de conexão. Verifique sua internet.');
+}
+}
 function escolherObjetivo(objetivo){
 adicionarMensagemUsuario(objetivo);
 setTimeout(function(){
