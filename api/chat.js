@@ -28,6 +28,6 @@ module.exports = async function handler(req, res) {
     res.status(200).json({ reply: response.text });
   } catch (error) {
     console.error('Erro na API Gemini:', error);
-    res.status(500).json({ error: 'Não foi possível processar sua mensagem. Tente novamente.' });
+    res.status(500).json({ error: 'Erro: ' + (error.message || JSON.stringify(error)) });
   }
 };
