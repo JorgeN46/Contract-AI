@@ -732,6 +732,18 @@ function pickCamera(){
 document.getElementById('cameraInput').click();
 document.getElementById('attachMenu').classList.remove('open');
 }
+function enviarMensagem(){
+var inp = document.querySelector('.chat-input');
+var texto = inp.value.trim();
+if(!texto) return;
+adicionarMensagemUsuario(texto);
+inp.value = '';
+var area = document.getElementById('chatMessages');
+if(area) area.classList.add('active');
+var welcome = document.getElementById('dashWelcome');
+if(welcome) welcome.style.display = 'none';
+chamarIA(texto);
+}
 document.addEventListener('click', function(e){
 var menu = document.getElementById('attachMenu');
 if(menu && menu.classList.contains('open') && !menu.contains(e.target) && !e.target.closest('.chat-plus')){
