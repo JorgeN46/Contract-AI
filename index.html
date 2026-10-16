@@ -353,7 +353,7 @@ Ao continuar, você concorda com nossos
 
 <div class="chat-bar">
 <button class="chat-plus" title="Anexar" onclick="toggleAttachMenu(event)">+</button>
-<input type="text" class="chat-input" placeholder="Pergunte algo sobre seus contratos..." />
+<input type="text" class="chat-input" placeholder="Pergunte algo sobre seus contratos..." onkeydown="if(event.key==='Enter'){event.preventDefault();enviarMensagem();}" />
 <button class="chat-send" title="Enviar" onclick="enviarMensagem()">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
 </button>
