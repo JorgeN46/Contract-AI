@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
     const systemInstruction = systemPrompt || 'Você é o Contract AI, um assistente que organiza informações de contratos. Nunca dá conclusões jurídicas. Sempre usa linguagem operacional e destaca itens para revisão humana.';
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: message,
       config: {
         systemInstruction: systemInstruction,
