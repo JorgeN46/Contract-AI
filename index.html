@@ -664,13 +664,18 @@ var div = document.createElement('div');
 div.className = 'msg ai';
 div.innerHTML = html;
 
+var ehTemporaria = html.includes('Pensando') || html.includes('⏳') || html.includes('Lendo');
+if(!ehTemporaria){
 var btn = document.createElement('button');
 btn.className = 'msg-copy';
 btn.title = 'Copiar resposta';
 btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar';
 btn.onclick = function(e){
 e.stopPropagation();
-var texto = div.innerText.replace(/Copiar$/,'').trim();
+var clone = div.cloneNode(true);
+var btnClone = clone.querySelector('.msg-copy');
+if(btnClone) btnClone.remove();
+var texto = clone.innerText.trim();
 navigator.clipboard.writeText(texto).then(function(){
 btn.innerHTML = '✓ Copiado';
 setTimeout(function(){
@@ -680,8 +685,9 @@ btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 btn.innerHTML = '❌ Erro';
 });
 };
-
 div.appendChild(btn);
+}
+
 area.appendChild(div);
 div.scrollIntoView({behavior:'smooth', block:'end'});
 }
