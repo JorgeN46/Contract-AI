@@ -354,6 +354,11 @@ Ao continuar, você concorda com nossos
 
 <div class="chat-messages" id="chatMessages"></div>
 
+<div class="attach-preview" id="attachPreview">
+<span class="attach-name" id="attachName"></span>
+<button class="attach-remove" onclick="removerAnexo()">×</button>
+</div>
+
 <div class="chat-bar">
 <button class="chat-plus" title="Anexar" onclick="toggleAttachMenu(event)">+</button>
 <input type="text" class="chat-input" placeholder="Pergunte algo sobre seus contratos..." onkeydown="if(event.key==='Enter'){event.preventDefault();enviarMensagem();}" />
