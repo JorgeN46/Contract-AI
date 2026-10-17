@@ -48,6 +48,12 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 .screen.active{display:block}
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
 .login-card{width:100%;max-width:420px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:40px 32px;box-shadow:0 20px 60px -20px rgba(0,0,0,.6)}
+.attach-preview{position:fixed;bottom:80px;left:16px;right:16px;max-width:760px;margin:0 auto;background:#0b1220;border:1px solid rgba(79,141,255,.4);border-radius:12px;padding:10px 14px;display:none;align-items:center;gap:10px;z-index:40;box-shadow:0 10px 30px -10px rgba(0,0,0,.6)}
+.attach-preview.active{display:flex}
+.attach-preview::before{content:'📎';font-size:16px}
+.attach-name{flex:1;color:#fff;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.attach-remove{background:transparent;border:0;color:rgba(255,255,255,.5);font-size:22px;cursor:pointer;line-height:1;padding:0 4px}
+.attach-remove:hover{color:#fca5a5}
 .chat-bar{position:fixed;bottom:16px;left:16px;right:16px;max-width:760px;margin:0 auto;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);border-radius:16px;padding:8px;box-shadow:0 10px 40px -10px rgba(0,0,0,.6);z-index:40}
 .chat-plus{width:40px;height:40px;border-radius:12px;border:0;background:rgba(255,255,255,.06);color:#fff;font-size:22px;cursor:pointer;flex:0 0 40px;display:grid;place-items:center;line-height:1}
 .chat-plus:hover{background:rgba(255,255,255,.12)}
