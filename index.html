@@ -760,16 +760,39 @@ document.getElementById('cameraInput').click();
 document.getElementById('attachMenu').classList.remove('open');
 }
 function enviarMensagem(){
-var inp = document.querySelector('.chat-input');
-var texto = inp.value.trim();
-if(!texto) return;
-adicionarMensagemUsuario(texto);
-inp.value = '';
-var area = document.getElementById('chatMessages');
-if(area) area.classList.add('active');
-var welcome = document.getElementById('dashWelcome');
-if(welcome) welcome.style.display = 'none';
-chamarIA(texto);
+function enviarMensagem(){
+  var inp = document.querySelector('.chat-input');
+  var texto = inp.value.trim();
+
+  if(arquivoAnexado) {
+     var nome = arquivoAnexado;
+     var msgUsuario = texto ? "📎 " + nome + "\n" + texto : "📎 " + nome;
+     adicionarMensagemUsuario(msgUsuario);
+     
+     var area = document.getElementById('chatMessages');
+     if(area) area.classList.add('active');
+     var welcome = document.getElementById('dashWelcome');
+     if(welcome) welcome.style.display = 'none';
+
+     if(texto) {
+         chamarIA("Analise o arquivo '" + nome + "'. Instrução do usuário: " + texto);
+     } else {
+         setTimeout(function(){
+            adicionarMensagemIA('Recebi o arquivo <b>' + nome + '</b>. O que deseja fazer?<div class="msg-options"><button class="msg-opt" onclick="escolherObjetivo(\'Análise\')">📊 Análise</button><button class="msg-opt" onclick="escolherObjetivo(\'Trabalho\')">💼 Trabalho</button><button class="msg-opt" onclick="escolherObjetivo(\'Resumo\')">📝 Resumo</button></div>');
+         }, 500);
+     }
+
+     arquivoAnexado = null;
+     inp.placeholder = "Pergunte algo sobre seus contratos...";
+  } else if(texto) {
+     adicionarMensagemUsuario(texto);
+     var area = document.getElementById('chatMessages');
+     if(area) area.classList.add('active');
+     var welcome = document.getElementById('dashWelcome');
+     if(welcome) welcome.style.display = 'none';
+     chamarIA(texto);
+  }
+  inp.value = '';
 }
 document.addEventListener('click', function(e){
 var menu = document.getElementById('attachMenu');
