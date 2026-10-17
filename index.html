@@ -624,11 +624,26 @@ var arquivoAnexado = null;
 
 function aoSelecionarArquivo(input){
   if(!input.files || input.files.length === 0) return;
-  arquivoAnexado = input.files[0].name;
-  var inp = document.querySelector('.chat-input');
-  inp.placeholder = "📎 " + arquivoAnexado + " anexado. Digite seu prompt ou envie vazio.";
-  inp.focus();
+  
+  var nomeOriginal = input.files[0].name;
+  var nomeLimpo = nomeOriginal;
+  
+  // Limpa o texto gigante do WPS Office para pegar só o nome do arquivo
+  var match = nomeOriginal.match(/'([^']+)'/);
+  if(match) nomeLimpo = match[1];
+
+  arquivoAnexado = nomeLimpo;
+  
+  document.getElementById('attachName').textContent = nomeLimpo;
+  document.getElementById('attachPreview').classList.add('active');
+  
   input.value = '';
+}
+
+function removerAnexo(){
+  arquivoAnexado = null;
+  document.getElementById('attachPreview').classList.remove('active');
+  document.getElementById('attachName').textContent = '';
 }
 function iniciarLeitura(nomeArquivo){
 document.getElementById('dashWelcome').style.display = 'none';
