@@ -807,8 +807,7 @@ function enviarMensagem(){
          }, 500);
      }
 
-     arquivoAnexado = null;
-     inp.placeholder = "Pergunte algo sobre seus contratos...";
+     removerAnexo(); // <- Essa linha é a que limpa a caixinha azul após o envio
   } else if(texto) {
      adicionarMensagemUsuario(texto);
      var area = document.getElementById('chatMessages');
