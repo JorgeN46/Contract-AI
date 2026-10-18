@@ -634,16 +634,44 @@ function aoSelecionarArquivo(input){
   
   var nomeOriginal = input.files[0].name;
   var nomeLimpo = nomeOriginal;
-  
-  // Limpa o texto gigante do WPS Office para pegar só o nome do arquivo
   var match = nomeOriginal.match(/'([^']+)'/);
   if(match) nomeLimpo = match[1];
 
   arquivoAnexado = nomeLimpo;
+  textoArquivoExtraido = ""; // Limpa o texto anterior
   
-  document.getElementById('attachName').textContent = nomeLimpo;
+  document.getElementById('attachName').textContent = nomeLimpo + ' (Lendo...)';
   document.getElementById('attachPreview').classList.add('active');
   
+  if (input.files[0].type === 'application/pdf') {
+      var fileReader = new FileReader();
+      fileReader.onload = function() {
+          var typedarray = new Uint8Array(this.result);
+          if(typeof pdfjsLib !== 'undefined') {
+              pdfjsLib.getDocument(typedarray).promise.then(function(pdf) {
+                  var maxPages = pdf.numPages;
+                  var countPromises = [];
+                  for (var j = 1; j <= maxPages; j++) {
+                      var page = pdf.getPage(j);
+                      countPromises.push(page.then(function(page) {
+                          return page.getTextContent().then(function(text) {
+                              return text.items.map(function(s) { return s.str; }).join(' ');
+                          });
+                      }));
+                  }
+                  Promise.all(countPromises).then(function(texts) {
+                      textoArquivoExtraido = texts.join('\n');
+                      document.getElementById('attachName').textContent = nomeLimpo + ' (Pronto)';
+                  });
+              }).catch(function(err) {
+                  document.getElementById('attachName').textContent = nomeLimpo + ' (Erro ao ler)';
+              });
+          }
+      };
+      fileReader.readAsArrayBuffer(input.files[0]);
+  } else {
+      document.getElementById('attachName').textContent = nomeLimpo + ' (Apenas PDF por enquanto)';
+  }
   input.value = '';
 }
 
