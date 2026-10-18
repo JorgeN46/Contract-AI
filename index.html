@@ -760,6 +760,7 @@ area.appendChild(div);
 div.scrollIntoView({behavior:'smooth', block:'end'});
 }
 async function chamarIA(mensagemUsuario){
+async function chamarIA(mensagemUsuario){
 adicionarMensagemIA('⏳ Pensando...');
 try {
 var promptPersonalizado = localStorage.getItem('contractai_prompt') || '';
@@ -768,6 +769,7 @@ method: 'POST',
 headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 message: mensagemUsuario,
+fileText: textoArquivoExtraido,
 systemPrompt: promptPersonalizado
 })
 });
