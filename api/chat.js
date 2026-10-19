@@ -47,7 +47,6 @@ module.exports = async function handler(req, res) {
     
     let basePrompt = "";
 
-    // MODO ANÁLISE (Rigoroso)
     const promptAnalise = `Você é o Contract AI, no MODO ANÁLISE. Seu objetivo é organizar, explicar, alertar e encaminhar.
 Sempre que receber um documento, siga ESTRITAMENTE esta estrutura:
 1. **Resumo Operacional**: Visão geral em 2 parágrafos.
@@ -57,22 +56,18 @@ Sempre que receber um documento, siga ESTRITAMENTE esta estrutura:
 5. **Próximos Passos (Ação Direta)**: Dê direções práticas e sugira redações recomendadas.
 6. **Aviso Legal**: Termine SEMPRE com: "Lembrete: Este relatório é operacional e não substitui a análise de um advogado habilitado."`;
 
-    // MODO REFINAMENTO
     const promptRefinamento = `Você é o Contract AI, no MODO REFINAMENTO. Seu objetivo é ajudar o usuário a melhorar textos, deixando-os mais formais, claros ou naturais. Seja amigável, direto e foque na escrita.`;
 
-    // MODO PADRÃO (Livre, mas com Roteamento Inteligente)
-    const promptPadrao = `Você é o Contract AI, no MODO PADRÃO. Aja como um assistente conversacional e casual.
-Responda de forma natural, amigável e descontraída.
-IMPORTANTE: Se o usuário anexar um arquivo (PDF, imagem, etc.) ou pedir para analisar um contrato complexo, jurídico ou empresarial, VOCÊ DEVE MUDAR AUTOMATICAMENTE para o comportamento de "MODO ANÁLISE".
-Quando isso acontecer, comece sua resposta EXATAMENTE com esta frase: "🤖 *Identifiquei um documento complexo. Ativei o Modo Análise automaticamente para você.*"
-Depois da frase, siga a estrutura de 6 passos do Modo Análise (Resumo, Limitações, Pontos Positivos, Riscos com Evidências, Próximos Passos e Aviso Legal).`;
+    const promptPadrao = `Você é o Contract AI, no MODO PADRÃO. Aja como um assistente conversacional, amigável e descontraído.
+Responda de forma natural às mensagens do usuário.
+ATENÇÃO: Se houver um documento anexo no histórico, NÃO faça a análise completa por conta própria. Apenas responda o que o usuário perguntou. 
+Se o usuário pedir EXPLICITAMENTE para analisar, extrair riscos ou revisar o contrato, use a estrutura do "Modo Análise" (comece avisando: "🤖 *Ativei o Modo Análise automaticamente para te ajudar com isso.*"). Caso contrário, apenas converse normalmente.`;
 
     if (mode === 'leitura') {
       basePrompt = promptAnalise;
     } else if (mode === 'refinamento') {
       basePrompt = promptRefinamento;
     } else {
-      // Se for modo padrão, mas tiver um arquivo anexado, a IA decide trocar sozinha
       basePrompt = promptPadrao;
     }
 
@@ -80,7 +75,8 @@ Depois da frase, siga a estrutura de 6 passos do Modo Análise (Resumo, Limitaç
 
     let promptFinal = message;
     if (fileText && fileText.trim().length > 0) {
-        promptFinal = "Texto do documento anexo:\n\n" + fileText.substring(0, 30000) + "\n\nInstrução do usuário: " + message;
+        // O texto do arquivo é enviado como contexto, mas a IA decide se analisa ou não baseado no prompt acima
+        promptFinal = "Contexto (Documento Anexo):\n\n" + fileText.substring(0, 30000) + "\n\nMensagem do usuário: " + message;
     }
 
     const { texto, modeloUsado } = await chamarGemini(ai, promptFinal, fileText, finalInstruction);
