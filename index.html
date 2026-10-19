@@ -641,7 +641,7 @@ function aoSelecionarArquivo(input){
   if(match) nomeLimpo = match[1];
 
   arquivoAnexado = nomeLimpo;
-  textoArquivoExtraido = ""; // Limpa o texto anterior
+  textoArquivoExtraido = ""; 
   
   document.getElementById('attachName').textContent = nomeLimpo + ' (Lendo...)';
   document.getElementById('attachPreview').classList.add('active');
@@ -654,14 +654,26 @@ function aoSelecionarArquivo(input){
               pdfjsLib.getDocument(typedarray).promise.then(function(pdf) {
                   var maxPages = pdf.numPages;
                   var countPromises = [];
+                  
                   for (var j = 1; j <= maxPages; j++) {
-                      var page = pdf.getPage(j);
+                      var pageNum = j; // Fixa o número da página nesta iteração
+                      var page = pdf.getPage(pageNum);
+                      
                       countPromises.push(page.then(function(page) {
                           return page.getTextContent().then(function(text) {
-                              return text.items.map(function(s) { return s.str; }).join(' ');
+                              var pageText = text.items.map(function(s) { return s.str; }).join(' ');
+                              
+                              // 1. Remove caracteres de controle/lixo (como )
+                              pageText = pageText.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ');
+                              // 2. Remove espaços múltiplos
+                              pageText = pageText.replace(/\s+/g, ' ').trim();
+                              
+                              // 3. Adiciona o marcador de página para a IA ler
+                              return '\n\n--- Página ' + pageNum + ' ---\n' + pageText;
                           });
                       }));
                   }
+                  
                   Promise.all(countPromises).then(function(texts) {
                       textoArquivoExtraido = texts.join('\n');
                       document.getElementById('attachName').textContent = nomeLimpo + ' (Pronto)';
