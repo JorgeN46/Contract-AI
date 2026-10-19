@@ -433,7 +433,7 @@ Câmera
 </button>
 </div>
 <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.png,.jpg,.jpeg" multiple hidden onchange="aoSelecionarArquivo(this)" />
-<input type="file" id="photoInput" accept="image/*" hidden />
+<input type="file" id="photoInput" accept="image/*" hidden onchange="aoSelecionarArquivo(this)" />
 <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden />
 
 </div><!-- /dashboard -->
