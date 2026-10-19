@@ -766,13 +766,15 @@ async function chamarIA(mensagemUsuario){
 adicionarMensagemIA('⏳ Pensando...');
 try {
 var promptPersonalizado = localStorage.getItem('contractai_prompt') || '';
+var modoAtual = localStorage.getItem('contractai_mode') || 'padrao';
 var resposta = await fetch('/api/chat', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
 body: JSON.stringify({
 message: mensagemUsuario,
 fileText: textoArquivoExtraido,
-systemPrompt: promptPersonalizado
+systemPrompt: promptPersonalizado,
+mode: modoAtual
 })
 });
 var dados = await resposta.json();
