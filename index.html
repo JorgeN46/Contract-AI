@@ -612,6 +612,7 @@ document.querySelector('.personalizacao-btn').classList.remove('open');
 document.getElementById('personalizacaoMenu').classList.remove('open');
 }
 function novoChat(){
+function novoChat(){
 var area = document.getElementById('chatMessages');
 var welcome = document.getElementById('dashWelcome');
 if(area){
@@ -623,6 +624,11 @@ welcome.style.display = '';
 }
 var inp = document.querySelector('.chat-input');
 if(inp) inp.value = '';
+
+// Limpa a memória do arquivo anterior
+textoArquivoExtraido = "";
+arquivoAnexado = null;
+removerAnexo(); 
 }
 function toggleSidebar(){
 document.getElementById('sidebar').classList.toggle('open');
