@@ -757,6 +757,7 @@ function aoSelecionarArquivo(input){
 
 function removerAnexo(){
   arquivoAnexado = null;
+  textoArquivoExtraido = ""; // <--- A MÁGICA ESTÁ AQUI
   document.getElementById('attachPreview').classList.remove('active');
   document.getElementById('attachName').textContent = '';
 }
