@@ -637,59 +637,80 @@ var textoArquivoExtraido = "";
 
 function aoSelecionarArquivo(input){
   if(!input.files || input.files.length === 0) return;
-  
-  var nomeOriginal = input.files[0].name;
-  var nomeLimpo = nomeOriginal;
-  var match = nomeOriginal.match(/'([^']+)'/);
-  if(match) nomeLimpo = match[1];
 
-  arquivoAnexado = nomeLimpo;
-  textoArquivoExtraido = ""; 
-  
-  document.getElementById('attachName').textContent = nomeLimpo + ' (Lendo...)';
-  document.getElementById('attachPreview').classList.add('active');
-  
-  if (input.files[0].type === 'application/pdf') {
-      var fileReader = new FileReader();
-      fileReader.onload = function() {
-          var typedarray = new Uint8Array(this.result);
-          if(typeof pdfjsLib !== 'undefined') {
-              pdfjsLib.getDocument(typedarray).promise.then(function(pdf) {
-                  var maxPages = pdf.numPages;
-                  var countPromises = [];
-                  
-                  for (var j = 1; j <= maxPages; j++) {
-                      var pageNum = j; // Fixa o número da página nesta iteração
-                      var page = pdf.getPage(pageNum);
-                      
-                      countPromises.push(page.then(function(page) {
-                          return page.getTextContent().then(function(text) {
-                              var pageText = text.items.map(function(s) { return s.str; }).join(' ');
-                              
-                              // 1. Remove caracteres de controle/lixo (como )
-                              pageText = pageText.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ');
-                              // 2. Remove espaços múltiplos
-                              pageText = pageText.replace(/\s+/g, ' ').trim();
-                              
-                              // 3. Adiciona o marcador de página para a IA ler
-                              return '\n\n--- Página ' + pageNum + ' ---\n' + pageText;
-                          });
-                      }));
-                  }
-                  
-                  Promise.all(countPromises).then(function(texts) {
-                      textoArquivoExtraido = texts.join('\n');
-                      document.getElementById('attachName').textContent = nomeLimpo + ' (Pronto)';
-                  });
-              }).catch(function(err) {
-                  document.getElementById('attachName').textContent = nomeLimpo + ' (Erro ao ler)';
-              });
-          }
-      };
-      fileReader.readAsArrayBuffer(input.files[0]);
-  } else {
-      document.getElementById('attachName').textContent = nomeLimpo + ' (Apenas PDF por enquanto)';
+  var files = Array.from(input.files);
+  var numImages = files.filter(f => f.type.startsWith('image/')).length;
+  var numDocs = files.length - numImages;
+
+  // 🚨 AQUI ESTÃO OS LIMITES
+  if (numImages > 10) {
+      alert("Limite excedido: você pode anexar no máximo 10 imagens por vez.");
+      input.value = '';
+      return;
   }
+  if (numDocs > 2) {
+      alert("Limite excedido: você pode anexar no máximo 2 documentos por vez.");
+      input.value = '';
+      return;
+  }
+
+  var nomes = files.map(f => {
+      var match = f.name.match(/'([^']+)'/);
+      return match ? match[1] : f.name;
+  });
+
+  arquivoAnexado = files.length > 1 ? files.length + ' arquivos anexados' : nomes[0];
+  textoArquivoExtraido = ""; 
+  document.getElementById('attachName').textContent = arquivoAnexado + ' (Lendo...)';
+  document.getElementById('attachPreview').classList.add('active');
+
+  var promises = files.map(function(file, index) {
+      return new Promise(function(resolve) {
+          var nomeFile = nomes[index];
+          
+          if (file.type === 'application/pdf') {
+              var reader = new FileReader();
+              reader.onload = function() {
+                  pdfjsLib.getDocument(new Uint8Array(this.result)).promise.then(function(pdf) {
+                      var pagePromises = [];
+                      for (var i = 1; i <= pdf.numPages; i++) {
+                          pagePromises.push(pdf.getPage(i).then(p => p.getTextContent()).then(t => t.items.map(s => s.str).join(' ')));
+                      }
+                      Promise.all(pagePromises).then(texts => {
+                          var fullText = texts.map((t, i) => `\n--- ${nomeFile} - Página ${i+1} ---\n${t.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim()}`).join('\n');
+                          resolve(fullText);
+                      });
+                  });
+              };
+              reader.readAsArrayBuffer(file);
+              
+          } else if (file.type.startsWith('image/')) {
+              Tesseract.recognize(file, 'por').then(({ data: { text } }) => {
+                  resolve(`\n--- ${nomeFile} (Imagem) ---\n${text}`);
+              });
+              
+          } else if (file.type.includes('word') || file.name.endsWith('.docx')) {
+              var reader = new FileReader();
+              reader.onload = function() {
+                  mammoth.extractRawText({ arrayBuffer: this.result }).then(function(result) {
+                      resolve(`\n--- ${nomeFile} ---\n${result.value}`);
+                  });
+              };
+              reader.readAsArrayBuffer(file);
+              
+          } else {
+              resolve(`\n--- ${nomeFile} ---\n(Formato não suportado)`);
+          }
+      });
+  });
+
+  Promise.all(promises).then(function(texts) {
+      textoArquivoExtraido = texts.join('\n\n');
+      document.getElementById('attachName').textContent = arquivoAnexado + ' (Pronto)';
+  }).catch(function(err) {
+      document.getElementById('attachName').textContent = arquivoAnexado + ' (Erro ao ler)';
+  });
+
   input.value = '';
 }
 
