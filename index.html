@@ -929,12 +929,13 @@ function enviarMensagem(){
 
      removerAnexo(); // <- Essa linha é a que limpa a caixinha azul após o envio
   } else if(texto) {
-     adicionarMensagemUsuario(texto);
-     var area = document.getElementById('chatMessages');
-     if(area) area.classList.add('active');
-     var welcome = document.getElementById('dashWelcome');
-     if(welcome) welcome.style.display = 'none';
-     chamarIA(texto);
+   textoArquivoExtraido = ""; // <--- LIMPA A MEMÓRIA DO PDF ANTES DE ENVIAR
+   adicionarMensagemUsuario(texto);
+   var area = document.getElementById('chatMessages');
+   if(area) area.classList.add('active');
+   var welcome = document.getElementById('dashWelcome');
+   if(welcome) welcome.style.display = 'none';
+   chamarIA(texto);
   }
   inp.value = '';
 }
