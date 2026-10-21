@@ -994,6 +994,45 @@ h.classList.remove('hidden');
 });
 lastY = y;
 });
+function baixarPDF(id) {
+  var elemento = document.getElementById(id);
+  if(!elemento) return;
+
+  // Clona o elemento para remover os botões antes de gerar o PDF
+  var clone = elemento.cloneNode(true);
+  var botoes = clone.querySelector('.msg-actions');
+  if(botoes) botoes.remove();
+
+  var opt = {
+    margin:       1,
+    filename:     'Contract_AI_Documento.pdf',
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, backgroundColor: '#070b14' }, // Fundo escuro
+    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+  };
+
+  // Aplica estilos inline para garantir que o PDF saia com cores
+  clone.style.color = '#fff';
+  clone.style.background = '#070b14';
+  clone.style.padding = '20px';
+
+  html2pdf().set(opt).from(clone).save();
+}
+
+function baixarWord(id) {
+  var elemento = document.getElementById(id);
+  if(!elemento) return;
+
+  var clone = elemento.cloneNode(true);
+  var botoes = clone.querySelector('.msg-actions');
+  if(botoes) botoes.remove();
+
+  // html-docx-js precisa do HTML completo para renderizar
+  var htmlDoc = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' + clone.innerHTML + '</body></html>';
+  
+  var converted = htmlDocx.asBlob(htmlDoc);
+  saveAs(converted, 'Contract_AI_Documento.docx');
+  }
 </script>
 </body>
 </html>
