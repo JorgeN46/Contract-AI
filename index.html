@@ -808,38 +808,59 @@ adicionarMensagemIA('✅ Refinamento concluído.<br><br>Aqui está o que encontr
 }, 600);
 }
 function adicionarMensagemIA(html){
-  var area = document.getElementById('chatMessages');
-  var div = document.createElement('div');
-  div.className = 'msg ai';
-  
-  // Converte Markdown para HTML
-  div.innerHTML = marked.parse(html);
+var area = document.getElementById('chatMessages');
+var div = document.createElement('div');
+div.className = 'msg ai';
+div.id = 'msg-ai-' + Date.now() + '-' + Math.floor(Math.random() * 1000); // Cria um ID único
+div.innerHTML = marked.parse(html);
 
-  var ehTemporaria = html.includes('Pensando') || html.includes('⏳') || html.includes('Lendo');
-  if(!ehTemporaria){
-    var btn = document.createElement('button');
-    btn.className = 'msg-copy';
-    btn.title = 'Copiar resposta';
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar';
-    btn.onclick = function(e){
-      e.stopPropagation();
-      var clone = div.cloneNode(true);
-      var btnClone = clone.querySelector('.msg-copy');
-      if(btnClone) btnClone.remove();
-      var texto = clone.innerText.trim();
-      navigator.clipboard.writeText(texto).then(function(){
-        btn.innerHTML = '✓ Copiado';
-        setTimeout(function(){
-          btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copiar';
-        }, 2000);
-      }).catch(function(){
-        btn.innerHTML = '❌ Erro';
-      });
-    };
-    div.appendChild(btn);
-  }
-  area.appendChild(div);
-  div.scrollIntoView({behavior:'smooth', block:'end'});
+var ehTemporaria = html.includes('Pensando') || html.includes('⏳') || html.includes('Lendo');
+if(!ehTemporaria){
+  var actions = document.createElement('div');
+  actions.className = 'msg-actions';
+
+  // Botão Copiar
+  var btnCopiar = document.createElement('button');
+  btnCopiar.className = 'msg-action-btn';
+  btnCopiar.innerHTML = '📋 Copiar';
+  btnCopiar.onclick = function(e){
+    e.stopPropagation();
+    var clone = div.cloneNode(true);
+    var btnClone = clone.querySelector('.msg-actions');
+    if(btnClone) btnClone.remove();
+    var texto = clone.innerText.trim();
+    navigator.clipboard.writeText(texto).then(function(){
+      btnCopiar.innerHTML = '✓ Copiado';
+      setTimeout(function(){ btnCopiar.innerHTML = '📋 Copiar'; }, 2000);
+    });
+  };
+
+  // Botão Baixar PDF
+  var btnPDF = document.createElement('button');
+  btnPDF.className = 'msg-action-btn';
+  btnPDF.innerHTML = '📄 Baixar PDF';
+  btnPDF.onclick = function(e){
+    e.stopPropagation();
+    baixarPDF(div.id);
+  };
+
+  // Botão Baixar Word
+  var btnWord = document.createElement('button');
+  btnWord.className = 'msg-action-btn';
+  btnWord.innerHTML = '📝 Baixar Word';
+  btnWord.onclick = function(e){
+    e.stopPropagation();
+    baixarWord(div.id);
+  };
+
+  actions.appendChild(btnCopiar);
+  actions.appendChild(btnPDF);
+  actions.appendChild(btnWord);
+  div.appendChild(actions);
+}
+
+area.appendChild(div);
+div.scrollIntoView({behavior:'smooth', block:'end'});
 }
 function adicionarMensagemUsuario(texto){
 var area = document.getElementById('chatMessages');
