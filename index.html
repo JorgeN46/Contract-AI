@@ -181,9 +181,13 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   margin: 20px 0;
 }
 .msg.user{background:linear-gradient(180deg,#5b96ff,#2f6bff);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
-.msg-copy{margin-top:10px;padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:rgba(255,255,255,.7);font-size:12px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;transition:.2s}
-.msg-copy:hover{background:rgba(79,141,255,.15);border-color:rgba(79,141,255,.35);color:#7db4ff}
-.msg-copy:active{transform:scale(.97)}
+.msg-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.msg-action-btn {
+  padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.04); color: rgba(255,255,255,.7); font-size: 12px;
+  cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; transition: .2s;
+}
+.msg-action-btn:hover { background: rgba(79,141,255,.15); border-color: rgba(79,141,255,.35); color: #7db4ff; }
 .msg-options{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .msg-opt{padding:10px 16px;border-radius:10px;border:1px solid rgba(79,141,255,.4);background:rgba(79,141,255,.1);color:#7db4ff;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:.2s}
 .msg-opt:hover{background:rgba(79,141,255,.2);color:#fff}
