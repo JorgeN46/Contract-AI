@@ -641,22 +641,136 @@ document.querySelector('.personalizacao-btn').classList.remove('open');
 document.getElementById('personalizacaoMenu').classList.remove('open');
 }
 function novoChat(){
-var area = document.getElementById('chatMessages');
-var welcome = document.getElementById('dashWelcome');
-if(area){
-area.classList.remove('active');
-area.innerHTML = '';
-}
-if(welcome){
-welcome.style.display = '';
-}
-var inp = document.querySelector('.chat-input');
-if(inp) inp.value = '';
+  salvarConversaAtual(); // Salva a conversa no histórico antes de limpar
+  
+  var area = document.getElementById('chatMessages');
+  var welcome = document.getElementById('dashWelcome');
+  if(area){
+    area.classList.remove('active');
+    area.innerHTML = '';
+  }
+  if(welcome){
+    welcome.style.display = '';
+  }
+  var inp = document.querySelector('.chat-input');
+  if(inp) inp.value = '';
 
-// Limpa a memória do arquivo anterior
-textoArquivoExtraido = "";
-arquivoAnexado = null;
-removerAnexo(); 
+  textoArquivoExtraido = "";
+  arquivoAnexado = null;
+  removerAnexo(); 
+  conversaAtual = []; // Limpa o array para o novo chat
+}
+
+function salvarConversaAtual(){
+  if(conversaAtual.length === 0) return; // Se não tem mensagem, não salva
+
+  var historico = JSON.parse(localStorage.getItem('contractai_historico') || '[]');
+  
+  // Pega o título baseado na primeira mensagem do usuário
+  var primeiraMsg = conversaAtual.find(m => m.role === 'user');
+  var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
+
+  var novaConversa = {
+    id: Date.now().toString(),
+    titulo: titulo,
+    data: new Date().toLocaleDateString('pt-BR'),
+    mensagens: conversaAtual
+  };
+
+  historico.unshift(novaConversa); // Coloca no topo da lista
+  localStorage.setItem('contractai_historico', JSON.stringify(historico));
+  
+  renderizarHistorico(); // Atualiza a tela
+}
+
+function renderizarHistorico(){
+  var container = document.getElementById('listaConversas');
+  if(!container) return;
+  
+  container.innerHTML = '';
+  var historico = JSON.parse(localStorage.getItem('contractai_historico') || '[]');
+
+  if(historico.length === 0){
+    container.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:14px; padding:10px;">Nenhuma conversa</div>';
+    return;
+  }
+
+  historico.forEach(function(conv) {
+    var item = document.createElement('div');
+    item.className = 'sidebar-item';
+    item.style.cssText = 'padding: 10px; color: #fff; font-size: 14px; cursor: pointer; border-radius: 8px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+    item.innerHTML = '💬 ' + conv.titulo;
+    
+    item.onclick = function() {
+      carregarConversa(conv.id);
+    };
+    
+    // Efeito visual ao passar o dedo
+    item.onmouseover = function() { item.style.background = 'rgba(255,255,255,.1)'; };
+    item.onmouseout = function() { item.style.background = 'transparent'; };
+
+    container.appendChild(item);
+  });
+}
+
+function carregarConversa(id){
+  salvarConversaAtual(); // Salva a atual antes de abrir a antiga
+  
+  var historico = JSON.parse(localStorage.getItem('contractai_historico') || '[]');
+  var conv = historico.find(c => c.id === id);
+  if(!conv) return;
+
+  var area = document.getElementById('chatMessages');
+  var welcome = document.getElementById('dashWelcome');
+  
+  if(welcome) welcome.style.display = 'none';
+  area.classList.add('active');
+  area.innerHTML = '';
+  
+  conversaAtual = conv.mensagens; // Restaura a memória atual
+
+  // Reconstroi as mensagens na tela
+  conv.mensagens.forEach(function(msg) {
+    if(msg.role === 'user'){
+      var div = document.createElement('div');
+      div.className = 'msg user';
+      div.textContent = msg.content;
+      area.appendChild(div);
+    } else {
+      var div = document.createElement('div');
+      div.className = 'msg ai';
+      div.innerHTML = marked.parse(msg.content);
+      
+      // Adiciona os botões novamente
+      var actions = document.createElement('div');
+      actions.className = 'msg-actions';
+      var btnCopiar = document.createElement('button');
+      btnCopiar.className = 'msg-action-btn';
+      btnCopiar.innerHTML = '📋 Copiar';
+      btnCopiar.onclick = function(e){
+        e.stopPropagation();
+        var clone = div.cloneNode(true);
+        var btnClone = clone.querySelector('.msg-actions');
+        if(btnClone) btnClone.remove();
+        navigator.clipboard.writeText(clone.innerText.trim()).then(function(){
+          btnCopiar.innerHTML = '✓ Copiado';
+          setTimeout(function(){ btnCopiar.innerHTML = '📋 Copiar'; }, 2000);
+        });
+      };
+      actions.appendChild(btnCopiar);
+      div.appendChild(actions);
+      
+      area.appendChild(div);
+    }
+  });
+  
+  // Fecha a sidebar no celular
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  if(sidebar.classList.contains('open')) {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('open');
+  }
 }
 function toggleSidebar(){
 document.getElementById('sidebar').classList.toggle('open');
