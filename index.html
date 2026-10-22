@@ -613,6 +613,9 @@ function fecharModal(){
 document.getElementById('modalOverlay').classList.remove('open');
 document.getElementById('modalBox').classList.remove('open');
 }
+var supabaseUrl = 'https://uzmmoypdllnoawunmnxg.supabase.co';
+var supabaseKey = 'sb_publishable_h167SfQxm19PCEKFCcseSw_mgGxI9th';
+var supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 function go(name){
 document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
 document.getElementById('screen-' + name).classList.add('active');
