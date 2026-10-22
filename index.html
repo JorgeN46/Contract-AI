@@ -838,6 +838,7 @@ div.innerHTML = marked.parse(html);
 
 var ehTemporaria = html.includes('Pensando') || html.includes('⏳') || html.includes('Lendo');
 if(!ehTemporaria){
+  conversaAtual.push({ role: 'ai', content: html });
   var actions = document.createElement('div');
   actions.className = 'msg-actions';
 
