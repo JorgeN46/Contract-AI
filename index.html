@@ -704,6 +704,7 @@ document.getElementById('attachMenu').classList.remove('open');
 
 var arquivoAnexado = null;
 var textoArquivoExtraido = "";
+var conversaAtual = []; // Array que vai guardar as mensagens desta sessão
 
 function aoSelecionarArquivo(input){
   if(!input.files || input.files.length === 0) return;
