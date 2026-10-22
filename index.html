@@ -580,8 +580,19 @@ fb.textContent = '✓ Prompt resetado';
 setTimeout(function(){ fb.textContent = ''; }, 2500);
 }
 window.addEventListener('DOMContentLoaded', function(){
-var salvo = localStorage.getItem('contractai_prompt');
-if(salvo) document.getElementById('customPrompt').value = salvo;
+  var salvo = localStorage.getItem('contractai_prompt');
+  if(salvo) document.getElementById('customPrompt').value = salvo;
+
+  // SINCRONIZAR O MODO ATIVO COM A MEMÓRIA DO NAVEGADOR
+  var modoSalvo = localStorage.getItem('contractai_mode') || 'padrao';
+  document.querySelectorAll('.personalizacao-item').forEach(function(item) {
+      if (item.getAttribute('data-mode') === modoSalvo) {
+          item.classList.add('active');
+          document.querySelector('.personalizacao-btn .label').textContent = item.querySelector('.mode-name').textContent;
+      } else {
+          item.classList.remove('active');
+      }
+  });
 });
 function abrirTermos(e){
 if(e) e.preventDefault();
