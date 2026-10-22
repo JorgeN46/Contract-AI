@@ -322,7 +322,13 @@ Continuar com Microsoft
 
 <div class="divider">ou</div>
 
-<a href="#" class="sso" onclick="fazerLogin(event); return false;">✉️ Continuar com e-mail</a>
+<div style="display:flex; flex-direction:column; gap:10px; margin-bottom:12px;">
+  <input type="email" id="loginEmail" placeholder="Seu e-mail" style="width:100%; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:14px; color:#fff; font-family:inherit; font-size:15px; outline:none;">
+  <input type="password" id="loginSenha" placeholder="Sua senha (mínimo 6 caracteres)" style="width:100%; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:12px; padding:14px; color:#fff; font-family:inherit; font-size:15px; outline:none;">
+</div>
+
+<button id="btnLogin" class="sso" onclick="submitLogin(event)" style="cursor:pointer; width:100%; border:none;">Entrar / Criar Conta</button>
+<p id="loginFeedback" style="text-align:center; font-size:13px; margin-top:12px; min-height:18px; transition:0.3s;"></p>
   <p class="legal-text">
 Ao continuar, você concorda com nossos
 <a href="#" onclick="abrirTermos(event)">Termos de Uso</a> e
