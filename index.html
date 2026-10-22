@@ -885,12 +885,14 @@ area.appendChild(div);
 div.scrollIntoView({behavior:'smooth', block:'end'});
 }
 function adicionarMensagemUsuario(texto){
-var area = document.getElementById('chatMessages');
-var div = document.createElement('div');
-div.className = 'msg user';
-div.textContent = texto;
-area.appendChild(div);
-div.scrollIntoView({behavior:'smooth', block:'end'});
+  var area = document.getElementById('chatMessages');
+  var div = document.createElement('div');
+  div.className = 'msg user';
+  div.textContent = texto;
+  area.appendChild(div);
+  div.scrollIntoView({behavior:'smooth', block:'end'});
+  
+  conversaAtual.push({ role: 'user', content: texto }); // <--- ADICIONE AQUI
 }
 async function chamarIA(mensagemUsuario){
 adicionarMensagemIA('⏳ Pensando...');
