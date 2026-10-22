@@ -1,18 +1,17 @@
 async function chamarGemini(apiKey, message, systemInstruction, usePro) {
-  // BANCO DE MODELOS
-  const modeloPrincipal = usePro ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+  // BANCO DE MODELOS ATUALIZADO CONFORME O GOOGLE STUDIO
+  const modeloPrincipal = usePro ? 'gemini-3.8-pro' : 'gemini-3.8-flash'; // Usei o 3.8 para o principal
   
-  // Fallbacks
+  // Fallbacks (Planos B atualizados)
   const modelos = usePro 
-    ? [modeloPrincipal, 'gemini-2.5-flash'] 
-    : [modeloPrincipal, 'gemini-2.0-flash-lite'];
+    ? [modeloPrincipal, 'gemini-3.8-flash'] 
+    : [modeloPrincipal, 'gemini-3.5-flash-lite']; 
 
   let ultimoErro = null;
 
   for (const modelo of modelos) {
     for (let tentativa = 1; tentativa <= 3; tentativa++) {
       try {
-        // Passamos a chave diretamente na URL (?key=), que é 100% aceito e evita o erro 401 de Bearer Token
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${apiKey}`;
         
         const body = {
@@ -41,19 +40,17 @@ async function chamarGemini(apiKey, message, systemInstruction, usePro) {
 
         const data = await response.json();
         
-        // Extraindo o texto da resposta do Google
         const texto = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sem resposta gerada.";
         return { texto, modeloUsado: modelo };
 
       } catch (err) {
         ultimoErro = err;
         const msg = err.message || '';
-        // Retry automático para erros de sobrecarga (503) ou limite temporário (429)
         if (msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand') || msg.includes('429')) {
           await new Promise(r => setTimeout(r, Math.pow(2, tentativa - 1) * 1000));
           continue;
         }
-        break; // Se for erro 401/400, para de tentar este modelo
+        break; 
       }
     }
   }
@@ -110,7 +107,7 @@ ATENÇÃO: Se o usuário enviar um documento e pedir EXPLICITAMENTE uma análise
 
     if (mode === 'leitura') {
       basePrompt = promptAnalise;
-      usarModeloPro = true; // Ativa o 2.5 Pro
+      usarModeloPro = true; // Ativa o modelo Pro
     } else if (mode === 'refinamento') {
       basePrompt = promptRefinamento;
     } else {
