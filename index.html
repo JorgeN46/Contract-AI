@@ -1048,6 +1048,43 @@ function baixarWord(id) {
   var converted = htmlDocx.asBlob(htmlDoc);
   saveAs(converted, 'Contract_AI_Documento.docx');
   }
+async function fazerLogin(e) {
+  if(e) e.preventDefault();
+  
+  // Para testes rápidos, vamos usar um prompt simples. 
+  // Depois criamos uma tela bonita para isso.
+  var email = prompt("Digite seu e-mail para testar:");
+  if(!email) return;
+  
+  var senha = prompt("Digite uma senha (mínimo 6 caracteres):");
+  if(!senha) return;
+
+  // Tenta fazer login
+  let { data, error } = await supabase.auth.signInWithPassword({
+    email: email,
+    password: senha
+  });
+
+  if (error) {
+    // Se o login falhar, tenta CRIAR a conta
+    let { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: email,
+      password: senha
+    });
+
+    if (signUpError) {
+      alert("Erro ao criar conta: " + signUpError.message);
+      return;
+    }
+    
+    alert("Conta criada com sucesso! Redirecionando...");
+  } else {
+    alert("Login feito com sucesso! Redirecionando...");
+  }
+
+  // Redireciona para o dashboard
+  go('dashboard');
+}
 </script>
 </body>
 </html>
