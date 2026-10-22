@@ -1054,42 +1054,60 @@ function baixarWord(id) {
   var converted = htmlDocx.asBlob(htmlDoc);
   saveAs(converted, 'Contract_AI_Documento.docx');
   }
-async function fazerLogin(e) {
+async function submitLogin(e) {
   if(e) e.preventDefault();
   
-  // Para testes rápidos, vamos usar um prompt simples. 
-  // Depois criamos uma tela bonita para isso.
-  var email = prompt("Digite seu e-mail para testar:");
-  if(!email) return;
-  
-  var senha = prompt("Digite uma senha (mínimo 6 caracteres):");
-  if(!senha) return;
+  var email = document.getElementById('loginEmail').value;
+  var senha = document.getElementById('loginSenha').value;
+  var btn = document.getElementById('btnLogin');
+  var fb = document.getElementById('loginFeedback');
 
-  // Tenta fazer login
+  if(!email || !senha) {
+    fb.style.color = '#fca5a5'; // Vermelho claro
+    fb.textContent = 'Por favor, preencha e-mail e senha.';
+    return;
+  }
+
+  fb.style.color = '#7db4ff'; // Azul
+  fb.textContent = 'Verificando dados...';
+  btn.disabled = true;
+  btn.textContent = 'Aguarde...';
+
+  // 1. Tenta fazer login
   let { data, error } = await supabase.auth.signInWithPassword({
     email: email,
     password: senha
   });
 
   if (error) {
-    // Se o login falhar, tenta CRIAR a conta
+    // 2. Se o login falhar (conta não existe ou senha errada), tenta criar a conta
     let { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: email,
       password: senha
     });
 
     if (signUpError) {
-      alert("Erro ao criar conta: " + signUpError.message);
+      fb.style.color = '#fca5a5';
+      fb.textContent = 'Erro: ' + signUpError.message;
+      btn.disabled = false;
+      btn.textContent = 'Entrar / Criar Conta';
       return;
     }
     
-    alert("Conta criada com sucesso! Redirecionando...");
+    fb.style.color = '#4fd1c5'; // Verde
+    fb.textContent = 'Conta criada com sucesso! Entrando...';
   } else {
-    alert("Login feito com sucesso! Redirecionando...");
+    fb.style.color = '#4fd1c5';
+    fb.textContent = 'Login feito com sucesso! Entrando...';
   }
 
-  // Redireciona para o dashboard
-  go('dashboard');
+  // 3. Entra no sistema
+  setTimeout(function() {
+    btn.disabled = false;
+    btn.textContent = 'Entrar / Criar Conta';
+    fb.textContent = '';
+    go('dashboard');
+  }, 1500);
 }
 </script>
 </body>
