@@ -661,7 +661,122 @@ function novoChat(){
   removerAnexo(); 
   
   conversaAtual = []; 
-  idConversaAtual = null; // <--- LIMPA O ID AQUI (Avisa que é um chat novo)
+  idConversaAtual = null;
+}
+
+function salvarConversaAtual(){
+  if(conversaAtual.length === 0) return;
+
+  var historico = JSON.parse(localStorage.getItem('contractai_historico') || '[]');
+  var primeiraMsg = conversaAtual.find(m => m.role === 'user');
+  var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
+
+  if (idConversaAtual) {
+    var index = historico.findIndex(c => c.id === idConversaAtual);
+    if (index !== -1) {
+      historico[index].mensagens = conversaAtual;
+      historico[index].titulo = titulo;
+    }
+  } else {
+    var novaConversa = {
+      id: Date.now().toString(),
+      titulo: titulo,
+      data: new Date().toLocaleDateString('pt-BR'),
+      mensagens: conversaAtual
+    };
+    historico.unshift(novaConversa); 
+    idConversaAtual = novaConversa.id;
+  }
+
+  localStorage.setItem('contractai_historico', JSON.stringify(historico));
+  renderizarHistorico(); 
+}
+
+function renderizarHistorico(){
+  var container = document.getElementById('listaConversas');
+  if(!container) return;
+  
+  container.innerHTML = '';
+  var historico = JSON.parse(localStorage.getItem('contractai_historico') || '[]');
+
+  if(historico.length === 0){
+    container.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:14px; padding:10px;">Nenhuma conversa</div>';
+    return;
+  }
+
+  historico.forEach(function(conv) {
+    var item = document.createElement('div');
+    item.className = 'sidebar-item';
+    item.style.cssText = 'padding: 10px; color: #fff; font-size: 14px; cursor: pointer; border-radius: 8px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+    item.innerHTML = '💬 ' + conv.titulo;
+    
+    item.onclick = function() {
+      carregarConversa(conv.id);
+    };
+    
+    item.onmouseover = function() { item.style.background = 'rgba(255,255,255,.1)'; };
+    item.onmouseout = function() { item.style.background = 'transparent'; };
+
+    container.appendChild(item);
+  });
+}
+
+function carregarConversa(id){
+  salvarConversaAtual(); 
+  
+  var historico = JSON.parse(localStorage.getItem('contractai_historico') || '[]');
+  var conv = historico.find(c => c.id === id);
+  if(!conv) return;
+
+  var area = document.getElementById('chatMessages');
+  var welcome = document.getElementById('dashWelcome');
+  
+  if(welcome) welcome.style.display = 'none';
+  area.classList.add('active');
+  area.innerHTML = '';
+  
+  idConversaAtual = conv.id; 
+  conversaAtual = conv.mensagens; 
+
+  conv.mensagens.forEach(function(msg) {
+    if(msg.role === 'user'){
+      var div = document.createElement('div');
+      div.className = 'msg user';
+      div.textContent = msg.content;
+      area.appendChild(div);
+    } else {
+      var div = document.createElement('div');
+      div.className = 'msg ai';
+      div.innerHTML = marked.parse(msg.content);
+      
+      var actions = document.createElement('div');
+      actions.className = 'msg-actions';
+      var btnCopiar = document.createElement('button');
+      btnCopiar.className = 'msg-action-btn';
+      btnCopiar.innerHTML = '📋 Copiar';
+      btnCopiar.onclick = function(e){
+        e.stopPropagation();
+        var clone = div.cloneNode(true);
+        var btnClone = clone.querySelector('.msg-actions');
+        if(btnClone) btnClone.remove();
+        navigator.clipboard.writeText(clone.innerText.trim()).then(function(){
+          btnCopiar.innerHTML = '✓ Copiado';
+          setTimeout(function(){ btnCopiar.innerHTML = '📋 Copiar'; }, 2000);
+        });
+      };
+      actions.appendChild(btnCopiar);
+      div.appendChild(actions);
+      
+      area.appendChild(div);
+    }
+  });
+  
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  if(sidebar.classList.contains('open')) {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('open');
+  }
 }
 
 function salvarConversaAtual(){
