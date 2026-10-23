@@ -777,46 +777,7 @@ function carregarConversa(id){
       sidebar.classList.remove('open');
       overlay.classList.remove('open');
   }
-}
-
-function salvarConversaAtual(){
-  if(conversaAtual.length === 0) return;
-
-  var historico = JSON.parse(localStorage.getItem('contractai_historico') || '[]');
-  var primeiraMsg = conversaAtual.find(m => m.role === 'user');
-  var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
-
-  if (idConversaAtual) {
-    // Se já tem um ID, significa que estamos editando uma conversa que já existe
-    var index = historico.findIndex(c => c.id === idConversaAtual);
-    if (index !== -1) {
-      historico[index].mensagens = conversaAtual;
-      historico[index].titulo = titulo;
-    }
-  } else {
-    // Se não tem ID, é uma conversa nova do zero
-    var novaConversa = {
-      id: Date.now().toString(),
-      titulo: titulo,
-      data: new Date().toLocaleDateString('pt-BR'),
-      mensagens: conversaAtual
-    };
-    historico.unshift(novaConversa); 
-    idConversaAtual = novaConversa.id; // Guarda o ID para a próxima vez
-  }
-
-  localStorage.setItem('contractai_historico', JSON.stringify(historico));
-  renderizarHistorico(); 
-}
-
-  // Fecha a sidebar no celular
-  var sidebar = document.getElementById('sidebar');
-  var overlay = document.getElementById('sidebarOverlay');
-  if(sidebar.classList.contains('open')) {
-      sidebar.classList.remove('open');
-      overlay.classList.remove('open');
-  }
-}
+} 
 function toggleSidebar(){
 document.getElementById('sidebar').classList.toggle('open');
 document.getElementById('sidebarOverlay').classList.toggle('open');
