@@ -1031,6 +1031,13 @@ systemPrompt: promptPersonalizado,
 mode: modoAtual
 })
 });
+
+// 👇 NOVO: Verifica se a resposta é realmente um JSON válido
+var contentType = resposta.headers.get('content-type');
+if (!contentType || !contentType.includes('application/json')) {
+    throw new Error("O servidor demorou muito para responder ou ocorreu um erro interno. Tente novamente.");
+}
+
 var dados = await resposta.json();
 var area = document.getElementById('chatMessages');
 var ultima = area.lastElementChild;
@@ -1044,7 +1051,7 @@ adicionarMensagemIA('❌ Erro da API: <code style="font-size:12px">' + JSON.stri
 var area = document.getElementById('chatMessages');
 var ultima = area.lastElementChild;
 if(ultima && ultima.textContent.includes('Pensando')) ultima.remove();
-adicionarMensagemIA('❌ Erro de conexão: ' + err.message);
+adicionarMensagemIA('❌ ' + err.message);
 }
 }
 function escolherObjetivo(objetivo){
