@@ -642,7 +642,8 @@ document.querySelector('.personalizacao-btn').classList.remove('open');
 document.getElementById('personalizacaoMenu').classList.remove('open');
 }
 function novoChat(){
-  salvarConversaAtual(); // Salva a conversa no histórico antes de limpar
+function novoChat(){
+  salvarConversaAtual(); 
   
   var area = document.getElementById('chatMessages');
   var welcome = document.getElementById('dashWelcome');
@@ -659,8 +660,9 @@ function novoChat(){
   textoArquivoExtraido = "";
   arquivoAnexado = null;
   removerAnexo(); 
-  conversaAtual = []; // Limpa o array para o novo chat
-  idConversaAtual = null; // Reseta o ID para criar um novo chat sem duplicar
+  
+  conversaAtual = []; 
+  idConversaAtual = null; // <--- LIMPA O ID AQUI (Avisa que é um chat novo)
 }
 
 function salvarConversaAtual(){
