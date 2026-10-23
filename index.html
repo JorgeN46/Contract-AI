@@ -666,25 +666,34 @@ function novoChat(){
 }
 
 function salvarConversaAtual(){
-  if(conversaAtual.length === 0) return; // Se não tem mensagem, não salva
+function salvarConversaAtual(){
+  if(conversaAtual.length === 0) return;
 
   var historico = JSON.parse(localStorage.getItem('contractai_historico') || '[]');
-  
-  // Pega o título baseado na primeira mensagem do usuário
   var primeiraMsg = conversaAtual.find(m => m.role === 'user');
   var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
 
-  var novaConversa = {
-    id: Date.now().toString(),
-    titulo: titulo,
-    data: new Date().toLocaleDateString('pt-BR'),
-    mensagens: conversaAtual
-  };
+  if (idConversaAtual) {
+    // Se já tem um ID, significa que estamos editando uma conversa que já existe
+    var index = historico.findIndex(c => c.id === idConversaAtual);
+    if (index !== -1) {
+      historico[index].mensagens = conversaAtual;
+      historico[index].titulo = titulo;
+    }
+  } else {
+    // Se não tem ID, é uma conversa nova do zero
+    var novaConversa = {
+      id: Date.now().toString(),
+      titulo: titulo,
+      data: new Date().toLocaleDateString('pt-BR'),
+      mensagens: conversaAtual
+    };
+    historico.unshift(novaConversa); 
+    idConversaAtual = novaConversa.id; // Guarda o ID para a próxima vez
+  }
 
-  historico.unshift(novaConversa); // Coloca no topo da lista
   localStorage.setItem('contractai_historico', JSON.stringify(historico));
-  
-  renderizarHistorico(); // Atualiza a tela
+  renderizarHistorico(); 
 }
 
 function renderizarHistorico(){
