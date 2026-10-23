@@ -727,7 +727,7 @@ function renderizarHistorico(){
 }
 
 function carregarConversa(id){
-  salvarConversaAtual(); // Salva a atual antes de abrir a antiga
+  salvarConversaAtual(); 
   
   var historico = JSON.parse(localStorage.getItem('contractai_historico') || '[]');
   var conv = historico.find(c => c.id === id);
@@ -740,9 +740,9 @@ function carregarConversa(id){
   area.classList.add('active');
   area.innerHTML = '';
   
-  conversaAtual = conv.mensagens; // Restaura a memória atual
+  idConversaAtual = conv.id; // <--- SALVA O ID DA CONVERSA ABERTA
+  conversaAtual = conv.mensagens; 
 
-  // Reconstroi as mensagens na tela
   conv.mensagens.forEach(function(msg) {
     if(msg.role === 'user'){
       var div = document.createElement('div');
@@ -754,7 +754,6 @@ function carregarConversa(id){
       div.className = 'msg ai';
       div.innerHTML = marked.parse(msg.content);
       
-      // Adiciona os botões novamente
       var actions = document.createElement('div');
       actions.className = 'msg-actions';
       var btnCopiar = document.createElement('button');
@@ -776,6 +775,14 @@ function carregarConversa(id){
       area.appendChild(div);
     }
   });
+  
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  if(sidebar.classList.contains('open')) {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('open');
+  }
+}
   
   // Fecha a sidebar no celular
   var sidebar = document.getElementById('sidebar');
