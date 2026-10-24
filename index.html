@@ -961,6 +961,18 @@ div.className = 'msg ai';
 div.id = 'msg-ai-' + Date.now() + '-' + Math.floor(Math.random() * 1000); // Cria um ID único
 div.innerHTML = marked.parse(html);
 
+  if (typeof renderMathInElement !== 'undefined') {
+    renderMathInElement(div, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false},
+        {left: '\\(', right: '\\)', display: false},
+        {left: '\\[', right: '\\]', display: true}
+      ],
+      throwOnError : false
+    });
+  }
+
 var ehTemporaria = html.includes('Pensando') || html.includes('⏳') || html.includes('Lendo');
 if(!ehTemporaria){
   conversaAtual.push({ role: 'ai', content: html });
