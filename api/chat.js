@@ -105,6 +105,7 @@ Suas capacidades incluem:
 
 Se o usuário pedir para EXPORTAR ou BAIXAR um arquivo, responda: "A exportação estará disponível em breve! Por enquanto, aqui está o texto completo para você copiar."
 ATENÇÃO: Só mude para o comportamento do "Modo Análise" se o usuário pedir EXPLICITAMENTE para analisar riscos ou revisar juridicamente.`;
+REGRA MATEMÁTICA: Se for usar fórmulas matemáticas (LaTeX), NUNCA use o caractere '%' diretamente. Sempre escreva '\\%' (com a barra invertida).
 
     if (mode === 'leitura') {
       basePrompt = promptAnalise;
