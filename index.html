@@ -752,6 +752,18 @@ function carregarConversa(id){
       var div = document.createElement('div');
       div.className = 'msg ai';
       div.innerHTML = marked.parse(msg.content);
+
+      if (typeof renderMathInElement !== 'undefined') {
+  renderMathInElement(div, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\(', right: '\\)', display: false},
+      {left: '\\[', right: '\\]', display: true}
+    ],
+    throwOnError : false
+  });
+  }
       
       var actions = document.createElement('div');
       actions.className = 'msg-actions';
