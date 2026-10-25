@@ -1270,17 +1270,18 @@ async function submitLogin(e) {
 
   // 3. Entra no sistema
   setTimeout(function() {
-    btn.disabled = false;
-    btn.textContent = 'Entrar / Criar Conta';
-    fb.textContent = '';
-    supabase.auth.getUser().then(function(res) {
-    if(res.data.user) {
-        localStorage.setItem('contractai_user_id', res.data.user.id);
-        renderizarHistorico(); 
-    }
-});
-    go('dashboard');
-  }, 1500);
+  btn.disabled = false;
+  btn.textContent = 'Entrar / Criar Conta';
+  fb.textContent = '';
+  
+  supabase.auth.getUser().then(function(res) {
+      if(res.data.user) {
+          localStorage.setItem('contractai_user_id', res.data.user.id);
+          renderizarHistorico(); 
+      }
+      go('dashboard'); // <--- O redirecionamento agora acontece DEPOIS de pegar o ID
+  });
+}, 1500);
 }
 </script>
 </body>
