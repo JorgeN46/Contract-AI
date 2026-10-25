@@ -649,65 +649,61 @@ localStorage.setItem('contractai_mode', el.getAttribute('data-mode') || 'padrao'
 document.querySelector('.personalizacao-btn').classList.remove('open');
 document.getElementById('personalizacaoMenu').classList.remove('open');
 }
+var idConversaAtual = null;
+
 function novoChat(){
-  salvarConversaAtual(); 
-  
   var area = document.getElementById('chatMessages');
   var welcome = document.getElementById('dashWelcome');
-  if(area){
-    area.classList.remove('active');
-    area.innerHTML = '';
-  }
-  if(welcome){
-    welcome.style.display = '';
-  }
+  if(area){ area.classList.remove('active'); area.innerHTML = ''; }
+  if(welcome){ welcome.style.display = ''; }
   var inp = document.querySelector('.chat-input');
   if(inp) inp.value = '';
 
   textoArquivoExtraido = "";
   arquivoAnexado = null;
   removerAnexo(); 
-  
   conversaAtual = []; 
-  idConversaAtual = null;
+  idConversaAtual = null; 
 }
 
-function salvarConversaAtual(){
+async function salvarConversaAtual(){
   if(conversaAtual.length === 0) return;
+  
+  var userId = localStorage.getItem('contractai_user_id');
+  if(!userId) return; 
 
-  var historico = JSON.parse(localStorage.getItem('contractai_historico') || '[]');
   var primeiraMsg = conversaAtual.find(m => m.role === 'user');
   var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
 
-  if (idConversaAtual) {
-    var index = historico.findIndex(c => c.id === idConversaAtual);
-    if (index !== -1) {
-      historico[index].mensagens = conversaAtual;
-      historico[index].titulo = titulo;
-    }
-  } else {
-    var novaConversa = {
-      id: Date.now().toString(),
-      titulo: titulo,
-      data: new Date().toLocaleDateString('pt-BR'),
-      mensagens: conversaAtual
-    };
-    historico.unshift(novaConversa); 
-    idConversaAtual = novaConversa.id;
+  if (!idConversaAtual) {
+    let { data, error } = await supabase.from('conversations').insert([{ user_id: userId, title: titulo }]).select();
+    if (error) { console.error(error); return; }
+    idConversaAtual = data[0].id; 
   }
 
-  localStorage.setItem('contractai_historico', JSON.stringify(historico));
-  renderizarHistorico(); 
+  for (let msg of conversaAtual) {
+      let { data: exist } = await supabase.from('messages').select('id').eq('conversation_id', idConversaAtual).eq('content', msg.content);
+      if(!exist || exist.length === 0) {
+          await supabase.from('messages').insert([{ conversation_id: idConversaAtual, role: msg.role, content: msg.content }]);
+      }
+  }
+  renderizarHistorico();
 }
-
-function renderizarHistorico(){
+async function renderizarHistorico(){
   var container = document.getElementById('listaConversas');
   if(!container) return;
+  container.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:14px; padding:10px;">Carregando...</div>';
+  
+  var userId = localStorage.getItem('contractai_user_id');
+  if(!userId) {
+      container.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:14px; padding:10px;">Faça login para ver seu histórico</div>';
+      return;
+  }
+
+  let { data: historico, error } = await supabase.from('conversations').select('*').order('created_at', { ascending: false });
   
   container.innerHTML = '';
-  var historico = JSON.parse(localStorage.getItem('contractai_historico') || '[]');
-
-  if(historico.length === 0){
+  if (error || !historico || historico.length === 0) {
     container.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:14px; padding:10px;">Nenhuma conversa</div>';
     return;
   }
@@ -716,37 +712,33 @@ function renderizarHistorico(){
     var item = document.createElement('div');
     item.className = 'sidebar-item';
     item.style.cssText = 'padding: 10px; color: #fff; font-size: 14px; cursor: pointer; border-radius: 8px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
-    item.innerHTML = '💬 ' + conv.titulo;
-    
-    item.onclick = function() {
-      carregarConversa(conv.id);
-    };
-    
+    item.innerHTML = '💬 ' + (conv.title || 'Conversa');
+    item.onclick = function() { carregarConversa(conv.id); };
     item.onmouseover = function() { item.style.background = 'rgba(255,255,255,.1)'; };
     item.onmouseout = function() { item.style.background = 'transparent'; };
-
     container.appendChild(item);
   });
 }
 
-function carregarConversa(id){
-  salvarConversaAtual(); 
-  
-  var historico = JSON.parse(localStorage.getItem('contractai_historico') || '[]');
-  var conv = historico.find(c => c.id === id);
-  if(!conv) return;
-
+async function carregarConversa(id){
   var area = document.getElementById('chatMessages');
   var welcome = document.getElementById('dashWelcome');
   
   if(welcome) welcome.style.display = 'none';
   area.classList.add('active');
-  area.innerHTML = '';
+  area.innerHTML = '<div style="color:rgba(255,255,255,.5); text-align:center;">Carregando conversa...</div>';
   
-  idConversaAtual = conv.id; 
-  conversaAtual = conv.mensagens; 
+  idConversaAtual = id;
 
-  conv.mensagens.forEach(function(msg) {
+  let { data: msgs, error } = await supabase.from('messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true });
+  
+  area.innerHTML = '';
+  if (error || !msgs) return;
+
+  conversaAtual = []; 
+  
+  msgs.forEach(function(msg) {
+    conversaAtual.push({ role: msg.role, content: msg.content });
     if(msg.role === 'user'){
       var div = document.createElement('div');
       div.className = 'msg user';
@@ -756,19 +748,19 @@ function carregarConversa(id){
       var div = document.createElement('div');
       div.className = 'msg ai';
       div.innerHTML = marked.parse(msg.content);
-
-      if (typeof renderMathInElement !== 'undefined') {
-  renderMathInElement(div, {
-    delimiters: [
-      {left: '$$', right: '$$', display: true},
-      {left: '$', right: '$', display: false},
-      {left: '\\(', right: '\\)', display: false},
-      {left: '\\[', right: '\\]', display: true}
-    ],
-    throwOnError : false
-  });
-  }
       
+      if (typeof renderMathInElement !== 'undefined') {
+        renderMathInElement(div, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\(', right: '\\)', display: false},
+            {left: '\\[', right: '\\]', display: true}
+          ],
+          throwOnError : false
+        });
+      }
+
       var actions = document.createElement('div');
       actions.className = 'msg-actions';
       var btnCopiar = document.createElement('button');
@@ -786,7 +778,6 @@ function carregarConversa(id){
       };
       actions.appendChild(btnCopiar);
       div.appendChild(actions);
-      
       area.appendChild(div);
     }
   });
@@ -797,7 +788,7 @@ function carregarConversa(id){
       sidebar.classList.remove('open');
       overlay.classList.remove('open');
   }
-} 
+}
 function toggleSidebar(){
 document.getElementById('sidebar').classList.toggle('open');
 document.getElementById('sidebarOverlay').classList.toggle('open');
