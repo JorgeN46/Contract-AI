@@ -612,10 +612,10 @@ window.addEventListener('DOMContentLoaded', function(){
     if (res.data.session && res.data.session.user) {
         localStorage.setItem('contractai_user_id', res.data.session.user.id);
         atualizarDadosUsuario(res.data.session.user.email); 
-        atualizarDadosUsuario(null);
         renderizarHistorico();
     } else {
         localStorage.removeItem('contractai_user_id');
+        atualizarDadosUsuario(null);
         renderizarHistorico();
     }
 });
