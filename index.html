@@ -1270,6 +1270,12 @@ async function submitLogin(e) {
     btn.disabled = false;
     btn.textContent = 'Entrar / Criar Conta';
     fb.textContent = '';
+    supabase.auth.getUser().then(function(res) {
+    if(res.data.user) {
+        localStorage.setItem('contractai_user_id', res.data.user.id);
+        renderizarHistorico(); 
+    }
+});
     go('dashboard');
   }, 1500);
 }
