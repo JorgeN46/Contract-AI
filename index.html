@@ -1285,6 +1285,41 @@ async function submitLogin(e) {
   });
 }, 1500);
 }
+function atualizarDadosUsuario(email) {
+  if(!email) return;
+  
+  // Pega a primeira letra do e-mail para o avatar
+  var inicial = email.charAt(0).toUpperCase();
+  
+  // Atualiza o e-mail na tela de configurações
+  var elPerfil = document.getElementById('perfilEmail');
+  var elConta = document.getElementById('contaEmail');
+  if(elPerfil) elPerfil.textContent = email;
+  if(elConta) elConta.textContent = email;
+  
+  // Atualiza as iniciais nos avatares (se existirem)
+  document.querySelectorAll('.avatar-fab, .avatar-sidebar, .avatar').forEach(function(avatar) {
+      avatar.textContent = inicial;
+  });
+}
+
+async function fazerLogout() {
+  // Desloga do Supabase
+  await supabase.auth.signOut();
+  
+  // Limpa a memória do navegador
+  localStorage.removeItem('contractai_user_id');
+  localStorage.removeItem('contractai_historico');
+  
+  // Limpa o chat e o histórico da tela
+  var area = document.getElementById('chatMessages');
+  var lista = document.getElementById('listaConversas');
+  if(area) { area.innerHTML = ''; area.classList.remove('active'); }
+  if(lista) lista.innerHTML = '';
+  
+  // Volta para a tela inicial
+  go('landing');
+}
 </script>
 </body>
 </html>
