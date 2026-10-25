@@ -608,7 +608,14 @@ window.addEventListener('DOMContentLoaded', function(){
           item.classList.remove('active');
       }
   });
-  renderizarHistorico();
+  supabase.auth.getSession().then(function(res) {
+    if (res.data.session && res.data.session.user) {
+        localStorage.setItem('contractai_user_id', res.data.session.user.id);
+        renderizarHistorico();
+    } else {
+        localStorage.removeItem('contractai_user_id');
+        renderizarHistorico();
+    }
 });
 function abrirTermos(e){
 if(e) e.preventDefault();
