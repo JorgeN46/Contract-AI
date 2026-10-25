@@ -1067,6 +1067,7 @@ var ultima = area.lastElementChild;
 if(ultima && ultima.textContent.includes('Pensando')) ultima.remove();
 if(dados.reply){
 adicionarMensagemIA(dados.reply);
+salvarConversaAtual(); 
 } else {
 adicionarMensagemIA('❌ Erro da API: <code style="font-size:12px">' + JSON.stringify(dados) + '</code>');
 }
