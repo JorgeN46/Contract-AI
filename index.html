@@ -1093,7 +1093,7 @@ async function chamarIA(mensagemUsuario){
       
       // Atualiza o texto na tela (com Markdown e um cursor piscando)
       divTemp.innerHTML = marked.parse(textoAcumulado) + '<span style="color:#7db4ff;">▍</span>';
-      divTemp.scrollIntoView({behavior:'smooth', block:'end'});
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 
     // Quando terminar, aplica a formatação final (remove o cursor)
