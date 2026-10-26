@@ -1232,12 +1232,12 @@ async function submitLogin(e) {
   var fb = document.getElementById('loginFeedback');
 
   if(!email || !senha) {
-    fb.style.color = '#fca5a5'; // Vermelho claro
+    fb.style.color = '#fca5a5';
     fb.textContent = 'Por favor, preencha e-mail e senha.';
     return;
   }
 
-  fb.style.color = '#7db4ff'; // Azul
+  fb.style.color = '#7db4ff';
   fb.textContent = 'Verificando dados...';
   btn.disabled = true;
   btn.textContent = 'Aguarde...';
@@ -1249,7 +1249,16 @@ async function submitLogin(e) {
   });
 
   if (error) {
-    // 2. Se o login falhar (conta não existe ou senha errada), tenta criar a conta
+    // Se a conta existe, mas o e-mail não foi confirmado
+    if (error.message.includes('Email not confirmed') || error.message.includes('not confirmed')) {
+      fb.style.color = '#fca5a5';
+      fb.textContent = 'Por favor, verifique seu e-mail para confirmar a conta antes de entrar.';
+      btn.disabled = false;
+      btn.textContent = 'Entrar / Criar Conta';
+      return; // Para o código aqui e não tenta criar de novo
+    }
+
+    // Se o erro for porque a conta não existe, aí sim tenta criar
     let { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: email,
       password: senha
@@ -1263,28 +1272,32 @@ async function submitLogin(e) {
       return;
     }
     
-    fb.style.color = '#4fd1c5'; // Verde
-    fb.textContent = 'Conta criada com sucesso! Entrando...';
+    // Se o cadastro deu certo, pede para confirmar o e-mail
+    fb.style.color = '#4fd1c5';
+    fb.textContent = 'Conta criada! Verifique seu e-mail para ativar o acesso.';
+    btn.disabled = false;
+    btn.textContent = 'Entrar / Criar Conta';
+    
   } else {
+    // Login feito com sucesso direto (e-mail já confirmado)
     fb.style.color = '#4fd1c5';
     fb.textContent = 'Login feito com sucesso! Entrando...';
+    
+    setTimeout(function() {
+      btn.disabled = false;
+      btn.textContent = 'Entrar / Criar Conta';
+      fb.textContent = '';
+      
+      supabase.auth.getUser().then(function(res) {
+          if(res.data.user) {
+              localStorage.setItem('contractai_user_id', res.data.user.id);
+              atualizarDadosUsuario(res.data.user.email); 
+              renderizarHistorico(); 
+          }
+          go('dashboard');
+      });
+    }, 1500);
   }
-
-  // 3. Entra no sistema
-  setTimeout(function() {
-  btn.disabled = false;
-  btn.textContent = 'Entrar / Criar Conta';
-  fb.textContent = '';
-  
-  supabase.auth.getUser().then(function(res) {
-      if(res.data.user) {
-          localStorage.setItem('contractai_user_id', res.data.user.id);
-          atualizarDadosUsuario(res.data.user.email); // <--- ADICIONE AQUI
-          renderizarHistorico(); 
-      }
-      go('dashboard');
-  });
-}, 1500);
 }
 function atualizarDadosUsuario(email) {
   var elPerfil = document.getElementById('perfilEmail');
