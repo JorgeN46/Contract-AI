@@ -667,7 +667,8 @@ function novoChat(){
   if(area){ area.classList.remove('active'); area.innerHTML = ''; }
   if(welcome){ welcome.style.display = ''; }
   var inp = document.querySelector('.chat-input');
-  if(inp) inp.value = '';
+  limparInput(); 
+textoArquivoExtraido = "";
 
   textoArquivoExtraido = "";
   arquivoAnexado = null;
