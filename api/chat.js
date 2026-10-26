@@ -1,3 +1,80 @@
+async function chamarGeminiStream(apiKey, message, systemInstruction, usePro, res) {
+  const modeloPrincipal = usePro ? 'gemini-3.8-pro' : 'gemini-3.8-flash';
+  const modelos = usePro 
+    ? [modeloPrincipal, 'gemini-3.8-flash'] 
+    : [modeloPrincipal, 'gemini-3.5-flash-lite']; 
+
+  let ultimoErro = null;
+
+  for (const modelo of modelos) {
+    for (let tentativa = 1; tentativa <= 2; tentativa++) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:streamGenerateContent?alt=sse&key=${apiKey}`;
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            contents: [{ role: 'user', parts: [{ text: message }] }],
+            generationConfig: { temperature: 0.5 }
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(JSON.stringify(errData));
+        }
+
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Transfer-Encoding', 'chunked');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.replace('data: ', '').trim();
+              if (dataStr === '[DONE]') continue;
+              try {
+                const data = JSON.parse(dataStr);
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (text) {
+                  res.write(text);
+                }
+              } catch (e) {}
+            }
+          }
+        }
+        res.end();
+        return; // Sucesso, sai da função
+
+      } catch (err) {
+        ultimoErro = err;
+        const msg = err.message || '';
+        if (msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand') || msg.includes('429')) {
+          await new Promise(r => setTimeout(r, Math.pow(2, tentativa - 1) * 1000));
+          continue;
+        }
+        break;
+      }
+    }
+  }
+  
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Todos os modelos falharam', details: ultimoErro.message });
+  } else {
+    res.end();
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -11,7 +88,6 @@ module.exports = async function handler(req, res) {
     let basePrompt = "";
     let usarModeloPro = false; 
 
-    // PROMPT MESTRE DE ANÁLISE (Contratos, Laudos, Contabilidade, Educação)
     const promptAnalise = `Você é o Contract AI, no MODO ANÁLISE. Seu objetivo é organizar, explicar, alertar e encaminhar. Você lê qualquer tipo de documento profissional (Contratos, Laudos Técnicos/Médicos, Relatórios Contábeis, Materiais Didáticos) e extrai o valor operacional dele.
 
 Sempre que receber um documento, siga ESTRITAMENTE esta estrutura:
@@ -22,7 +98,6 @@ Sempre que receber um documento, siga ESTRITAMENTE esta estrutura:
 5. **Próximos Passos (Ação Direta)**: Dê direções práticas. Se for um professor pedindo ajuda com material didático, sugira melhorias na estrutura da aula. Se for contrato, sugira redações. Se for contábil, sugira ajustes.
 6. **Aviso Legal**: Termine SEMPRE com: "Lembrete: Este relatório é operacional e não substitui a análise de um profissional habilitado (advogado, contador, médico, etc)."`;
 
-    // MODO REFINAMENTO (Editor de textos gerais)
     const promptRefinamento = `Você é o Contract AI, no MODO REFINAMENTO. Sua especialidade é ser um Editor e Redator Profissional Sênior.
 Seu objetivo é melhorar, criar ou editar textos, e-mails, artigos, trabalhos escolares e documentos em geral.
 REGRAS DE OPERAÇÃO:
@@ -34,7 +109,6 @@ REGRAS DE OPERAÇÃO:
    - **O que foi melhorado:** [Explique em 2 tópicos]
 5. NUNCA dê conselhos jurídicos ou contábeis definitivos neste modo. Foque 100% na qualidade da escrita.`;
 
-    // MODO PADRÃO (Assistente geral - Usa o Flash)
     const promptPadrao = `Você é o Contract AI, no MODO PADRÃO.
 Aja como um assistente conversacional inteligente, descontraído e muito prestativo. 
 Fale como um colega de trabalho moderno e confiável: seja direto, use um tom amigável (mas sem exagerar nos emojis) e demonstre empatia.
@@ -49,7 +123,7 @@ ATENÇÃO: Só mude para o comportamento do "Modo Análise" se o usuário pedir 
 
     if (mode === 'leitura') {
       basePrompt = promptAnalise;
-      usarModeloPro = true; // Ativa o modelo Pro
+      usarModeloPro = true;
     } else if (mode === 'refinamento') {
       basePrompt = promptRefinamento;
     } else {
@@ -62,58 +136,12 @@ ATENÇÃO: Só mude para o comportamento do "Modo Análise" se o usuário pedir 
     if (fileText && fileText.trim().length > 0) {
         promptFinal = "Texto/Documento fornecido:\n\n" + fileText.substring(0, 30000) + "\n\nInstrução do usuário: " + (message || "Refine ou edite este texto.");
     }
-        // SELECIONA O MODELO E PREPARA A URL DE STREAMING
-    const modelo = usarModeloPro ? 'gemini-3.8-pro' : 'gemini-3.8-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:streamGenerateContent?alt=sse&key=${apiKey}`;
-    
-    // FAZ A CHAMADA PARA O GOOGLE
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: finalInstruction }] },
-        contents: [{ role: 'user', parts: [{ text: promptFinal }] }],
-        generationConfig: { temperature: 0.5 }
-      })
-    });
 
-    if (!response.ok) {
-      throw new Error("Erro na API do Google. Verifique a chave ou o modelo.");
-    }
-
-    // CONFIGURA A RESPOSTA DA VERCEL PARA ENVIAR EM PEDAÇOS
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Transfer-Encoding', 'chunked');
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
-    // LOOP QUE LÊ OS PEDAÇOS E MANDA PRO SITE
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
-      
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const dataStr = line.replace('data: ', '').trim();
-          if (dataStr === '[DONE]') continue;
-          try {
-            const data = JSON.parse(dataStr);
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) {
-              res.write(text); // Envia o pedacinho de texto para o frontend
-            }
-          } catch (e) {}
-        }
-      }
-    }
-    res.end();
+    // AQUI É ONDE A MÁGICA ACONTECE (A parte que faltava!)
+    await chamarGeminiStream(apiKey, promptFinal, finalInstruction, usarModeloPro, res);
 
   } catch (error) {
-    console.error('Erro:', error.message);
+    console.error('Erro geral:', error.message);
     if (!res.headersSent) {
       res.status(500).json({ error: 'Erro no servidor', details: error.message });
     } else {
