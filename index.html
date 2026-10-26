@@ -1051,65 +1051,101 @@ function adicionarMensagemUsuario(texto){
   
   conversaAtual.push({ role: 'user', content: texto }); // <--- ADICIONE AQUI
 }
-    // SELECIONA O MODELO E PREPARA A URL DE STREAMING
-    const modelo = usarModeloPro ? 'gemini-3.8-pro' : 'gemini-3.8-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:streamGenerateContent?alt=sse&key=${apiKey}`;
+async function chamarIA(mensagemUsuario){
+  // Cria o balão vazio da IA antes de começar a receber os dados
+  var area = document.getElementById('chatMessages');
+  var divTemp = document.createElement('div');
+  divTemp.className = 'msg ai';
+  divTemp.id = 'msg-streaming';
+  divTemp.innerHTML = '<span style="color:#7db4ff; font-style:italic;">Digitando<span class="dots">...</span></span>';
+  area.appendChild(divTemp);
+  divTemp.scrollIntoView({behavior:'smooth', block:'end'});
+
+  try {
+    var promptPersonalizado = localStorage.getItem('contractai_prompt') || '';
+    var modoAtual = localStorage.getItem('contractai_mode') || 'padrao';
     
-    // FAZ A CHAMADA PARA O GOOGLE
-    const response = await fetch(url, {
+    var resposta = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: finalInstruction }] },
-        contents: [{ role: 'user', parts: [{ text: promptFinal }] }],
-        generationConfig: { temperature: 0.5 }
+        message: mensagemUsuario,
+        fileText: textoArquivoExtraido,
+        systemPrompt: promptPersonalizado,
+        mode: modoAtual
       })
     });
 
-    if (!response.ok) {
-      throw new Error("Erro na API do Google. Verifique a chave ou o modelo.");
-    }
+    // Remove o aviso de "Digitando..."
+    divTemp.innerHTML = '';
+    var textoAcumulado = "";
 
-    // CONFIGURA A RESPOSTA DA VERCEL PARA ENVIAR EM PEDAÇOS
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Transfer-Encoding', 'chunked');
-
-    const reader = response.body.getReader();
+    // LÊ O FLUXO DE DADOS EM TEMPO REAL
+    const reader = resposta.body.getReader();
     const decoder = new TextDecoder();
 
-    // LOOP QUE LÊ OS PEDAÇOS E MANDA PRO SITE
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       
       const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
+      textoAcumulado += chunk;
       
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const dataStr = line.replace('data: ', '').trim();
-          if (dataStr === '[DONE]') continue;
-          try {
-            const data = JSON.parse(dataStr);
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) {
-              res.write(text); // Envia o pedacinho de texto para o frontend
-            }
-          } catch (e) {}
-        }
-      }
+      // Atualiza o texto na tela (com Markdown e um cursor piscando)
+      divTemp.innerHTML = marked.parse(textoAcumulado) + '<span style="color:#7db4ff;">▍</span>';
+      divTemp.scrollIntoView({behavior:'smooth', block:'end'});
     }
-    res.end();
 
-  } catch (error) {
-    console.error('Erro:', error.message);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Erro no servidor', details: error.message });
-    } else {
-      res.end();
+    // Quando terminar, aplica a formatação final (remove o cursor)
+    divTemp.id = 'msg-ai-' + Date.now(); // Dá um ID final para o PDF/Word
+    divTemp.innerHTML = marked.parse(textoAcumulado);
+    
+    // Renderiza o KaTeX (matemática) no final
+    if (typeof renderMathInElement !== 'undefined') {
+      renderMathInElement(divTemp, {
+        delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}],
+        throwOnError : false
+      });
     }
+
+    // Chama a função original para adicionar os botões de Copiar/PDF/Word e salvar no histórico
+    // Mas como a mensagem já está na tela, nós só adicionamos os botões nela
+    conversaAtual.push({ role: 'ai', content: textoAcumulado });
+    
+    var actions = document.createElement('div');
+    actions.className = 'msg-actions';
+    var btnCopiar = document.createElement('button');
+    btnCopiar.className = 'msg-action-btn';
+    btnCopiar.innerHTML = '📋 Copiar';
+    btnCopiar.onclick = function(e){
+      e.stopPropagation();
+      navigator.clipboard.writeText(textoAcumulado).then(function(){
+        btnCopiar.innerHTML = '✓ Copiado';
+        setTimeout(function(){ btnCopiar.innerHTML = '📋 Copiar'; }, 2000);
+      });
+    };
+    
+    var btnPDF = document.createElement('button');
+    btnPDF.className = 'msg-action-btn';
+    btnPDF.innerHTML = '📄 Baixar PDF';
+    btnPDF.onclick = function(e){ e.stopPropagation(); baixarPDF(divTemp.id); };
+
+    var btnWord = document.createElement('button');
+    btnWord.className = 'msg-action-btn';
+    btnWord.innerHTML = '📝 Baixar Word';
+    btnWord.onclick = function(e){ e.stopPropagation(); baixarWord(divTemp.id); };
+
+    actions.appendChild(btnCopiar);
+    actions.appendChild(btnPDF);
+    actions.appendChild(btnWord);
+    divTemp.appendChild(actions);
+    
+    salvarConversaAtual(); // Salva no Supabase
+
+  } catch(err) {
+    divTemp.innerHTML = '❌ Erro de conexão: ' + err.message;
   }
-};
+}
 function escolherObjetivo(objetivo){
 adicionarMensagemUsuario(objetivo);
 var prompt = '';
