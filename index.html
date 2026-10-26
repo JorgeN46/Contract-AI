@@ -1059,7 +1059,7 @@ async function chamarIA(mensagemUsuario){
   divTemp.id = 'msg-streaming';
   divTemp.innerHTML = '<span style="color:#7db4ff; font-style:italic;">Digitando<span class="dots">...</span></span>';
   area.appendChild(divTemp);
-  divTemp.scrollIntoView({behavior:'smooth', block:'end'});
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
   try {
     var promptPersonalizado = localStorage.getItem('contractai_prompt') || '';
