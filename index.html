@@ -1211,7 +1211,7 @@ function enviarMensagem(){
    if(welcome) welcome.style.display = 'none';
    chamarIA(texto);
   }
-  inp.value = '';
+  limparInput(); //  ''
   salvarConversaAtual();
 }
 document.addEventListener('click', function(e){
