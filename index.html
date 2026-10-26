@@ -1051,45 +1051,65 @@ function adicionarMensagemUsuario(texto){
   
   conversaAtual.push({ role: 'user', content: texto }); // <--- ADICIONE AQUI
 }
-async function chamarIA(mensagemUsuario){
-adicionarMensagemIA('⏳ Pensando...');
-try {
-var promptPersonalizado = localStorage.getItem('contractai_prompt') || '';
-var modoAtual = localStorage.getItem('contractai_mode') || 'padrao';
-var resposta = await fetch('/api/chat', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-message: mensagemUsuario,
-fileText: textoArquivoExtraido,
-systemPrompt: promptPersonalizado,
-mode: modoAtual
-})
-});
+    // SELECIONA O MODELO E PREPARA A URL DE STREAMING
+    const modelo = usarModeloPro ? 'gemini-3.8-pro' : 'gemini-3.8-flash';
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:streamGenerateContent?alt=sse&key=${apiKey}`;
+    
+    // FAZ A CHAMADA PARA O GOOGLE
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: finalInstruction }] },
+        contents: [{ role: 'user', parts: [{ text: promptFinal }] }],
+        generationConfig: { temperature: 0.5 }
+      })
+    });
 
-// 👇 NOVO: Verifica se a resposta é realmente um JSON válido
-var contentType = resposta.headers.get('content-type');
-if (!contentType || !contentType.includes('application/json')) {
-    throw new Error("O servidor demorou muito para responder ou ocorreu um erro interno. Tente novamente.");
-}
+    if (!response.ok) {
+      throw new Error("Erro na API do Google. Verifique a chave ou o modelo.");
+    }
 
-var dados = await resposta.json();
-var area = document.getElementById('chatMessages');
-var ultima = area.lastElementChild;
-if(ultima && ultima.textContent.includes('Pensando')) ultima.remove();
-if(dados.reply){
-adicionarMensagemIA(dados.reply);
-salvarConversaAtual(); 
-} else {
-adicionarMensagemIA('❌ Erro da API: <code style="font-size:12px">' + JSON.stringify(dados) + '</code>');
-}
-} catch(err) {
-var area = document.getElementById('chatMessages');
-var ultima = area.lastElementChild;
-if(ultima && ultima.textContent.includes('Pensando')) ultima.remove();
-adicionarMensagemIA('❌ ' + err.message);
-}
-}
+    // CONFIGURA A RESPOSTA DA VERCEL PARA ENVIAR EM PEDAÇOS
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    // LOOP QUE LÊ OS PEDAÇOS E MANDA PRO SITE
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const dataStr = line.replace('data: ', '').trim();
+          if (dataStr === '[DONE]') continue;
+          try {
+            const data = JSON.parse(dataStr);
+            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (text) {
+              res.write(text); // Envia o pedacinho de texto para o frontend
+            }
+          } catch (e) {}
+        }
+      }
+    }
+    res.end();
+
+  } catch (error) {
+    console.error('Erro:', error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erro no servidor', details: error.message });
+    } else {
+      res.end();
+    }
+  }
+};
 function escolherObjetivo(objetivo){
 adicionarMensagemUsuario(objetivo);
 var prompt = '';
