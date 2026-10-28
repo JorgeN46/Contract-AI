@@ -1076,13 +1076,14 @@ async function chamarIA(mensagemUsuario){
     var resposta = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: mensagemUsuario,
-        fileText: textoArquivoExtraido,
-        systemPrompt: promptPersonalizado,
-        mode: modoAtual
-      })
-    });
+        body: JSON.stringify({
+    message: mensagemUsuario,
+    fileText: textoArquivoExtraido,
+    systemPrompt: promptPersonalizado,
+    mode: modoAtual,
+    history: conversaAtual.slice(-10) // <--- ADICIONE ESTA LINHA AQUI (com a vírgula no mode!)
+  })
+});
 
     divTemp.innerHTML = '';
     var textoAcumulado = "";
