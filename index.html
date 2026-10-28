@@ -1144,7 +1144,7 @@ async function chamarIA(mensagemUsuario){
 
   } catch(err) {
     divTemp.innerHTML = '❌ Erro de conexão: ' + err.message;
-  }
+    }
   }
 function escolherObjetivo(objetivo){
 adicionarMensagemUsuario(objetivo);
@@ -1240,7 +1240,6 @@ h.classList.remove('hidden');
 });
 lastY = y;
 });
-function baixarPDF(id) {
 function baixarPDF(id) {
   var elemento = document.getElementById(id);
   if(!elemento) return;
