@@ -1546,6 +1546,43 @@ function limparInput() {
       inp.style.height = '40px'; // Reseta a altura ao enviar
   }
 }
+async function deletarConversa(id) {
+  if(!confirm("Tem certeza que deseja apagar esta conversa? Esta ação não pode ser desfeita.")) return;
+
+  // Apaga do banco de dados
+  let { error } = await supabase.from('conversations').delete().eq('id', id);
+  
+  if (error) {
+    alert("Erro ao apagar: " + error.message);
+    return;
+  }
+
+  // Se a conversa apagada for a que está aberta na tela, limpa a tela
+  if (idConversaAtual === id) {
+    novoChat(); 
+  }
+
+  // Atualiza a lista lateral
+  renderizarHistorico();
+}
+
+async function fazerLogout() {
+  // Desloga do Supabase
+  await supabase.auth.signOut();
+  
+  // Limpa a memória do navegador
+  localStorage.removeItem('contractai_user_id');
+  localStorage.removeItem('contractai_historico');
+  
+  // Limpa a tela
+  var area = document.getElementById('chatMessages');
+  var lista = document.getElementById('listaConversas');
+  if(area) { area.innerHTML = ''; area.classList.remove('active'); }
+  if(lista) lista.innerHTML = '';
+  
+  // Volta para a tela inicial
+  go('landing');
+}
 </script>
 </body>
 </html>
