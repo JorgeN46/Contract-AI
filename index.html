@@ -1244,49 +1244,53 @@ function baixarPDF(id) {
   var elemento = document.getElementById(id);
   if(!elemento) return;
 
-  // 1. Clona a mensagem e remove os botões
   var clone = elemento.cloneNode(true);
   var botoes = clone.querySelector('.msg-actions');
   if(botoes) botoes.remove();
-  
-  // Remove o cursor de digitação
   clone.innerHTML = clone.innerHTML.replace('<span style="color:#7db4ff;">▍</span>', '');
 
-  // 2. Cria o container invisível fora da tela
-  var container = document.createElement('div');
-  container.style.position = 'absolute';
-  container.style.left = '-9999px'; // Joga pra fora da tela
-  container.style.top = '0';
-  container.style.width = '800px'; // Largura fixa
-  container.style.backgroundColor = '#ffffff';
-  container.style.color = '#000000';
-  container.style.padding = '40px';
-  container.style.fontFamily = 'Helvetica, Arial, sans-serif';
-  container.innerHTML = clone.innerHTML;
+  // Pega o título da conversa ou usa um padrão
+  var titulo = "Contract AI - Documento";
 
-  // 3. Força o texto a ficar preto e o fundo transparente
-  container.querySelectorAll('*').forEach(function(el) {
-      el.style.color = '#000000';
-      el.style.background = 'transparent';
-      el.style.borderColor = '#cccccc';
-  });
-
-  // 4. Adiciona ao body para o html2canvas conseguir ler
-  document.body.appendChild(container);
-
-  // 5. Configura o PDF
-  var opt = {
-    margin:       0.5,
-    filename:     'Contract_AI_Documento.pdf',
-    image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-  };
-
-  // 6. Gera o PDF e apaga o container depois
-  html2pdf().set(opt).from(container).save().then(function() {
-      document.body.removeChild(container);
-  });
+  var win = window.open('', '_blank');
+  win.document.write(`
+    <html>
+      <head>
+        <title>${titulo}</title>
+        <style>
+          @page { margin: 20mm; }
+          body { 
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
+            color: #333; 
+            line-height: 1.6; 
+            max-width: 800px; 
+            margin: 0 auto;
+          }
+          h1 { font-size: 24px; color: #111; border-bottom: 2px solid #4f8dff; padding-bottom: 10px; margin-bottom: 20px; }
+          h2 { font-size: 20px; color: #222; margin-top: 30px; }
+          h3 { font-size: 16px; color: #444; margin-top: 20px; }
+          p { margin-bottom: 12px; text-align: justify; }
+          ul, ol { margin-bottom: 20px; padding-left: 24px; }
+          li { margin-bottom: 8px; }
+          strong { color: #000; }
+          table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 14px; }
+          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+          th { background-color: #f8f9fa; font-weight: bold; color: #111; }
+          blockquote { border-left: 4px solid #4f8dff; padding-left: 16px; color: #555; font-style: italic; margin: 20px 0; }
+          .footer { margin-top: 40px; font-size: 12px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+        </style>
+      </head>
+      <body>
+        ${clone.innerHTML}
+        <div class="footer">Gerado por Contract AI</div>
+      </body>
+    </html>
+  `);
+  win.document.close();
+  
+  setTimeout(function() {
+    win.print();
+  }, 1000);
 }
 
 function baixarWord(id) {
