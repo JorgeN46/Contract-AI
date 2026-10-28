@@ -1241,28 +1241,40 @@ h.classList.remove('hidden');
 lastY = y;
 });
 function baixarPDF(id) {
+function baixarPDF(id) {
   var elemento = document.getElementById(id);
   if(!elemento) return;
 
-  // Clona o elemento para remover os botões antes de gerar o PDF
   var clone = elemento.cloneNode(true);
   var botoes = clone.querySelector('.msg-actions');
   if(botoes) botoes.remove();
 
+  // Remove o cursor de digitação se houver
+  clone.innerHTML = clone.innerHTML.replace('<span style="color:#7db4ff;">▍</span>', '');
+
+  // Cria um container invisível e limpo para o PDF não sair em branco
+  var container = document.createElement('div');
+  container.style.padding = '20px';
+  container.style.background = '#ffffff'; // Fundo branco para o PDF
+  container.style.color = '#000000'; // Texto preto
+  container.style.fontFamily = 'Arial, sans-serif';
+  container.innerHTML = clone.innerHTML;
+
+  // Força todos os elementos internos a ficarem pretos (para não bugar no fundo branco)
+  container.querySelectorAll('*').forEach(function(el) {
+      el.style.color = '#000000';
+      el.style.background = 'transparent';
+  });
+
   var opt = {
-    margin:       1,
+    margin:       0.5,
     filename:     'Contract_AI_Documento.pdf',
     image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, backgroundColor: '#070b14' }, // Fundo escuro
-    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
   };
 
-  // Aplica estilos inline para garantir que o PDF saia com cores
-  clone.style.color = '#fff';
-  clone.style.background = '#070b14';
-  clone.style.padding = '20px';
-
-  html2pdf().set(opt).from(clone).save();
+  html2pdf().set(opt).from(container).save();
 }
 
 function baixarWord(id) {
@@ -1273,12 +1285,21 @@ function baixarWord(id) {
   var botoes = clone.querySelector('.msg-actions');
   if(botoes) botoes.remove();
 
-  // html-docx-js precisa do HTML completo para renderizar
-  var htmlDoc = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>' + clone.innerHTML + '</body></html>';
+  // Remove o cursor de digitação
+  clone.innerHTML = clone.innerHTML.replace('<span style="color:#7db4ff;">▍</span>', '');
+
+  var htmlContent = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family: Arial, sans-serif; color: #000;">' + clone.innerHTML + '</body></html>';
   
-  var converted = htmlDocx.asBlob(htmlDoc);
-  saveAs(converted, 'Contract_AI_Documento.docx');
+  try {
+      var converted = htmlDocx.asBlob(htmlContent);
+      saveAs(converted, 'Contract_AI_Documento.docx');
+  } catch (e) {
+      // Plano B: Se o html-docx falhar, baixa como arquivo .doc simples que abre no Word
+      console.error("Erro no html-docx, usando fallback:", e);
+      var blob = new Blob([htmlContent], {type: 'application/msword'});
+      saveAs(blob, 'Contract_AI_Documento.doc');
   }
+}
 async function submitLogin(e) {
   if(e) e.preventDefault();
   
