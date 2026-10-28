@@ -773,16 +773,75 @@ async function renderizarHistorico(){
     return;
   }
 
+  // Lógica para agrupar por data
+  var hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  var ontem = new Date(hoje);
+  ontem.setDate(ontem.getDate() - 1);
+  var seteDias = new Date(hoje);
+  seteDias.setDate(seteDias.getDate() - 7);
+
+  var grupos = {
+    hoje: [],
+    ontem: [],
+    semana: [],
+    antigo: []
+  };
+
   historico.forEach(function(conv) {
-    var item = document.createElement('div');
-    item.className = 'sidebar-item';
-    item.style.cssText = 'padding: 10px; color: #fff; font-size: 14px; cursor: pointer; border-radius: 8px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
-    item.innerHTML = '💬 ' + (conv.title || 'Conversa');
-    item.onclick = function() { carregarConversa(conv.id); };
-    item.onmouseover = function() { item.style.background = 'rgba(255,255,255,.1)'; };
-    item.onmouseout = function() { item.style.background = 'transparent'; };
-    container.appendChild(item);
+    var dataConv = new Date(conv.created_at);
+    dataConv.setHours(0,0,0,0);
+
+    if (dataConv.getTime() === hoje.getTime()) {
+      grupos.hoje.push(conv);
+    } else if (dataConv.getTime() === ontem.getTime()) {
+      grupos.ontem.push(conv);
+    } else if (dataConv >= seteDias) {
+      grupos.semana.push(conv);
+    } else {
+      grupos.antigo.push(conv);
+    }
   });
+
+  // Função auxiliar para criar os itens
+  function criarGrupo(titulo, lista) {
+    if (lista.length === 0) return;
+
+    var groupTitle = document.createElement('div');
+    groupTitle.className = 'sidebar-group-title';
+    groupTitle.textContent = titulo;
+    container.appendChild(groupTitle);
+
+    lista.forEach(function(conv) {
+      var item = document.createElement('div');
+      item.className = 'sidebar-item';
+      
+      var text = document.createElement('div');
+      text.className = 'sidebar-item-text';
+      text.innerHTML = '💬 ' + (conv.title || 'Conversa');
+      
+      var btnDelete = document.createElement('button');
+      btnDelete.className = 'btn-delete-chat';
+      btnDelete.innerHTML = '🗑️';
+      btnDelete.title = 'Apagar conversa';
+      btnDelete.onclick = function(e) {
+        e.stopPropagation(); // Evita abrir a conversa ao clicar na lixeira
+        deletarConversa(conv.id);
+      };
+
+      item.appendChild(text);
+      item.appendChild(btnDelete);
+      
+      item.onclick = function() { carregarConversa(conv.id); };
+      container.appendChild(item);
+    });
+  }
+
+  // Renderiza os grupos na ordem correta
+  criarGrupo('Hoje', grupos.hoje);
+  criarGrupo('Ontem', grupos.ontem);
+  criarGrupo('Últimos 7 dias', grupos.semana);
+  criarGrupo('Mais antigo', grupos.antigo);
 }
 
 async function carregarConversa(id){
