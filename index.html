@@ -1560,10 +1560,30 @@ function limparInput() {
       inp.style.height = '40px'; // Reseta a altura ao enviar
   }
 }
-async function deletarConversa(id) {
-  if(!confirm("Tem certeza que deseja apagar esta conversa? Esta ação não pode ser desfeita.")) return;
+var conversaParaApagar = null;
 
-  // Apaga do banco de dados
+function deletarConversa(id) {
+  conversaParaApagar = id;
+  document.getElementById('deleteModalOverlay').classList.add('open');
+  document.getElementById('deleteModalBox').classList.add('open');
+}
+
+function fecharDeleteModal() {
+  document.getElementById('deleteModalOverlay').classList.remove('open');
+  document.getElementById('deleteModalBox').classList.remove('open');
+  conversaParaApagar = null;
+}
+
+async function confirmarDelete() {
+  if(!conversaParaApagar) return;
+  
+  var id = conversaParaApagar;
+  
+  // Fecha o modal
+  document.getElementById('deleteModalOverlay').classList.remove('open');
+  document.getElementById('deleteModalBox').classList.remove('open');
+
+  // Remove do banco
   let { error } = await supabase.from('conversations').delete().eq('id', id);
   
   if (error) {
@@ -1571,15 +1591,14 @@ async function deletarConversa(id) {
     return;
   }
 
-  // Se a conversa apagada for a que está aberta na tela, limpa a tela
+  // Se a conversa apagada era a que estava aberta na tela, limpa a tela
   if (idConversaAtual === id) {
     novoChat(); 
   }
 
-  // Atualiza a lista lateral
-  renderizarHistorico();
+  conversaParaApagar = null;
+  renderizarHistorico(); // Atualiza a lista sem a conversa apagada
 }
-
 async function fazerLogout() {
   // Desloga do Supabase
   await supabase.auth.signOut();
