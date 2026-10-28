@@ -1052,12 +1052,11 @@ function adicionarMensagemUsuario(texto){
   conversaAtual.push({ role: 'user', content: texto }); // <--- ADICIONE AQUI
 }
 async function chamarIA(mensagemUsuario){
-  // Cria o balão vazio da IA antes de começar a receber os dados
   var area = document.getElementById('chatMessages');
   var divTemp = document.createElement('div');
   divTemp.className = 'msg ai';
   divTemp.id = 'msg-streaming';
-  divTemp.innerHTML = '<span style="color:#7db4ff; font-style:italic;">Digitando<span class="dots">...</span></span>';
+  divTemp.innerHTML = '<span style="color:#7db4ff; font-style:italic;">Digitando...</span>';
   area.appendChild(divTemp);
   window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
@@ -1076,11 +1075,9 @@ async function chamarIA(mensagemUsuario){
       })
     });
 
-    // Remove o aviso de "Digitando..."
     divTemp.innerHTML = '';
     var textoAcumulado = "";
 
-    // LÊ O FLUXO DE DADOS EM TEMPO REAL
     const reader = resposta.body.getReader();
     const decoder = new TextDecoder();
 
@@ -1091,16 +1088,13 @@ async function chamarIA(mensagemUsuario){
       const chunk = decoder.decode(value);
       textoAcumulado += chunk;
       
-      // Atualiza o texto na tela (com Markdown e um cursor piscando)
       divTemp.innerHTML = marked.parse(textoAcumulado) + '<span style="color:#7db4ff;">▍</span>';
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 
-    // Quando terminar, aplica a formatação final (remove o cursor)
-    divTemp.id = 'msg-ai-' + Date.now(); // Dá um ID final para o PDF/Word
+    divTemp.id = 'msg-ai-' + Date.now();
     divTemp.innerHTML = marked.parse(textoAcumulado);
     
-    // Renderiza o KaTeX (matemática) no final
     if (typeof renderMathInElement !== 'undefined') {
       renderMathInElement(divTemp, {
         delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}],
@@ -1108,12 +1102,12 @@ async function chamarIA(mensagemUsuario){
       });
     }
 
-    // Chama a função original para adicionar os botões de Copiar/PDF/Word e salvar no histórico
-    // Mas como a mensagem já está na tela, nós só adicionamos os botões nela
     conversaAtual.push({ role: 'ai', content: textoAcumulado });
     
     var actions = document.createElement('div');
     actions.className = 'msg-actions';
+    
+    // BOTÃO COPIAR (Sempre aparece)
     var btnCopiar = document.createElement('button');
     btnCopiar.className = 'msg-action-btn';
     btnCopiar.innerHTML = '📋 Copiar';
@@ -1124,28 +1118,34 @@ async function chamarIA(mensagemUsuario){
         setTimeout(function(){ btnCopiar.innerHTML = '📋 Copiar'; }, 2000);
       });
     };
-    
-    var btnPDF = document.createElement('button');
-    btnPDF.className = 'msg-action-btn';
-    btnPDF.innerHTML = '📄 Baixar PDF';
-    btnPDF.onclick = function(e){ e.stopPropagation(); baixarPDF(divTemp.id); };
-
-    var btnWord = document.createElement('button');
-    btnWord.className = 'msg-action-btn';
-    btnWord.innerHTML = '📝 Baixar Word';
-    btnWord.onclick = function(e){ e.stopPropagation(); baixarWord(divTemp.id); };
-
     actions.appendChild(btnCopiar);
-    actions.appendChild(btnPDF);
-    actions.appendChild(btnWord);
+
+    // LÓGICA PARA MOSTRAR PDF E WORD APENAS SE NECESSÁRIO
+    var textoUsuario = mensagemUsuario.toLowerCase();
+    var pediuDownload = textoUsuario.includes('pdf') || textoUsuario.includes('word') || textoUsuario.includes('arquivo') || textoUsuario.includes('baixar') || textoUsuario.includes('documento');
+    var temAnexo = (textoArquivoExtraido && textoArquivoExtraido.length > 0);
+
+    if (pediuDownload || temAnexo) {
+        var btnPDF = document.createElement('button');
+        btnPDF.className = 'msg-action-btn';
+        btnPDF.innerHTML = '📄 Baixar PDF';
+        btnPDF.onclick = function(e){ e.stopPropagation(); baixarPDF(divTemp.id); };
+        actions.appendChild(btnPDF);
+
+        var btnWord = document.createElement('button');
+        btnWord.className = 'msg-action-btn';
+        btnWord.innerHTML = '📝 Baixar Word';
+        btnWord.onclick = function(e){ e.stopPropagation(); baixarWord(divTemp.id); };
+        actions.appendChild(btnWord);
+    }
+
     divTemp.appendChild(actions);
-    
-    salvarConversaAtual(); // Salva no Supabase
+    salvarConversaAtual(); 
 
   } catch(err) {
     divTemp.innerHTML = '❌ Erro de conexão: ' + err.message;
   }
-}
+  }
 function escolherObjetivo(objetivo){
 adicionarMensagemUsuario(objetivo);
 var prompt = '';
