@@ -676,54 +676,40 @@ function novoChat(){
   idConversaAtual = null; 
 }
 async function salvarConversaAtual(){
-  if(conversaAtual.length === 0) return; // Se não tem mensagem, sai silenciosamente
+  if(conversaAtual.length === 0) return; 
   
   var userId = localStorage.getItem('contractai_user_id');
-  
-  // ALERTA 1: Verificar se o usuário está logado
-  if(!userId) {
-      alert("ERRO NO LOGIN: O ID do usuário está vazio. Você não está logado de verdade no Supabase.");
-      return; 
-  }
+  if(!userId) return; // Se não estiver logado, não faz nada
 
   var primeiraMsg = conversaAtual.find(m => m.role === 'user');
   var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
 
   try {
       if (!idConversaAtual) {
-        // Tenta criar a conversa
         let { data, error } = await supabase.from('conversations').insert([{ user_id: userId, title: titulo }]).select();
         
-        // ALERTA 2: Verificar se o Supabase aceitou criar a conversa
+        // Se der erro, apenas registra no console do navegador, sem travar o usuário
         if (error) { 
-            alert("ERRO AO CRIAR CONVERSA NO BANCO: " + JSON.stringify(error)); 
+            console.error("Erro ao criar conversa:", error); 
             return; 
         }
         idConversaAtual = data[0].id; 
       }
 
-      // Tenta salvar as mensagens
       for (let msg of conversaAtual) {
           let { data: exist } = await supabase.from('messages').select('id').eq('conversation_id', idConversaAtual).eq('content', msg.content);
           if(!exist || exist.length === 0) {
-              let { error: msgError } = await supabase.from('messages').insert([{ conversation_id: idConversaAtual, role: msg.role, content: msg.content }]);
-              
-              // ALERTA 3: Verificar se o Supabase aceitou salvar a mensagem
-              if(msgError) {
-                  alert("ERRO AO SALVAR MENSAGEM NO BANCO: " + JSON.stringify(msgError));
-                  return;
-              }
+              await supabase.from('messages').insert([{ conversation_id: idConversaAtual, role: msg.role, content: msg.content }]);
           }
       }
       
-      // ALERTA 4: Se chegou até aqui, deu tudo certo!
-      alert("SUCESSO! Conversa salva no banco de dados.");
+      // Atualiza a lista lateral silenciosamente
       renderizarHistorico();
       
   } catch (err) {
-      alert("ERRO DESCONHECIDO: " + err.message);
+      console.error("Erro inesperado ao salvar conversa:", err);
+     }
   }
-}
 async function renderizarHistorico(){
   var container = document.getElementById('listaConversas');
   if(!container) return;
