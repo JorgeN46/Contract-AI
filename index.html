@@ -1244,27 +1244,37 @@ function baixarPDF(id) {
   var elemento = document.getElementById(id);
   if(!elemento) return;
 
+  // 1. Clona a mensagem e remove os botões
   var clone = elemento.cloneNode(true);
   var botoes = clone.querySelector('.msg-actions');
   if(botoes) botoes.remove();
-
-  // Remove o cursor de digitação se houver
+  
+  // Remove o cursor de digitação
   clone.innerHTML = clone.innerHTML.replace('<span style="color:#7db4ff;">▍</span>', '');
 
-  // Cria um container invisível e limpo para o PDF não sair em branco
+  // 2. Cria o container invisível fora da tela
   var container = document.createElement('div');
-  container.style.padding = '20px';
-  container.style.background = '#ffffff'; // Fundo branco para o PDF
-  container.style.color = '#000000'; // Texto preto
-  container.style.fontFamily = 'Arial, sans-serif';
+  container.style.position = 'absolute';
+  container.style.left = '-9999px'; // Joga pra fora da tela
+  container.style.top = '0';
+  container.style.width = '800px'; // Largura fixa
+  container.style.backgroundColor = '#ffffff';
+  container.style.color = '#000000';
+  container.style.padding = '40px';
+  container.style.fontFamily = 'Helvetica, Arial, sans-serif';
   container.innerHTML = clone.innerHTML;
 
-  // Força todos os elementos internos a ficarem pretos (para não bugar no fundo branco)
+  // 3. Força o texto a ficar preto e o fundo transparente
   container.querySelectorAll('*').forEach(function(el) {
       el.style.color = '#000000';
       el.style.background = 'transparent';
+      el.style.borderColor = '#cccccc';
   });
 
+  // 4. Adiciona ao body para o html2canvas conseguir ler
+  document.body.appendChild(container);
+
+  // 5. Configura o PDF
   var opt = {
     margin:       0.5,
     filename:     'Contract_AI_Documento.pdf',
@@ -1273,7 +1283,10 @@ function baixarPDF(id) {
     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
   };
 
-  html2pdf().set(opt).from(container).save();
+  // 6. Gera o PDF e apaga o container depois
+  html2pdf().set(opt).from(container).save().then(function() {
+      document.body.removeChild(container);
+  });
 }
 
 function baixarWord(id) {
