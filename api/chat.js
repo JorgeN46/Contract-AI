@@ -1,4 +1,4 @@
-async function chamarGeminiStream(apiKey, message, systemInstruction, usePro, res) {
+async function chamarGeminiStream(apiKey, contentsArray, systemInstruction, usePro, res) {
   const modeloPrincipal = usePro ? 'gemini-3.8-pro' : 'gemini-3.8-flash';
   const modelos = usePro 
     ? [modeloPrincipal, 'gemini-3.8-flash'] 
@@ -16,7 +16,7 @@ async function chamarGeminiStream(apiKey, message, systemInstruction, usePro, re
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: systemInstruction }] },
-            contents: [{ role: 'user', parts: [{ text: message }] }],
+            contents: contentsArray,
             generationConfig: { temperature: 0.5 }
           })
         });
@@ -47,14 +47,14 @@ async function chamarGeminiStream(apiKey, message, systemInstruction, usePro, re
                 const data = JSON.parse(dataStr);
                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (text) {
-                  res.write(text);
+                  res.write(text); 
                 }
               } catch (e) {}
             }
           }
         }
         res.end();
-        return; // Sucesso, sai da função
+        return; 
 
       } catch (err) {
         ultimoErro = err;
@@ -74,12 +74,11 @@ async function chamarGeminiStream(apiKey, message, systemInstruction, usePro, re
     res.end();
   }
 }
-
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { message, fileText, systemPrompt, mode } = req.body;
+    const { message, fileText, systemPrompt, mode, history } = req.body;
     if (!message && (!fileText || fileText.trim() === '')) return res.status(400).json({ error: 'Mensagem vazia' });
 
     const apiKey = process.env.GOOGLE_API_KEY;
@@ -88,7 +87,7 @@ module.exports = async function handler(req, res) {
     let basePrompt = "";
     let usarModeloPro = false; 
 
-    // PROMPT DO MODO ANÁLISE
+    // PROMPT MESTRE DE ANÁLISE
     const promptAnalise = `Você é o Contract AI, no MODO ANÁLISE. Seu objetivo é organizar, explicar, alertar e encaminhar. Você lê qualquer tipo de documento profissional (Contratos, Laudos Técnicos/Médicos, Relatórios Contábeis, Materiais Didáticos) e extrai o valor operacional dele.
 
 Sempre que receber um documento, siga ESTRITAMENTE esta estrutura:
@@ -97,37 +96,27 @@ Sempre que receber um documento, siga ESTRITAMENTE esta estrutura:
 3. **Pontos Positivos/Conclusões**: O que está bem redigido ou quais são as conclusões principais.
 4. **Riscos e Pontos de Atenção**: Use tópicos. Para CADA risco, cite a Evidência (Fonte: Cláusula X / Página Y / Trecho: "texto exato").
 5. **Próximos Passos (Ação Direta)**: Dê direções práticas.
-6. **Aviso Legal**: Termine SEMPRE com: "Lembrete: Este relatório é operacional e não substitui a análise de um profissional habilitado.
-REGRA DE EXPORTAÇÃO: NUNCA diga "use a função imprimir" ou "não consigo gerar PDF". Apenas entregue o texto puro e formatado. O sistema (site) já possui botões de download que farão esse trabalho para o usuário."`;
+6. **Aviso Legal**: Termine SEMPRE com: "Lembrete: Este relatório é operacional e não substitui a análise de um profissional habilitado."`;
 
+    // MODO REFINAMENTO
     const promptRefinamento = `Você é o Contract AI, no MODO REFINAMENTO. Sua especialidade é ser um Editor e Redator Profissional Sênior.
 Seu objetivo é melhorar, criar ou editar textos, e-mails, artigos, trabalhos escolares e documentos em geral.
-REGRAS DE OPERAÇÃO:
-1. Se o usuário pedir para CRIAR um texto, gere um texto de alta qualidade, estruturado e pronto para uso.
-2. Se o usuário enviar um texto ou arquivo e pedir para MELHORAR/EDITAR, reescreva o texto aplicando o tom desejado.
-3. Se o usuário pedir para EXPORTAR ou BAIXAR um arquivo, responda: "A funcionalidade de exportação estará disponível em breve! Por enquanto, aqui está o texto completo para você copiar e colar onde precisar."
-4. Ao entregar um resultado de edição, formate assim:
-   - **Texto Refinado:** [Insira o texto completo]
-   - **O que foi melhorado:** [Explique em 2 tópicos]
-5. NUNCA dê conselhos jurídicos ou contábeis definitivos neste modo. Foque 100% na qualidade da escrita.
-REGRA DE EXPORTAÇÃO: NUNCA diga "use a função imprimir" ou "não consigo gerar PDF". Apenas entregue o texto puro e formatado. O sistema (site) já possui botões de download que farão esse trabalho para o usuário.`;
+1. Se o usuário pedir para CRIAR um texto, gere um texto de alta qualidade.
+2. Se o usuário enviar um texto e pedir para MELHORAR, reescreva aplicando o tom desejado.
+3. Ao entregar um resultado, formate como: **Texto Refinado:** [texto] e **O que foi melhorado:** [explicação].
+4. NUNCA dê conselhos jurídicos ou contábeis definitivos neste modo.`;
 
     // MODO PADRÃO
     const promptPadrao = `Você é o Contract AI, no MODO PADRÃO.
 Aja como um assistente conversacional inteligente, descontraído e muito prestativo. 
-Fale como um colega de trabalho moderno e confiável: seja direto, use um tom amigável e demonstre empatia.
-Suas capacidades incluem: conversar sobre qualquer assunto, ajudar a criar e-mails, trabalhos, planos de aula, e ler documentos anexados.
-
-REGRAS CRÍTICAS:
-1. NUNCA use a estrutura do "Modo Análise" (Resumo Operacional, Riscos, etc) a menos que o usuário envie um documento e peça explicitamente para analisar.
-2. Se o usuário pedir para "gerar um PDF" ou "gerar um Word", apenas gere o conteúdo de forma limpa e organizada. O sistema já tem botões na tela para baixar o arquivo. NÃO diga que você não consegue gerar arquivos, apenas entregue o texto.
-3. Você NÃO tem acesso à internet em tempo real. Se o usuário perguntar sobre o clima de hoje, notícias ou cotações, explique educadamente que você é uma IA offline e não tem esses dados atualizados.
-4. REGRA MATEMÁTICA: Se for usar fórmulas (LaTeX), NUNCA use '%'. Escreva '\\%'.
-REGRA DE EXPORTAÇÃO: NUNCA diga "use a função imprimir" ou "não consigo gerar PDF". Apenas entregue o texto puro e formatado. O sistema (site) já possui botões de download que farão esse trabalho para o usuário.`;
+Suas capacidades incluem: conversar sobre qualquer assunto, criar e-mails, trabalhos escolares, planos de aula e ler documentos anexados.
+REGRA MATEMÁTICA: Se for usar fórmulas (LaTeX), NUNCA use '%'. Escreva '\\%'.
+REGRA DE EXPORTAÇÃO: NUNCA diga "use a função imprimir" ou "não consigo gerar PDF". Apenas entregue o texto puro e formatado. O sistema já possui botões de download.
+ATENÇÃO: Só mude para o comportamento do "Modo Análise" se o usuário pedir EXPLICITAMENTE para analisar riscos ou revisar juridicamente.`;
 
     if (mode === 'leitura') {
       basePrompt = promptAnalise;
-      usarModeloPro = true;
+      usarModeloPro = true; 
     } else if (mode === 'refinamento') {
       basePrompt = promptRefinamento;
     } else {
@@ -136,13 +125,33 @@ REGRA DE EXPORTAÇÃO: NUNCA diga "use a função imprimir" ou "não consigo ger
 
     const finalInstruction = systemPrompt ? basePrompt + "\n\nPreferências do usuário: " + systemPrompt : basePrompt;
 
+    // --- MONTAGEM DO HISTÓRICO ---
+    let contentsArray = [];
+    let historyToUse = history || [];
+
+    if (historyToUse.length > 0 && historyToUse[historyToUse.length - 1].role === 'user') {
+        historyToUse.pop();
+    }
+
+    historyToUse.forEach(msg => {
+        contentsArray.push({
+            role: msg.role === 'ai' ? 'model' : 'user',
+            parts: [{ text: msg.content }]
+        });
+    });
+
     let promptFinal = message || "Por favor, analise o texto do arquivo em anexo.";
     if (fileText && fileText.trim().length > 0) {
         promptFinal = "Texto/Documento fornecido:\n\n" + fileText.substring(0, 30000) + "\n\nInstrução do usuário: " + (message || "Refine ou edite este texto.");
     }
+    
+    contentsArray.push({
+        role: 'user',
+        parts: [{ text: promptFinal }]
+    });
 
-    // AQUI É ONDE A MÁGICA ACONTECE (A parte que faltava!)
-    await chamarGeminiStream(apiKey, promptFinal, finalInstruction, usarModeloPro, res);
+    // Chama a função passando o array completo com histórico
+    await chamarGeminiStream(apiKey, contentsArray, finalInstruction, usarModeloPro, res);
 
   } catch (error) {
     console.error('Erro geral:', error.message);
