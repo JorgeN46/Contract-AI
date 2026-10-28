@@ -386,7 +386,21 @@ Ao continuar, você concorda com nossos
 <a href="#" onclick="abrirTermos(event)">Termos de Uso</a> e
 <a href="#" onclick="abrirPrivacidade(event)">Política de Privacidade</a>.
 </p>
-
+<!-- Modal de Confirmar Exclusão -->
+<div class="modal-overlay" id="deleteModalOverlay" onclick="fecharDeleteModal()"></div>
+<div class="modal-box" id="deleteModalBox" style="max-width:400px">
+  <div class="modal-header">
+    <h3>Apagar Conversa</h3>
+    <button class="modal-close" onclick="fecharDeleteModal()">×</button>
+  </div>
+  <div class="modal-content">
+    <p style="color:rgba(255,255,255,.75); font-size:15px; line-height:1.6;">Tem certeza que deseja apagar esta conversa? Esta ação não pode ser desfeita.</p>
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:24px;">
+      <button class="btn btn-ghost" onclick="fecharDeleteModal()" style="padding:10px 16px;">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarDelete()" style="padding:10px 16px; background:#ef4444; box-shadow:0 4px 14px 0 rgba(239, 68, 68, 0.39);">Apagar</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="modalOverlay" onclick="fecharModal()"></div>
 <div class="modal-box" id="modalBox">
 <div class="modal-header">
