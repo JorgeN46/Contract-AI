@@ -1,12 +1,24 @@
-async function chamarGeminiStream(apiKey, contentsArray, systemInstruction, usePro, res) {
-  const modeloPrincipal = usePro ? 'gemini-3.8-pro' : 'gemini-3.8-flash';
-  const modelos = usePro 
-    ? [modeloPrincipal, 'gemini-3.8-flash'] 
-    : [modeloPrincipal, 'gemini-3.5-flash-lite']; 
+// REGISTRO DE MODELOS (MODEL TIERS)
+const MODEL_TIERS = {
+  padrao: {
+    primary: 'gemini-3.8-flash',
+    fallback: ['gemini-3.5-flash-lite']
+  },
+  refinamento: {
+    primary: 'gemini-3.8-flash',
+    fallback: ['gemini-3.5-flash-lite']
+  },
+  leitura: {
+    primary: 'gemini-3.8-pro',
+    fallback: ['gemini-3.8-flash']
+  }
+};
 
+async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstruction, res) {
+  const modelosParaTentar = [tierConfig.primary, ...tierConfig.fallback];
   let ultimoErro = null;
 
-  for (const modelo of modelos) {
+  for (const modelo of modelosParaTentar) {
     for (let tentativa = 1; tentativa <= 2; tentativa++) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:streamGenerateContent?alt=sse&key=${apiKey}`;
@@ -46,9 +58,7 @@ async function chamarGeminiStream(apiKey, contentsArray, systemInstruction, useP
               try {
                 const data = JSON.parse(dataStr);
                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (text) {
-                  res.write(text); 
-                }
+                if (text) res.write(text); 
               } catch (e) {}
             }
           }
@@ -63,7 +73,7 @@ async function chamarGeminiStream(apiKey, contentsArray, systemInstruction, useP
           await new Promise(r => setTimeout(r, Math.pow(2, tentativa - 1) * 1000));
           continue;
         }
-        break;
+        break; // Se for erro de modelo inválido, pula para o próximo fallback
       }
     }
   }
@@ -74,6 +84,7 @@ async function chamarGeminiStream(apiKey, contentsArray, systemInstruction, useP
     res.end();
   }
 }
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -85,8 +96,7 @@ module.exports = async function handler(req, res) {
     if (!apiKey) return res.status(500).json({ error: 'Chave não configurada.' });
 
     let basePrompt = "";
-    let usarModeloPro = false; 
-
+    
     // PROMPT MESTRE DE ANÁLISE
     const promptAnalise = `Você é o Contract AI, no MODO ANÁLISE. Seu objetivo é organizar, explicar, alertar e encaminhar. Você lê qualquer tipo de documento profissional (Contratos, Laudos Técnicos/Médicos, Relatórios Contábeis, Materiais Didáticos) e extrai o valor operacional dele.
 IMPORTANTE: Se o texto fornecido contiver MAIS DE UM documento (separados por marcadores como "--- arquivo.pdf ---"), você deve fazer uma análise comparativa, apontando diferenças, semelhanças e riscos entre eles.
@@ -114,25 +124,26 @@ Suas capacidades incluem: conversar sobre qualquer assunto, criar e-mails, traba
 REGRA MATEMÁTICA: Se for usar fórmulas (LaTeX), NUNCA use '%'. Escreva '\\%'.
 REGRA DE EXPORTAÇÃO: NUNCA diga "use a função imprimir" ou "não consigo gerar PDF". Apenas entregue o texto puro e formatado. O sistema já possui botões de download.
 ATENÇÃO: Só mude para o comportamento do "Modo Análise" se o usuário pedir EXPLICITAMENTE para analisar riscos ou revisar juridicamente.`;
+    
+    let tierSelecionado = MODEL_TIERS.padrao;
 
     if (mode === 'leitura') {
       basePrompt = promptAnalise;
-      usarModeloPro = true; 
+      tierSelecionado = MODEL_TIERS.leitura;
     } else if (mode === 'refinamento') {
       basePrompt = promptRefinamento;
+      tierSelecionado = MODEL_TIERS.refinamento;
     } else {
       basePrompt = promptPadrao;
+      tierSelecionado = MODEL_TIERS.padrao;
     }
 
     const finalInstruction = systemPrompt ? basePrompt + "\n\nPreferências do usuário: " + systemPrompt : basePrompt;
 
-    // --- MONTAGEM DO HISTÓRICO ---
     let contentsArray = [];
     let historyToUse = history || [];
 
-    if (historyToUse.length > 0 && historyToUse[historyToUse.length - 1].role === 'user') {
-        historyToUse.pop();
-    }
+    if (historyToUse.length > 0 && historyToUse[historyToUse.length - 1].role === 'user') historyToUse.pop();
 
     historyToUse.forEach(msg => {
         contentsArray.push({
@@ -142,24 +153,18 @@ ATENÇÃO: Só mude para o comportamento do "Modo Análise" se o usuário pedir 
     });
 
     let promptFinal = message || "Por favor, analise o texto do arquivo em anexo.";
-if (fileText && fileText.trim().length > 0) {
-    promptFinal = "O usuário enviou o(s) seguinte(s) documento(s):\n\n" + fileText.substring(0, 30000) + "\n\nInstrução do usuário: " + (message || "Analise e compare os documentos.");
-}
+    if (fileText && fileText.trim().length > 0) {
+        promptFinal = "O usuário enviou o(s) seguinte(s) documento(s):\n\n" + fileText.substring(0, 30000) + "\n\nInstrução do usuário: " + (message || "Analise e compare os documentos.");
+    }
     
-    contentsArray.push({
-        role: 'user',
-        parts: [{ text: promptFinal }]
-    });
+    contentsArray.push({ role: 'user', parts: [{ text: promptFinal }] });
 
-    // Chama a função passando o array completo com histórico
-    await chamarGeminiStream(apiKey, contentsArray, finalInstruction, usarModeloPro, res);
+    // Chama a função com o tier selecionado
+    await chamarModeloIA(apiKey, tierSelecionado, contentsArray, finalInstruction, res);
 
   } catch (error) {
     console.error('Erro geral:', error.message);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Erro no servidor', details: error.message });
-    } else {
-      res.end();
-    }
+    if (!res.headersSent) res.status(500).json({ error: 'Erro no servidor', details: error.message });
+    else res.end();
   }
 };
