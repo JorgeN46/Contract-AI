@@ -1700,5 +1700,9 @@ window.addEventListener('DOMContentLoaded', function(){
   <button onclick="abrirModalRenomear()">✏️ Editar nome</button>
   <button onclick="deletarConversa()" class="danger">🗑️ Deletar</button>
 </div>
+<!-- Modal de Zoom da Imagem -->
+<div class="img-zoom-overlay" id="imgZoomOverlay" onclick="this.classList.remove('open')">
+  <img id="imgZoomTarget" src="" alt="Zoom">
+</div>
 </body>
 </html>
