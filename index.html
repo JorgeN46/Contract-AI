@@ -1111,7 +1111,8 @@ function aoSelecionarArquivo(input){
   
 function removerAnexo(){
   arquivoAnexado = null;
-  textoArquivoExtraido = ""; // <--- A MÁGICA ESTÁ AQUI
+  textoArquivoExtraido = ""; 
+  imagensAnexadas = []; // <--- Limpa a galeria de imagens
   document.getElementById('attachPreview').classList.remove('active');
   document.getElementById('attachName').textContent = '';
 }
