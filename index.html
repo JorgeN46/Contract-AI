@@ -1253,14 +1253,14 @@ async function chamarIA(mensagemUsuario){
     var resposta = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-    message: mensagemUsuario,
-    fileText: textoArquivoExtraido,
-    systemPrompt: promptPersonalizado,
-    mode: modoAtual,
-    history: conversaAtual.slice(-10) // <--- ADICIONE ESTA LINHA AQUI (com a vírgula no mode!)
-  })
-});
+      body: JSON.stringify({
+        message: mensagemUsuario,
+        fileText: textoArquivoExtraido,
+        systemPrompt: promptPersonalizado,
+        mode: modoAtual,
+        history: conversaAtual.slice(-10)
+      })
+    });
 
     divTemp.innerHTML = '';
     var textoAcumulado = "";
@@ -1290,11 +1290,12 @@ async function chamarIA(mensagemUsuario){
     }
 
     conversaAtual.push({ role: 'ai', content: textoAcumulado });
+    textoArquivoExtraido = ""; // <--- LIMPA A MEMÓRIA DO ARQUIVO AQUI!
+    removerAnexo();
     
     var actions = document.createElement('div');
     actions.className = 'msg-actions';
     
-    // BOTÃO COPIAR (Sempre aparece)
     var btnCopiar = document.createElement('button');
     btnCopiar.className = 'msg-action-btn';
     btnCopiar.innerHTML = '📋 Copiar';
@@ -1307,12 +1308,10 @@ async function chamarIA(mensagemUsuario){
     };
     actions.appendChild(btnCopiar);
 
-    // LÓGICA PARA MOSTRAR PDF E WORD APENAS SE NECESSÁRIO
     var textoUsuario = mensagemUsuario.toLowerCase();
     var pediuDownload = textoUsuario.includes('pdf') || textoUsuario.includes('word') || textoUsuario.includes('arquivo') || textoUsuario.includes('baixar') || textoUsuario.includes('documento');
-    var temAnexo = (textoArquivoExtraido && textoArquivoExtraido.length > 0);
 
-    if (pediuDownload || temAnexo) {
+    if (pediuDownload) {
         var btnPDF = document.createElement('button');
         btnPDF.className = 'msg-action-btn';
         btnPDF.innerHTML = '📄 Baixar PDF';
@@ -1331,8 +1330,8 @@ async function chamarIA(mensagemUsuario){
 
   } catch(err) {
     divTemp.innerHTML = '❌ Erro de conexão: ' + err.message;
-    }
   }
+}
 function escolherObjetivo(objetivo){
 adicionarMensagemUsuario(objetivo);
 var prompt = '';
