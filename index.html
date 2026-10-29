@@ -667,46 +667,47 @@ Sair da conta
 </div><!-- /settings-plugins -->
 
 <script>
-  function salvarPrompt(){
-var txt = document.getElementById('customPrompt').value;
-localStorage.setItem('contractai_prompt', txt);
-var fb = document.getElementById('promptFeedback');
-fb.textContent = '✓ Salvo com sucesso';
-setTimeout(function(){ fb.textContent = ''; }, 2500);
+async function salvarPrompt(){
+  var userId = localStorage.getItem('contractai_user_id');
+  if(!userId) { alert("Você precisa estar logado."); return; }
+  
+  var txt = document.getElementById('customPrompt').value;
+  var fb = document.getElementById('promptFeedback');
+  
+  fb.textContent = 'Salvando...';
+  
+  // Salva no banco de dados (UPSERT: se não existir, cria. Se existir, atualiza)
+  let { error } = await supabase.from('profiles').upsert({ id: userId, custom_prompt: txt });
+  
+  if(error) {
+      fb.style.color = '#fca5a5';
+      fb.textContent = 'Erro ao salvar: ' + error.message;
+      return;
+  }
+  
+  // Mantém no localStorage para envio rápido na próxima mensagem
+  localStorage.setItem('contractai_prompt', txt);
+  
+  fb.style.color = '#4fd1c5';
+  fb.textContent = '✓ Salvo com sucesso na nuvem';
+  setTimeout(function(){ fb.textContent = ''; }, 2500);
 }
-function resetarPrompt(){
-document.getElementById('customPrompt').value = '';
-localStorage.removeItem('contractai_prompt');
-var fb = document.getElementById('promptFeedback');
-fb.textContent = '✓ Prompt resetado';
-setTimeout(function(){ fb.textContent = ''; }, 2500);
-}
-window.addEventListener('DOMContentLoaded', function(){
-  var salvo = localStorage.getItem('contractai_prompt');
-  if(salvo) document.getElementById('customPrompt').value = salvo;
 
-  // SINCRONIZAR O MODO ATIVO COM A MEMÓRIA DO NAVEGADOR
-  var modoSalvo = localStorage.getItem('contractai_mode') || 'padrao';
-  document.querySelectorAll('.personalizacao-item').forEach(function(item) {
-      if (item.getAttribute('data-mode') === modoSalvo) {
-          item.classList.add('active');
-          document.querySelector('.personalizacao-btn .label').textContent = item.querySelector('.mode-name').textContent;
-      } else {
-          item.classList.remove('active');
-      }
-  });
-  supabase.auth.getSession().then(function(res) {
-    if (res.data.session && res.data.session.user) {
-        localStorage.setItem('contractai_user_id', res.data.session.user.id);
-        atualizarDadosUsuario(res.data.session.user.email); 
-        renderizarHistorico();
-    } else {
-        localStorage.removeItem('contractai_user_id');
-        atualizarDadosUsuario(null);
-        renderizarHistorico();
-    }
-});
-});
+async function resetarPrompt(){
+  var userId = localStorage.getItem('contractai_user_id');
+  if(!userId) { alert("Você precisa estar logado."); return; }
+
+  document.getElementById('customPrompt').value = '';
+  localStorage.removeItem('contractai_prompt');
+  
+  // Limpa no banco de dados
+  await supabase.from('profiles').upsert({ id: userId, custom_prompt: null });
+  
+  var fb = document.getElementById('promptFeedback');
+  fb.style.color = '#4fd1c5';
+  fb.textContent = '✓ Prompt resetado';
+  setTimeout(function(){ fb.textContent = ''; }, 2500);
+}
 function abrirTermos(e){
 if(e) e.preventDefault();
 document.getElementById('modalTitle').textContent = 'Termos de Uso';
