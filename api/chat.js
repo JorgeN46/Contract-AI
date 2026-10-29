@@ -142,9 +142,9 @@ ATENÇÃO: Só mude para o comportamento do "Modo Análise" se o usuário pedir 
     });
 
     let promptFinal = message || "Por favor, analise o texto do arquivo em anexo.";
-    if (fileText && fileText.trim().length > 0) {
-        promptFinal = "Texto/Documento fornecido:\n\n" + fileText.substring(0, 30000) + "\n\nInstrução do usuário: " + (message || "Refine ou edite este texto.");
-    }
+if (fileText && fileText.trim().length > 0) {
+    promptFinal = "O usuário enviou o(s) seguinte(s) documento(s):\n\n" + fileText.substring(0, 30000) + "\n\nInstrução do usuário: " + (message || "Analise e compare os documentos.");
+}
     
     contentsArray.push({
         role: 'user',
