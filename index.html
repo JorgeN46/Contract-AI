@@ -1225,11 +1225,34 @@ function adicionarMensagemUsuario(texto){
   var area = document.getElementById('chatMessages');
   var div = document.createElement('div');
   div.className = 'msg user';
-  div.textContent = texto;
+  
+  // Adiciona o texto
+  var textNode = document.createElement('div');
+  textNode.textContent = texto;
+  div.appendChild(textNode);
+  
+  // Se tiver imagens anexadas, cria a galeria de miniaturas
+  if (imagensAnexadas.length > 0) {
+      var gallery = document.createElement('div');
+      gallery.className = 'chat-thumb-container';
+      
+      imagensAnexadas.forEach(function(base64Img) {
+          var img = document.createElement('img');
+          img.src = base64Img;
+          img.className = 'chat-thumb';
+          img.onclick = function() {
+              document.getElementById('imgZoomTarget').src = base64Img;
+              document.getElementById('imgZoomOverlay').classList.add('open');
+          };
+          gallery.appendChild(img);
+      });
+      div.appendChild(gallery);
+  }
+
   area.appendChild(div);
   div.scrollIntoView({behavior:'smooth', block:'end'});
   
-  conversaAtual.push({ role: 'user', content: texto }); // <--- ADICIONE AQUI
+  conversaAtual.push({ role: 'user', content: texto }); 
 }
 async function chamarIA(mensagemUsuario){
   var area = document.getElementById('chatMessages');
