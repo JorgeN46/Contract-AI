@@ -1620,13 +1620,6 @@ function limparInput() {
       inp.style.height = '40px'; // Reseta a altura ao enviar
   }
 }
-var conversaParaApagar = null;
-
-function deletarConversa(id) {
-  conversaParaApagar = id;
-  document.getElementById('deleteModalOverlay').classList.add('open');
-  document.getElementById('deleteModalBox').classList.add('open');
-}
 
 function fecharDeleteModal() {
   document.getElementById('deleteModalOverlay').classList.remove('open');
