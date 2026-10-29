@@ -265,6 +265,35 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   color: #fca5a5;
   transform: scale(1.1);
 }
+.context-menu {
+  position: fixed;
+  background: #0b1220;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,.8);
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 160px;
+}
+.context-menu.open { display: flex; }
+.context-menu button {
+  background: transparent;
+  border: 0;
+  color: #fff;
+  padding: 10px 14px;
+  text-align: left;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.context-menu button:hover { background: rgba(255,255,255,.08); }
+.context-menu button.danger { color: #fca5a5; }
+.context-menu button.danger:hover { background: rgba(248,113,113,.15); }
+.pin-icon { font-size: 12px; margin-right: 6px; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
