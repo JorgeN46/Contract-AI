@@ -797,6 +797,9 @@ async function salvarConversaAtual(){
       console.error("Erro inesperado ao salvar conversa:", err);
      }
   }
+var idConversaSelecionada = null;
+var timerLongPress;
+
 async function renderizarHistorico(){
   var container = document.getElementById('listaConversas');
   if(!container) return;
@@ -808,7 +811,8 @@ async function renderizarHistorico(){
       return;
   }
 
-  let { data: historico, error } = await supabase.from('conversations').select('*').order('created_at', { ascending: false });
+  // Agora ordena por is_pinned (fixados primeiro) e depois por data
+  let { data: historico, error } = await supabase.from('conversations').select('*').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
   
   container.innerHTML = '';
   if (error || !historico || historico.length === 0) {
@@ -816,75 +820,102 @@ async function renderizarHistorico(){
     return;
   }
 
-  // Lógica para agrupar por data
-  var hoje = new Date();
-  hoje.setHours(0,0,0,0);
-  var ontem = new Date(hoje);
-  ontem.setDate(ontem.getDate() - 1);
-  var seteDias = new Date(hoje);
-  seteDias.setDate(seteDias.getDate() - 7);
-
-  var grupos = {
-    hoje: [],
-    ontem: [],
-    semana: [],
-    antigo: []
-  };
-
   historico.forEach(function(conv) {
-    var dataConv = new Date(conv.created_at);
-    dataConv.setHours(0,0,0,0);
+    var item = document.createElement('div');
+    item.className = 'sidebar-item';
+    item.style.cssText = 'padding: 10px; color: #fff; font-size: 14px; cursor: pointer; border-radius: 8px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center;';
+    
+    var pinHtml = conv.is_pinned ? '<span class="pin-icon">📌</span>' : '';
+    item.innerHTML = pinHtml + '💬 ' + (conv.title || 'Conversa');
+    
+    // Clique normal abre a conversa
+    item.onclick = function(e) { 
+        if(!document.getElementById('chatContextMenu').classList.contains('open')) {
+            carregarConversa(conv.id); 
+        }
+    };
 
-    if (dataConv.getTime() === hoje.getTime()) {
-      grupos.hoje.push(conv);
-    } else if (dataConv.getTime() === ontem.getTime()) {
-      grupos.ontem.push(conv);
-    } else if (dataConv >= seteDias) {
-      grupos.semana.push(conv);
-    } else {
-      grupos.antigo.push(conv);
-    }
-  });
-
-  // Função auxiliar para criar os itens
-  function criarGrupo(titulo, lista) {
-    if (lista.length === 0) return;
-
-    var groupTitle = document.createElement('div');
-    groupTitle.className = 'sidebar-group-title';
-    groupTitle.textContent = titulo;
-    container.appendChild(groupTitle);
-
-    lista.forEach(function(conv) {
-      var item = document.createElement('div');
-      item.className = 'sidebar-item';
-      
-      var text = document.createElement('div');
-      text.className = 'sidebar-item-text';
-      text.innerHTML = '💬 ' + (conv.title || 'Conversa');
-      
-      var btnDelete = document.createElement('button');
-      btnDelete.className = 'btn-delete-chat';
-      btnDelete.innerHTML = '🗑️';
-      btnDelete.title = 'Apagar conversa';
-      btnDelete.onclick = function(e) {
-        e.stopPropagation(); // Evita abrir a conversa ao clicar na lixeira
-        deletarConversa(conv.id);
-      };
-
-      item.appendChild(text);
-      item.appendChild(btnDelete);
-      
-      item.onclick = function() { carregarConversa(conv.id); };
-      container.appendChild(item);
+    // Eventos de toque (Segurar o dedo por 600ms)
+    item.addEventListener('touchstart', function(e) {
+        timerLongPress = setTimeout(function() {
+            abrirMenuContexto(e, conv.id);
+        }, 600);
     });
-  }
+    item.addEventListener('touchend', function() { clearTimeout(timerLongPress); });
+    item.addEventListener('touchmove', function() { clearTimeout(timerLongPress); });
+    
+    // Eventos de mouse (Para testar no PC)
+    item.addEventListener('mousedown', function(e) {
+        timerLongPress = setTimeout(function() { abrirMenuContexto(e, conv.id); }, 600);
+    });
+    item.addEventListener('mouseup', function() { clearTimeout(timerLongPress); });
+    item.addEventListener('mouseleave', function() { clearTimeout(timerLongPress); });
 
-  // Renderiza os grupos na ordem correta
-  criarGrupo('Hoje', grupos.hoje);
-  criarGrupo('Ontem', grupos.ontem);
-  criarGrupo('Últimos 7 dias', grupos.semana);
-  criarGrupo('Mais antigo', grupos.antigo);
+    container.appendChild(item);
+  });
+}
+
+function abrirMenuContexto(e, id) {
+    idConversaSelecionada = id;
+    var menu = document.getElementById('chatContextMenu');
+    
+    // Posiciona o menu onde o dedo tocou
+    var touch = e.touches ? e.touches[0] : e;
+    menu.style.left = Math.min(touch.clientX, window.innerWidth - 180) + 'px';
+    menu.style.top = Math.min(touch.clientY, window.innerHeight - 150) + 'px';
+    
+    menu.classList.add('open');
+    
+    // Trava a rolagem para não bugar
+    if(e.cancelable) e.preventDefault(); 
+}
+
+// Fecha o menu se clicar fora dele
+document.addEventListener('click', function(e) {
+    var menu = document.getElementById('chatContextMenu');
+    if(menu.classList.contains('open') && !menu.contains(e.target)) {
+        menu.classList.remove('open');
+    }
+});
+
+// --- Ações do Menu ---
+
+async function fixarConversa() {
+    document.getElementById('chatContextMenu').classList.remove('open');
+    if(!idConversaSelecionada) return;
+    
+    // Pega o estado atual
+    let { data } = await supabase.from('conversations').select('is_pinned').eq('id', idConversaSelecionada).single();
+    var novoStatus = !(data && data.is_pinned);
+    
+    await supabase.from('conversations').update({ is_pinned: novoStatus }).eq('id', idConversaSelecionada);
+    renderizarHistorico();
+}
+
+async function abrirModalRenomear() {
+    document.getElementById('chatContextMenu').classList.remove('open');
+    if(!idConversaSelecionada) return;
+    
+    var novoNome = prompt("Digite o novo nome para esta conversa:");
+    if(novoNome && novoNome.trim() !== "") {
+        await supabase.from('conversations').update({ title: novoNome }).eq('id', idConversaSelecionada);
+        renderizarHistorico();
+    }
+}
+
+async function deletarConversa() {
+    document.getElementById('chatContextMenu').classList.remove('open');
+    if(!idConversaSelecionada) return;
+    
+    // Aqui a gente usa o modal bonito ou o confirm nativo
+    if(!confirm("Deseja realmente apagar esta conversa?")) return;
+    
+    await supabase.from('conversations').delete().eq('id', idConversaSelecionada);
+    
+    if(idConversaAtual === idConversaSelecionada) {
+        novoChat();
+    }
+    renderizarHistorico();
 }
 
 async function carregarConversa(id){
