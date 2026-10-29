@@ -1537,20 +1537,21 @@ async function submitLogin(e) {
     fb.style.color = '#4fd1c5';
     fb.textContent = 'Login feito com sucesso! Entrando...';
     
-    setTimeout(function() {
-      btn.disabled = false;
-      btn.textContent = 'Entrar / Criar Conta';
-      fb.textContent = '';
-      
-      supabase.auth.getUser().then(function(res) {
-          if(res.data.user) {
-              localStorage.setItem('contractai_user_id', res.data.user.id);
-              atualizarDadosUsuario(res.data.user.email); 
-              renderizarHistorico(); 
-          }
-          go('dashboard');
-      });
-    }, 1500);
+      setTimeout(function() {
+    btn.disabled = false;
+    btn.textContent = 'Entrar / Criar Conta';
+    fb.textContent = '';
+    
+    supabase.auth.getUser().then(function(res) {
+        if(res.data.user) {
+            localStorage.setItem('contractai_user_id', res.data.user.id);
+            atualizarDadosUsuario(res.data.user.email);
+            carregarPersonalizacaoDoBanco(res.data.user.id); // <-- AQUI TAMBÉM
+            renderizarHistorico(); 
+        }
+        go('dashboard');
+    });
+  }, 1500);
   }
 }
 function atualizarDadosUsuario(email) {
