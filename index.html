@@ -1643,6 +1643,17 @@ async function fazerLogout() {
   // Volta para a tela inicial
   go('landing');
 }
+async function carregarPersonalizacaoDoBanco(userId) {
+  let { data, error } = await supabase.from('profiles').select('custom_prompt').eq('id', userId).single();
+  
+  if (data && data.custom_prompt) {
+      document.getElementById('customPrompt').value = data.custom_prompt;
+      localStorage.setItem('contractai_prompt', data.custom_prompt); // Atualiza a memória local
+  } else {
+      document.getElementById('customPrompt').value = '';
+      localStorage.removeItem('contractai_prompt');
+  }
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
