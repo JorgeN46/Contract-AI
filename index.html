@@ -1044,71 +1044,60 @@ var textoArquivoExtraido = "";
 var conversaAtual = []; 
 var idConversaAtual = null; // <--- ADICIONE ESSA LINHA
 
+// Variável global para guardar as imagens em base64
+var imagensAnexadas = []; 
+
 function aoSelecionarArquivo(input){
   if(!input.files || input.files.length === 0) return;
 
   var files = Array.from(input.files);
   var numImages = files.filter(f => f.type.startsWith('image/')).length;
-  var numDocs = files.length - numImages;
-
-  // 🚨 AQUI ESTÃO OS LIMITES
-  if (numImages > 10) {
-      alert("Limite excedido: você pode anexar no máximo 10 imagens por vez.");
-      input.value = '';
-      return;
-  }
-  if (numDocs > 2) {
-      alert("Limite excedido: você pode anexar no máximo 2 documentos por vez.");
+  
+  // Limite de 10 imagens
+  if (imagensAnexadas.length + numImages > 10) {
+      alert("Limite excedido: você pode anexar no máximo 10 imagens por vez no chat.");
       input.value = '';
       return;
   }
 
-  var nomes = files.map(f => {
-      var match = f.name.match(/'([^']+)'/);
-      return match ? match[1] : f.name;
-  });
+  var nomes = files.map(f => f.name);
+  var totalArquivos = files.length;
 
-  arquivoAnexado = files.length > 1 ? files.length + ' arquivos anexados' : nomes[0];
+  arquivoAnexado = totalArquivos > 1 ? totalArquivos + ' arquivos anexados' : nomes[0];
   textoArquivoExtraido = ""; 
+  
   document.getElementById('attachName').textContent = arquivoAnexado + ' (Lendo...)';
   document.getElementById('attachPreview').classList.add('active');
 
-  var promises = files.map(function(file, index) {
+  var promises = files.map(function(file) {
       return new Promise(function(resolve) {
-          var nomeFile = nomes[index];
-          
-          if (file.type === 'application/pdf') {
+          if (file.type.startsWith('image/')) {
+              // Lê a imagem para exibir a miniatura
               var reader = new FileReader();
-              reader.onload = function() {
-                  pdfjsLib.getDocument(new Uint8Array(this.result)).promise.then(function(pdf) {
-                      var pagePromises = [];
-                      for (var i = 1; i <= pdf.numPages; i++) {
-                          pagePromises.push(pdf.getPage(i).then(p => p.getTextContent()).then(t => t.items.map(s => s.str).join(' ')));
-                      }
-                      Promise.all(pagePromises).then(texts => {
-                          var fullText = texts.map((t, i) => `\n--- ${nomeFile} - Página ${i+1} ---\n${t.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim()}`).join('\n');
-                          resolve(fullText);
-                      });
-                  });
+              reader.onload = function(e) {
+                  imagensAnexadas.push(e.target.result); // Salva o base64
+                  resolve(`\n--- Imagem Anexada: ${file.name} ---\n(Análise visual preparada para IA)`);
               };
-              reader.readAsArrayBuffer(file);
-              
-          } else if (file.type.startsWith('image/')) {
-              Tesseract.recognize(file, 'por').then(({ data: { text } }) => {
-                  resolve(`\n--- ${nomeFile} (Imagem) ---\n${text}`);
-              });
-              
-          } else if (file.type.includes('word') || file.name.endsWith('.docx')) {
-              var reader = new FileReader();
-              reader.onload = function() {
-                  mammoth.extractRawText({ arrayBuffer: this.result }).then(function(result) {
-                      resolve(`\n--- ${nomeFile} ---\n${result.value}`);
-                  });
-              };
-              reader.readAsArrayBuffer(file);
-              
+              reader.readAsDataURL(file);
+          } else if (file.type === 'application/pdf') {
+               // (Mantém a lógica antiga do PDF aqui...)
+               var reader = new FileReader();
+               reader.onload = function() {
+                   pdfjsLib.getDocument(new Uint8Array(this.result)).promise.then(function(pdf) {
+                       var pagePromises = [];
+                       for (var i = 1; i <= pdf.numPages; i++) {
+                           pagePromises.push(pdf.getPage(i).then(p => p.getTextContent()).then(t => t.items.map(s => s.str).join(' ')));
+                       }
+                       Promise.all(pagePromises).then(texts => {
+                           var fullText = texts.map((t, i) => `\n--- ${file.name} - Página ${i+1} ---\n${t.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim()}`).join('\n');
+                           resolve(fullText);
+                       });
+                   });
+               };
+               reader.readAsArrayBuffer(file);
           } else {
-              resolve(`\n--- ${nomeFile} ---\n(Formato não suportado)`);
+              // Outros formatos (Word/TXT)
+              resolve(`\n--- ${file.name} ---\n(Arquivo pronto)`);
           }
       });
   });
@@ -1116,13 +1105,10 @@ function aoSelecionarArquivo(input){
   Promise.all(promises).then(function(texts) {
       textoArquivoExtraido = texts.join('\n\n');
       document.getElementById('attachName').textContent = arquivoAnexado + ' (Pronto)';
-  }).catch(function(err) {
-      document.getElementById('attachName').textContent = arquivoAnexado + ' (Erro ao ler)';
   });
-
   input.value = '';
 }
-
+  
 function removerAnexo(){
   arquivoAnexado = null;
   textoArquivoExtraido = ""; // <--- A MÁGICA ESTÁ AQUI
