@@ -1381,16 +1381,16 @@ function enviarMensagem(){
      if(welcome) welcome.style.display = 'none';
 
      if(texto) {
+         // Se o usuário já digitou algo, manda direto para a IA
          chamarIA("Analise o arquivo '" + nome + "'. Instrução do usuário: " + texto);
+         removerAnexo(); // Limpa a memória APENAS se for enviar direto
      } else {
+         // Se não digitou nada, mostra os botões. NÃO limpa a memória!
          setTimeout(function(){
             adicionarMensagemIA('Recebi o arquivo <b>' + nome + '</b>. O que deseja fazer?<div class="msg-options"><button class="msg-opt" onclick="escolherObjetivo(\'Análise\')">📊 Análise</button><button class="msg-opt" onclick="escolherObjetivo(\'Trabalho\')">💼 Trabalho</button><button class="msg-opt" onclick="escolherObjetivo(\'Resumo\')">📝 Resumo</button></div>');
          }, 500);
      }
-
-     removerAnexo(); // <- Essa linha é a que limpa a caixinha azul após o envio
   } else if(texto) {
-   textoArquivoExtraido = ""; // <--- LIMPA A MEMÓRIA DO PDF ANTES DE ENVIAR
    adicionarMensagemUsuario(texto);
    var area = document.getElementById('chatMessages');
    if(area) area.classList.add('active');
@@ -1398,35 +1398,9 @@ function enviarMensagem(){
    if(welcome) welcome.style.display = 'none';
    chamarIA(texto);
   }
-  limparInput(); //  ''
+  limparInput();
   salvarConversaAtual();
 }
-document.addEventListener('click', function(e){
-var menu = document.getElementById('attachMenu');
-if(menu && menu.classList.contains('open') && !menu.contains(e.target) && !e.target.closest('.chat-plus')){
-menu.classList.remove('open');
-}
-});
-document.addEventListener('click', function(e){
-var pm = document.getElementById('personalizacaoMenu');
-if(pm && pm.classList.contains('open') && !pm.contains(e.target) && !e.target.closest('.personalizacao-btn')){
-pm.classList.remove('open');
-document.querySelector('.personalizacao-btn').classList.remove('open');
-}
-});
-var hdrs = document.querySelectorAll('header');
-var lastY = 0;
-window.addEventListener('scroll', function(){
-var y = window.scrollY;
-hdrs.forEach(function(h){
-if (y > window.innerHeight && y > lastY) {
-h.classList.add('hidden');
-} else {
-h.classList.remove('hidden');
-}
-});
-lastY = y;
-});
 function baixarPDF(id) {
   var elemento = document.getElementById(id);
   if(!elemento) return;
