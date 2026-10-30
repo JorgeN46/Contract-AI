@@ -773,9 +773,10 @@ function novoChat(){
 }
 async function salvarConversaAtual(){
   if(conversaAtual.length === 0) return; 
+  if(conversaAtual.length <= lastSavedIndex) return; // Nada novo para salvar
   
   var userId = localStorage.getItem('contractai_user_id');
-  if(!userId) return; // Se não estiver logado, não faz nada
+  if(!userId) return;
 
   var primeiraMsg = conversaAtual.find(m => m.role === 'user');
   var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
@@ -783,8 +784,6 @@ async function salvarConversaAtual(){
   try {
       if (!idConversaAtual) {
         let { data, error } = await supabase.from('conversations').insert([{ user_id: userId, title: titulo }]).select();
-        
-        // Se der erro, apenas registra no console do navegador, sem travar o usuário
         if (error) { 
             console.error("Erro ao criar conversa:", error); 
             return; 
@@ -792,22 +791,23 @@ async function salvarConversaAtual(){
         idConversaAtual = data[0].id; 
       }
 
-      for (let msg of conversaAtual) {
-          let { data: exist } = await supabase.from('messages').select('id').eq('conversation_id', idConversaAtual).eq('content', msg.content);
-          if(!exist || exist.length === 0) {
-              await supabase.from('messages').insert([{ conversation_id: idConversaAtual, role: msg.role, content: msg.content }]);
-          }
+      // Salva APENAS as mensagens novas (a partir do último índice salvo)
+      var novas = conversaAtual.slice(lastSavedIndex);
+      for (let msg of novas) {
+          await supabase.from('messages').insert([{ 
+              conversation_id: idConversaAtual, 
+              role: msg.role, 
+              content: msg.content 
+          }]);
       }
+      lastSavedIndex = conversaAtual.length;
       
-      // Atualiza a lista lateral silenciosamente
       renderizarHistorico();
       
   } catch (err) {
       console.error("Erro inesperado ao salvar conversa:", err);
-     }
   }
-var idConversaSelecionada = null;
-var timerLongPress;
+}
 
 async function renderizarHistorico(){
   var container = document.getElementById('listaConversas');
