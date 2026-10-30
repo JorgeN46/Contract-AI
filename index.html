@@ -820,7 +820,7 @@ async function renderizarHistorico(){
   }
 
   // Agora ordena por is_pinned (fixados primeiro) e depois por data
-  let { data: historico, error } = await supabase.from('conversations').select('*').order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
+  let { data: historico, error } = await supabase.from('conversations').select('*').eq('user_id', userId).order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
   
   container.innerHTML = '';
   if (error || !historico || historico.length === 0) {
