@@ -301,6 +301,75 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 .img-zoom-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px; }
 .img-zoom-overlay.open { display: flex; }
 .img-zoom-overlay img { max-width: 100%; max-height: 90vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+/* --- NOVO VISUAL DO CHAT --- */
+
+/* Avatar da IA (O "C") */
+.msg.ai {
+  position: relative;
+  padding-left: 44px !important; /* Abre espaço para o avatar */
+}
+.msg.ai::before {
+  content: 'C';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4f8dff, #4fd1c5);
+  color: #070b14;
+  font-weight: 800;
+  font-size: 14px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 10px rgba(79, 141, 255, 0.2);
+}
+
+/* Respiro entre parágrafos e listas */
+.msg.ai p { margin-bottom: 14px; }
+.msg.ai p:last-child { margin-bottom: 0; }
+.msg.ai ul, .msg.ai ol { margin-bottom: 16px; padding-left: 20px; }
+.msg.ai li { margin-bottom: 6px; }
+
+/* Botões de ação (Escondidos no PC, visíveis no celular) */
+.msg-actions { 
+  display: flex; 
+  gap: 8px; 
+  margin-top: 12px; 
+  flex-wrap: wrap; 
+  opacity: 0; /* Fica invisível no PC por padrão */
+  transition: opacity 0.2s ease;
+}
+.msg.ai:hover .msg-actions { 
+  opacity: 1; /* Aparece ao passar o mouse */
+}
+
+/* No celular (telas menores), os botões ficam sempre visíveis */
+@media (max-width: 768px) {
+  .msg-actions { opacity: 1; }
+}
+
+/* Animação dos 3 pontinhos */
+.typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+}
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  background-color: #7db4ff;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
