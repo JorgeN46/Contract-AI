@@ -989,7 +989,7 @@ async function carregarConversa(id){
       area.appendChild(div);
     }
   });
-  
+  lastSavedIndex = conversaAtual.length;
   var sidebar = document.getElementById('sidebar');
   var overlay = document.getElementById('sidebarOverlay');
   if(sidebar.classList.contains('open')) {
