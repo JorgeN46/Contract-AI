@@ -770,6 +770,7 @@ function novoChat(){
   removerAnexo(); 
   conversaAtual = []; 
   idConversaAtual = null; 
+  lastSavedIndex = 0;
 }
 async function salvarConversaAtual(){
   if(conversaAtual.length === 0) return; 
