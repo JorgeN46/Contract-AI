@@ -1664,7 +1664,7 @@ async function fazerLogout() {
   go('landing');
 }
 async function carregarPersonalizacaoDoBanco(userId) {
-  let { data, error } = await supabase.from('profiles').select('custom_prompt').eq('id', userId).single();
+  let { data, error } = await supabase.from('profiles').select('custom_prompt').eq('id', userId).maybeSingle();
   
   if (data && data.custom_prompt) {
       document.getElementById('customPrompt').value = data.custom_prompt;
