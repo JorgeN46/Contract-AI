@@ -904,7 +904,6 @@ async function renderizarHistorico(){
       return;
   }
 
-  // Agora ordena por is_pinned (fixados primeiro) e depois por data
   let { data: historico, error } = await supabase.from('conversations').select('*').eq('user_id', userId).order('is_pinned', { ascending: false }).order('created_at', { ascending: false });
   
   container.innerHTML = '';
@@ -913,39 +912,66 @@ async function renderizarHistorico(){
     return;
   }
 
+  // Lógica para agrupar por data
+  var hoje = new Date(); hoje.setHours(0,0,0,0);
+  var ontem = new Date(hoje); ontem.setDate(ontem.getDate() - 1);
+  
+  var grupos = { 'Fixadas': [], 'Hoje': [], 'Ontem': [], 'Mais antigas': [] };
+
   historico.forEach(function(conv) {
-    var item = document.createElement('div');
-    item.className = 'sidebar-item';
-    item.style.cssText = 'padding: 10px; color: #fff; font-size: 14px; cursor: pointer; border-radius: 8px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center;';
-    
-    var pinHtml = conv.is_pinned ? '<span class="pin-icon">📌</span>' : '';
-    item.innerHTML = pinHtml + '💬 ' + (conv.title || 'Conversa');
-    
-    // Clique normal abre a conversa
-    item.onclick = function(e) { 
-        if(!document.getElementById('chatContextMenu').classList.contains('open')) {
-            carregarConversa(conv.id); 
-        }
-    };
-
-    // Eventos de toque (Segurar o dedo por 600ms)
-    item.addEventListener('touchstart', function(e) {
-        timerLongPress = setTimeout(function() {
-            abrirMenuContexto(e, conv.id);
-        }, 600);
-    });
-    item.addEventListener('touchend', function() { clearTimeout(timerLongPress); });
-    item.addEventListener('touchmove', function() { clearTimeout(timerLongPress); });
-    
-    // Eventos de mouse (Para testar no PC)
-    item.addEventListener('mousedown', function(e) {
-        timerLongPress = setTimeout(function() { abrirMenuContexto(e, conv.id); }, 600);
-    });
-    item.addEventListener('mouseup', function() { clearTimeout(timerLongPress); });
-    item.addEventListener('mouseleave', function() { clearTimeout(timerLongPress); });
-
-    container.appendChild(item);
+    if(conv.is_pinned) {
+      grupos['Fixadas'].push(conv);
+    } else {
+      var dataConv = new Date(conv.created_at);
+      if (dataConv >= hoje) grupos['Hoje'].push(conv);
+      else if (dataConv >= ontem) grupos['Ontem'].push(conv);
+      else grupos['Mais antigas'].push(conv);
+    }
   });
+
+  // Renderiza os grupos
+  for (var tituloGrupo in grupos) {
+    if (grupos[tituloGrupo].length === 0) continue; // Pula grupos vazios
+
+    var titleDiv = document.createElement('div');
+    titleDiv.className = 'sidebar-group-title';
+    titleDiv.textContent = tituloGrupo;
+    container.appendChild(titleDiv);
+
+    grupos[tituloGrupo].forEach(function(conv) {
+      var item = document.createElement('div');
+      item.className = 'sidebar-item';
+      
+      var pinHtml = conv.is_pinned ? '<span class="pin-icon" style="margin-right:6px;">📌</span>' : '';
+      item.innerHTML = '<div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + pinHtml + '💬 ' + (conv.title || 'Conversa') + '</div>';
+      
+      // Clique normal abre a conversa e FECHA a sidebar
+      item.onclick = function(e) { 
+          if(!document.getElementById('chatContextMenu').classList.contains('open')) {
+              carregarConversa(conv.id); 
+              if(document.getElementById('sidebar').classList.contains('open')){
+                  toggleSidebar();
+              }
+          }
+      };
+
+      // Eventos de toque (Segurar o dedo)
+      item.addEventListener('touchstart', function(e) {
+          timerLongPress = setTimeout(function() { abrirMenuContexto(e, conv.id); }, 600);
+      });
+      item.addEventListener('touchend', function() { clearTimeout(timerLongPress); });
+      item.addEventListener('touchmove', function() { clearTimeout(timerLongPress); });
+      
+      // Eventos de mouse
+      item.addEventListener('mousedown', function(e) {
+          timerLongPress = setTimeout(function() { abrirMenuContexto(e, conv.id); }, 600);
+      });
+      item.addEventListener('mouseup', function() { clearTimeout(timerLongPress); });
+      item.addEventListener('mouseleave', function() { clearTimeout(timerLongPress); });
+
+      container.appendChild(item);
+    });
+  }
 }
 
 function abrirMenuContexto(e, id) {
