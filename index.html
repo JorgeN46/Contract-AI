@@ -869,24 +869,14 @@ function abrirMenuContexto(e, id) {
     idConversaSelecionada = id;
     var menu = document.getElementById('chatContextMenu');
     
-    // Posiciona o menu onde o dedo tocou
+    // Posiciona o menu onde o dedo tocou, sempre dentro da viewport
     var touch = e.touches ? e.touches[0] : e;
-    menu.style.left = Math.min(touch.clientX, window.innerWidth - 180) + 'px';
-    menu.style.top = Math.min(touch.clientY, window.innerHeight - 150) + 'px';
+    var margin = 8;
+    menu.style.left = Math.max(margin, Math.min(touch.clientX, window.innerWidth - 180 - margin)) + 'px';
+    menu.style.top = Math.max(margin, Math.min(touch.clientY, window.innerHeight - 150 - margin)) + 'px';
     
     menu.classList.add('open');
-    
-    // Trava a rolagem para não bugar
-    if(e.cancelable) e.preventDefault(); 
 }
-
-// Fecha o menu se clicar fora dele
-document.addEventListener('click', function(e) {
-    var menu = document.getElementById('chatContextMenu');
-    if(menu.classList.contains('open') && !menu.contains(e.target)) {
-        menu.classList.remove('open');
-    }
-});
 
 // --- Ações do Menu ---
 
