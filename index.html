@@ -1320,7 +1320,7 @@ async function chamarIA(mensagemUsuario){
   var divTemp = document.createElement('div');
   divTemp.className = 'msg ai';
   divTemp.id = 'msg-streaming';
-  divTemp.innerHTML = '<span style="color:#7db4ff; font-style:italic;">Digitando...</span>';
+  divTemp.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
   area.appendChild(divTemp);
   window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
