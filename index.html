@@ -1395,12 +1395,13 @@ async function chamarIA(mensagemUsuario){
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: mensagemUsuario,
-        fileText: textoArquivoExtraido,
-        systemPrompt: promptPersonalizado,
-        mode: modoAtual,
-        history: conversaAtual.slice(-10)
-      })
+  message: mensagemUsuario,
+  fileText: textoArquivoExtraido,
+  systemPrompt: promptPersonalizado,
+  mode: modoAtual,
+  history: conversaAtual.slice(-10),
+  userId: localStorage.getItem('contractai_user_id') // <--- ADICIONE ESTA LINHA
+})
     });
 
     var textoAcumulado = "";
