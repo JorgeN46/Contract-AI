@@ -1403,7 +1403,12 @@ async function chamarIA(mensagemUsuario){
   userId: localStorage.getItem('contractai_user_id') // <--- ADICIONE ESTA LINHA
 })
     });
-
+if (!resposta.ok) {
+  if (resposta.status === 429) {
+    throw new Error("Calma aí! Você está indo rápido demais. Aguarde um minuto para enviar mais mensagens.");
+  }
+  throw new Error("Falha na comunicação com o servidor.");
+}
     var textoAcumulado = "";
 
     const reader = resposta.body.getReader();
