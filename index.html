@@ -1822,6 +1822,33 @@ window.addEventListener('DOMContentLoaded', function(){
       }
   });
 });
+function criarParticulas(container) {
+  // Limita a quantidade para não travar o celular (só solta se tiver menos de 5 na tela)
+  if (container.querySelectorAll('.particle').length > 5) return;
+  
+  // Sorteia se vai criar a partícula (para não ficar excessivo)
+  if (Math.random() > 0.6) return; 
+
+  var p = document.createElement('div');
+  p.className = 'particle';
+  
+  // Posição aleatória ao longo do texto
+  var x = Math.random() * (container.offsetWidth - 10);
+  var y = Math.random() * (container.offsetHeight - 10);
+  
+  // Tamanho aleatório
+  var size = Math.random() * 4 + 2; // de 2px a 6px
+  
+  p.style.left = x + 'px';
+  p.style.top = y + 'px';
+  p.style.width = size + 'px';
+  p.style.height = size + 'px';
+  
+  container.appendChild(p);
+  
+  // Remove a partícula do HTML depois que a animação acabar
+  setTimeout(function() { p.remove(); }, 800);
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
