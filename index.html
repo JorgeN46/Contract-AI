@@ -1427,8 +1427,8 @@ async function chamarIA(mensagemUsuario){
 
     // Pega a caixa de conteúdo de dentro do avatar e coloca o texto final
     var contentBoxFinal = divTemp.querySelector('.msg-ai-content');
-    contentBoxFinal.innerHTML = marked.parse(textoAcumulado);
-
+    contentBoxFinal.innerHTML = marked.parse(textoAcumulado.trim());
+    
     if (typeof renderMathInElement !== 'undefined') {
       renderMathInElement(contentBoxFinal, {
         delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}],
