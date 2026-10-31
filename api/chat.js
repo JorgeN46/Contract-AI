@@ -1,3 +1,6 @@
+// Memória temporária para controle de limites (Rate Limiting)
+const requestCache = new Map();
+
 // REGISTRO DE MODELOS (MODEL TIERS)
 const MODEL_TIERS = {
   padrao: {
@@ -89,7 +92,31 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { message, fileText, systemPrompt, mode, history } = req.body;
+    // 1. Adicionamos o userId na desestruturação do body
+    const { message, fileText, systemPrompt, mode, history, userId } = req.body;
+    
+    // ==========================================
+    // 🛡️ RATE LIMITING (Proteção de Custos)
+    // ==========================================
+    const limitKey = userId || req.headers['x-forwarded-for'] || 'anonimo';
+    const now = Date.now();
+    const windowMs = 60000; // 1 minuto
+    const maxRequests = 10; // Máximo de 10 mensagens por minuto
+
+    if (!requestCache.has(limitKey)) {
+      requestCache.set(limitKey, []);
+    }
+
+    const timestamps = requestCache.get(limitKey).filter(t => now - t < windowMs);
+    
+    if (timestamps.length >= maxRequests) {
+      return res.status(429).json({ error: 'Você excedeu o limite de 10 mensagens por minuto.' });
+    }
+
+    timestamps.push(now);
+    requestCache.set(limitKey, timestamps);
+    // ==========================================
+
     if (!message && (!fileText || fileText.trim() === '')) return res.status(400).json({ error: 'Mensagem vazia' });
 
     const apiKey = process.env.GOOGLE_API_KEY;
