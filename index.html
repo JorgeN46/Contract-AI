@@ -1403,7 +1403,6 @@ window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
       })
     });
 
-    divTemp.innerHTML = '';
     var textoAcumulado = "";
 
     const reader = resposta.body.getReader();
@@ -1424,7 +1423,6 @@ window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 
-    divTemp.id = 'msg-ai-' + Date.now();
     divTemp.id = 'msg-ai-' + Date.now();
 
 // Pega a caixa de conteúdo de dentro do avatar e coloca o texto final
