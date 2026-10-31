@@ -1372,13 +1372,21 @@ function adicionarMensagemUsuario(texto){
 }
 async function chamarIA(mensagemUsuario){
   var area = document.getElementById('chatMessages');
-  var divTemp = document.createElement('div');
-  divTemp.className = 'msg ai';
-  divTemp.id = 'msg-streaming';
-  divTemp.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
-  area.appendChild(divTemp);
-  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+var divTemp = document.createElement('div');
+divTemp.className = 'msg ai';
+divTemp.id = 'msg-streaming';
 
+// Cria a estrutura com o Avatar e a caixa de texto
+divTemp.innerHTML = `
+  <div class="ai-avatar">C</div>
+  <div class="msg-ai-content">
+    <div class="typing-indicator"><span></span><span></span><span></span></div>
+  </div>
+`;
+
+area.appendChild(divTemp);
+window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  
   try {
     var promptPersonalizado = localStorage.getItem('contractai_prompt') || '';
     var modoAtual = localStorage.getItem('contractai_mode') || 'padrao';
