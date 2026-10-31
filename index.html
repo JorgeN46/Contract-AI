@@ -1372,20 +1372,20 @@ function adicionarMensagemUsuario(texto){
 }
 async function chamarIA(mensagemUsuario){
   var area = document.getElementById('chatMessages');
-var divTemp = document.createElement('div');
-divTemp.className = 'msg ai';
-divTemp.id = 'msg-streaming';
+  var divTemp = document.createElement('div');
+  divTemp.className = 'msg ai';
+  divTemp.id = 'msg-streaming';
 
-// Cria a estrutura com o Avatar e a caixa de texto
-divTemp.innerHTML = `
-  <div class="ai-avatar">C</div>
-  <div class="msg-ai-content">
-    <div class="typing-indicator"><span></span><span></span><span></span></div>
-  </div>
-`;
+  // Cria a estrutura com o Avatar e a caixa de texto
+  divTemp.innerHTML = `
+    <div class="ai-avatar">C</div>
+    <div class="msg-ai-content">
+      <div class="typing-indicator"><span></span><span></span><span></span></div>
+    </div>
+  `;
 
-area.appendChild(divTemp);
-window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  area.appendChild(divTemp);
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   
   try {
     var promptPersonalizado = localStorage.getItem('contractai_prompt') || '';
@@ -1409,35 +1409,35 @@ window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     const decoder = new TextDecoder();
 
     while (true) {
-  const { done, value } = await reader.read();
-  if (done) break;
-  
-  const chunk = decoder.decode(value);
-  textoAcumulado += chunk;
-  
-  var contentBox = divTemp.querySelector('.msg-ai-content');
-  contentBox.innerHTML = marked.parse(textoAcumulado) + '<span style="color:#7db4ff;">▍</span>';
-  
-  criarParticulas(divTemp); // <-- ADICIONE ESTA LINHA AQUI ✨
-  
-  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      const chunk = decoder.decode(value);
+      textoAcumulado += chunk;
+      
+      var contentBox = divTemp.querySelector('.msg-ai-content');
+      contentBox.innerHTML = marked.parse(textoAcumulado) + '<span style="color:#7db4ff;">▍</span>';
+      
+      criarParticulas(divTemp); // ✨ Mágica das partículas
+      
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 
     divTemp.id = 'msg-ai-' + Date.now();
 
-// Pega a caixa de conteúdo de dentro do avatar e coloca o texto final
-var contentBoxFinal = divTemp.querySelector('.msg-ai-content');
-contentBoxFinal.innerHTML = marked.parse(textoAcumulado);
+    // Pega a caixa de conteúdo de dentro do avatar e coloca o texto final
+    var contentBoxFinal = divTemp.querySelector('.msg-ai-content');
+    contentBoxFinal.innerHTML = marked.parse(textoAcumulado);
 
-if (typeof renderMathInElement !== 'undefined') {
-  renderMathInElement(contentBoxFinal, { // <-- Mude de divTemp para contentBoxFinal
-    delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}],
-    throwOnError : false
-  });
-}
+    if (typeof renderMathInElement !== 'undefined') {
+      renderMathInElement(contentBoxFinal, {
+        delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}],
+        throwOnError : false
+      });
+    }
 
     conversaAtual.push({ role: 'ai', content: textoAcumulado });
-    textoArquivoExtraido = ""; // <--- LIMPA A MEMÓRIA DO ARQUIVO AQUI!
+    textoArquivoExtraido = ""; 
     removerAnexo();
     
     var actions = document.createElement('div');
@@ -1476,13 +1476,14 @@ if (typeof renderMathInElement !== 'undefined') {
     salvarConversaAtual(); 
 
   } catch(err) {
-  var boxErro = divTemp.querySelector('.msg-ai-content');
-  if(boxErro) {
-    boxErro.innerHTML = '❌ Erro de conexão: ' + err.message;
-  } else {
-    divTemp.innerHTML = '❌ Erro de conexão: ' + err.message;
-     }
+    var boxErro = divTemp.querySelector('.msg-ai-content');
+    if(boxErro) {
+      boxErro.innerHTML = '❌ Erro de conexão: ' + err.message;
+    } else {
+      divTemp.innerHTML = '❌ Erro de conexão: ' + err.message;
+    }
   }
+} // <--- ESSA É A CHAVE QUE ESTAVA FALTANDO! 🎯
 function escolherObjetivo(objetivo){
 adicionarMensagemUsuario(objetivo);
 var prompt = '';
