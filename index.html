@@ -1417,14 +1417,18 @@ async function chamarIA(mensagemUsuario){
     }
 
     divTemp.id = 'msg-ai-' + Date.now();
-    divTemp.innerHTML = marked.parse(textoAcumulado);
-    
-    if (typeof renderMathInElement !== 'undefined') {
-      renderMathInElement(divTemp, {
-        delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}],
-        throwOnError : false
-      });
-    }
+    divTemp.id = 'msg-ai-' + Date.now();
+
+// Pega a caixa de conteúdo de dentro do avatar e coloca o texto final
+var contentBoxFinal = divTemp.querySelector('.msg-ai-content');
+contentBoxFinal.innerHTML = marked.parse(textoAcumulado);
+
+if (typeof renderMathInElement !== 'undefined') {
+  renderMathInElement(contentBoxFinal, { // <-- Mude de divTemp para contentBoxFinal
+    delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}],
+    throwOnError : false
+  });
+}
 
     conversaAtual.push({ role: 'ai', content: textoAcumulado });
     textoArquivoExtraido = ""; // <--- LIMPA A MEMÓRIA DO ARQUIVO AQUI!
