@@ -1476,9 +1476,13 @@ if (typeof renderMathInElement !== 'undefined') {
     salvarConversaAtual(); 
 
   } catch(err) {
+  var boxErro = divTemp.querySelector('.msg-ai-content');
+  if(boxErro) {
+    boxErro.innerHTML = '❌ Erro de conexão: ' + err.message;
+  } else {
     divTemp.innerHTML = '❌ Erro de conexão: ' + err.message;
+     }
   }
-}
 function escolherObjetivo(objetivo){
 adicionarMensagemUsuario(objetivo);
 var prompt = '';
