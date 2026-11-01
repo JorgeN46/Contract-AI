@@ -936,12 +936,18 @@ document.querySelector('.personalizacao-btn').classList.toggle('open');
 document.getElementById('personalizacaoMenu').classList.toggle('open');
 }
 function escolherPersonalizacao(el){
-document.querySelectorAll('.personalizacao-item').forEach(function(i){ i.classList.remove('active'); });
-el.classList.add('active');
-document.querySelector('.personalizacao-btn .label').textContent = el.querySelector('.mode-name').textContent;
-localStorage.setItem('contractai_mode', el.getAttribute('data-mode') || 'padrao');
-document.querySelector('.personalizacao-btn').classList.remove('open');
-document.getElementById('personalizacaoMenu').classList.remove('open');
+  document.querySelectorAll('.personalizacao-item').forEach(function(i){ i.classList.remove('active'); });
+  el.classList.add('active');
+  
+  var modoSelecionado = el.getAttribute('data-mode') || 'padrao';
+  document.querySelector('.personalizacao-btn .label').textContent = el.querySelector('.mode-name').textContent;
+  localStorage.setItem('contractai_mode', modoSelecionado);
+  
+  document.querySelector('.personalizacao-btn').classList.remove('open');
+  document.getElementById('personalizacaoMenu').classList.remove('open');
+  
+  // 👇 ESSA É A LINHA NOVA QUE FAZ A MÁGICA ACONTECER 👇
+  atualizarTelaInicial(modoSelecionado);
 }
 var idConversaAtual = null;
 var lastSavedIndex = 0;
