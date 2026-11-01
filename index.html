@@ -646,7 +646,23 @@ Ao continuar, você concorda com nossos
 </aside>
 
 <div class="dash-main" id="dashWelcome">
-<h1>Olá, seja bem-vindo! 👋</h1>
+  <div class="welcome-state">
+    <div class="welcome-icon">C</div>
+    <h1>Como posso ajudar hoje?</h1>
+    <p class="welcome-sub">Envie um contrato, faça uma pergunta ou use um dos atalhos abaixo.</p>
+    
+    <div class="welcome-chips">
+      <button class="welcome-chip" onclick="abrirAtalho('Analisar um contrato de prestação de serviço')">
+        📄 Analisar Contrato
+      </button>
+      <button class="welcome-chip" onclick="abrirAtalho('Fazer um resumo deste documento')">
+        📝 Resumir Documento
+      </button>
+      <button class="welcome-chip" onclick="abrirAtalho('Revisar e melhorar este texto: ')">
+        ✍️ Refinar Texto
+      </button>
+    </div>
+  </div>
 </div>
 
 <div class="chat-messages" id="chatMessages"></div>
