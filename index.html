@@ -699,14 +699,12 @@ Ao continuar, você concorda com nossos
     
     <div class="dash-main" id="dashWelcome">
   <div class="welcome-state">
-    <div class="welcome-icon">✨</div>
-    <h1>Como posso ajudar?</h1>
+    <div class="welcome-icon" id="welcomeIcon">✨</div>
+    <h1 id="welcomeTitle">Como posso ajudar?</h1>
+    <p class="welcome-sub" id="welcomeSub">Escreva uma mensagem ou escolha um atalho abaixo.</p>
     
-    <div class="welcome-chips">
-      <button class="welcome-chip" onclick="abrirAtalho('Crie uma apresentação de 5 slides sobre ')">📊 Apresentação</button>
-      <button class="welcome-chip" onclick="abrirAtalho('Faça um resumo em tópicos deste PDF')">📄 Resumir PDF</button>
-      <button class="welcome-chip" onclick="abrirAtalho('Escreva um e-mail profissional sobre ')">✍️ Escrever E-mail</button>
-      <button class="welcome-chip" onclick="abrirAtalho('Me explique de forma simples sobre ')">💡 Tirar Dúvida</button>
+    <div class="welcome-chips" id="welcomeChips">
+      <!-- Os botões vão entrar aqui via JavaScript -->
     </div>
   </div>
 </div>
