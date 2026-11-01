@@ -393,6 +393,37 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   0% { opacity: 1; transform: translateY(0) scale(1); }
   100% { opacity: 0; transform: translateY(-40px) scale(0); }
 }
+/* Efeito de fundo premium no Login */
+#screen-login {
+  position: relative;
+  overflow: hidden;
+}
+#screen-login::before {
+  content: '';
+  position: absolute;
+  top: -10%; left: 50%;
+  transform: translateX(-50%);
+  width: 100vw; height: 60vh;
+  background: radial-gradient(ellipse at center, rgba(79,141,255,0.15) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
+}
+.login-wrap { position: relative; z-index: 1; }
+
+/* Destaque no botão de Login por e-mail */
+#btnLogin {
+  background: linear-gradient(180deg, #5b96ff, #2f6bff);
+  box-shadow: 0 8px 30px -8px rgba(47,107,255,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #fff;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+#btnLogin:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 35px -8px rgba(47,107,255,0.9);
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
