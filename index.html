@@ -1976,6 +1976,14 @@ function criarParticulas(container) {
   // Remove a partícula do HTML depois que a animação acabar
   setTimeout(function() { p.remove(); }, 800);
 }
+function abrirAtalho(texto) {
+  var inp = document.querySelector('.chat-input');
+  if(inp) {
+    inp.value = texto;
+    inp.focus();
+    autoResize(inp); // Ajusta a altura do textarea
+  }
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
