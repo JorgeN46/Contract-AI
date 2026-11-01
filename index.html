@@ -424,6 +424,65 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   transform: translateY(-1px);
   box-shadow: 0 12px 35px -8px rgba(47,107,255,0.9);
 }
+.welcome-state {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeUp 0.6s ease;
+}
+.welcome-icon {
+  width: 64px; height: 64px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #4f8dff, #4fd1c5);
+  display: grid; place-items: center;
+  font-size: 32px; font-weight: 800; color: #070b14;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 40px -10px rgba(79,141,255,0.5);
+}
+.welcome-state h1 {
+  font-size: clamp(28px, 5vw, 36px);
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #fff, #a4c3ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.welcome-sub {
+  font-size: 16px;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 32px;
+  text-align: center;
+  max-width: 400px;
+}
+.welcome-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+.welcome-chip {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 12px 18px;
+  color: rgba(255,255,255,0.8);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.welcome-chip:hover {
+  background: rgba(79,141,255,0.15);
+  border-color: rgba(79,141,255,0.4);
+  color: #fff;
+  transform: translateY(-2px);
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
