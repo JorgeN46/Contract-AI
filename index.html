@@ -949,6 +949,44 @@ function escolherPersonalizacao(el){
   // 👇 ESSA É A LINHA NOVA QUE FAZ A MÁGICA ACONTECER 👇
   atualizarTelaInicial(modoSelecionado);
 }
+function atualizarTelaInicial(modo) {
+  var title = document.getElementById('welcomeTitle');
+  var sub = document.getElementById('welcomeSub');
+  var icon = document.getElementById('welcomeIcon');
+  var chips = document.getElementById('welcomeChips');
+  
+  if (!title || !chips) return;
+
+  if (modo === 'leitura') {
+    icon.textContent = '📄';
+    title.textContent = 'Análise de Documentos';
+    sub.textContent = 'Envie um contrato, laudo ou PDF para eu extrair os pontos mais importantes.';
+    chips.innerHTML = `
+      <button class="welcome-chip" onclick="abrirAtalho('Faça um resumo em tópicos deste PDF')">📝 Resumir PDF</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Quais são os riscos e cláusulas importantes deste contrato?')">⚠️ Riscos do Contrato</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Compare estes dois documentos')">⚖️ Comparar Documentos</button>
+    `;
+  } else if (modo === 'refinamento') {
+    icon.textContent = '✍️';
+    title.textContent = 'Refinamento de Textos';
+    sub.textContent = 'Melhore e-mails, artigos e documentos. Eu ajusto o tom e a gramática.';
+    chips.innerHTML = `
+      <button class="welcome-chip" onclick="abrirAtalho('Escreva um e-mail profissional sobre ')">📧 Escrever E-mail</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Deixe este texto mais formal: ')">👔 Formalizar Texto</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Corrija a gramática deste texto: ')">✏️ Corrigir Gramática</button>
+    `;
+  } else {
+    // Modo Padrão
+    icon.textContent = '✨';
+    title.textContent = 'Como posso ajudar?';
+    sub.textContent = 'Tire dúvidas, crie apresentações, resuma arquivos ou escreva textos.';
+    chips.innerHTML = `
+      <button class="welcome-chip" onclick="abrirAtalho('Crie uma apresentação de 5 slides sobre ')">📊 Apresentação</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Me explique de forma simples sobre ')">💡 Tirar Dúvida</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Faça um resumo deste arquivo')">📄 Resumir PDF</button>
+    `;
+     }
+  }
 var idConversaAtual = null;
 var lastSavedIndex = 0;
 
