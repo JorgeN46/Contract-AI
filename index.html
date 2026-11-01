@@ -1964,6 +1964,9 @@ window.addEventListener('DOMContentLoaded', function(){
       }
   });
 
+  // 👇 ADICIONADO AQUI: Atualiza a tela inicial (Empty State) de acordo com o modo
+  atualizarTelaInicial(modoSalvo);
+
   // 3. Verifica no Supabase se o usuário já está logado e puxa a personalização
   supabase.auth.getSession().then(function(res) {
       if (res.data.session && res.data.session.user) {
