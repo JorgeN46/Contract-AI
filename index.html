@@ -494,6 +494,14 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   0% { box-shadow: 0 0 10px rgba(79, 141, 255, 0.2); }
   100% { box-shadow: 0 0 25px rgba(79, 141, 255, 0.7); }
 }
+.card {
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(79, 141, 255, 0.4);
+  box-shadow: 0 10px 30px -10px rgba(79, 141, 255, 0.15);
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
