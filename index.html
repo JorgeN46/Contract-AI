@@ -470,6 +470,30 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   border-color: rgba(79,141,255,0.3);
   color: #fff;
 }
+/* Animação de entrada da página inicial */
+.hero-c > * {
+  animation: slideUpFade 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  opacity: 0;
+  transform: translateY(30px);
+}
+.hero-c .badge { animation-delay: 0.1s; }
+.hero-c h1 { animation-delay: 0.2s; }
+.hero-c p.lead { animation-delay: 0.3s; }
+.hero-c .actions { animation-delay: 0.4s; }
+.hero-c .muted { animation-delay: 0.5s; }
+
+@keyframes slideUpFade {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Animação de brilho no Logo */
+.logo-mark {
+  animation: pulseGlow 3s infinite alternate;
+}
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 10px rgba(79, 141, 255, 0.2); }
+  100% { box-shadow: 0 0 25px rgba(79, 141, 255, 0.7); }
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
