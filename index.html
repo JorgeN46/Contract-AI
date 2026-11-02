@@ -626,28 +626,58 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 <a href="#como-funciona" class="btn btn-ghost">Ver como funciona</a>
 </div>
 <p class="muted" style="margin-top:20px;font-size:13px">Sem cartão de crédito. 100% seguro e privado.</p>
-<!-- Mockup do Produto -->
+<!-- Mockup Real do Chat -->
 <div class="wrap hero-c" style="margin-top: 60px; perspective: 1000px;">
-  <div class="app-mockup">
-    <div class="mockup-header">
-      <div class="mockup-dots"><span></span><span></span><span></span></div>
-      <div class="mockup-title">Macrus — Modo Análise</div>
-    </div>
-    <div class="mockup-body">
-      <div class="mockup-msg user">
-        <div class="mockup-avatar" style="background:#5b96ff; color:#fff;">U</div>
-        <div class="mockup-text">Analise este contrato de prestação de serviço e aponte os riscos.</div>
-      </div>
-      <div class="mockup-msg ai">
-        <div class="mockup-avatar" style="background:linear-gradient(135deg, #4f8dff, #4fd1c5);">M</div>
-        <div class="mockup-text">
-          Encontrei 3 pontos de atenção no documento:<br><br>
-          ⚠️ <strong>Cláusula 4.2:</strong> Multa abusiva de 50%.<br>
-          ⚠️ <strong>Cláusula 7:</strong> Falta de previsão de LGPD.<br><br>
-          <span style="color:#7db4ff; cursor:pointer;">✅ Clique aqui para reescrever as cláusulas corrigidas.</span>
+  <div class="mockup-real-chat">
+    
+    <!-- Área de Mensagens -->
+    <div class="mockup-chat-messages">
+      
+      <!-- Mensagem do Usuário -->
+      <div class="msg user">
+        <div class="msg-ai-content" style="padding: 0;">
+          📎 Documento de parceria com advogado.pdf<br>
+          Analise este contrato, aponte os riscos e reescreva as cláusulas perigosas para mim.
         </div>
       </div>
+
+      <!-- Resposta da IA -->
+      <div class="msg ai">
+        <div class="ai-avatar" style="background: linear-gradient(135deg, #4f8dff, #4fd1c5);">M</div>
+        <div class="msg-ai-content">
+          <p><strong>📋 Resumo Operacional</strong><br>Trata-se de uma proposta de parceria por permuta de serviços entre uma estética automotiva e um advogado.</p>
+          
+          <p><strong>🚨 Diagnóstico de Riscos e Falhas</strong></p>
+          <ul>
+            <li><strong>Risco Fiscal:</strong> O uso de "Nota Interna" configura omissão de receita. O correto é a emissão de NFS-e com compensação civil (art. 368 do Código Civil).</li>
+            <li><strong>Risco Ético (OAB):</strong> A mercantilização da advocacia viola o Código de Ética da OAB. A parceria deve ser formalizada como prestação de serviços com cláusula de compensação, não como conta corrente comercial.</li>
+            <li><strong>Nulidade por Enriquecimento Sem Causa:</strong> A expiração de créditos em 12 meses viola o art. 884 do Código Civil, pois o serviço já foi prestado.</li>
+          </ul>
+
+          <p><strong>🛠️ Reescrita e Correção</strong></p>
+          <p>❌ <em>Texto Original: "...sistema de Crédito de Permuta com Nota Interna..."</em></p>
+          <p>✅ <em>Texto Corrigido: "A relação entre as PARTES será regida pelo instituto da compensação civil de obrigações líquidas e certas, nos termos do artigo 368 e seguintes do Código Civil..."</em></p>
+
+          <!-- Botões de Ação -->
+          <div class="msg-actions" style="opacity: 1;">
+            <button class="msg-action-btn">📋 Copiar</button>
+            <button class="msg-action-btn">📄 Baixar PDF</button>
+            <button class="msg-action-btn">📝 Baixar Word</button>
+          </div>
+        </div>
+      </div>
+
     </div>
+
+    <!-- Barra de Input Falsa -->
+    <div class="mockup-chat-bar">
+      <button class="chat-plus">+</button>
+      <div class="mockup-input">Pergunte qualquer coisa ou anexe um arquivo...</div>
+      <button class="chat-send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+    </div>
+
   </div>
 </div>
 </div></section>
