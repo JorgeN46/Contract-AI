@@ -527,59 +527,95 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   0% { transform: translate(0, 0); }
   100% { transform: translate(50px, 50px); }
 }
-/* Mockup do App na Landing Page */
-.app-mockup {
-  background: #0b1220;
+/* Mockup Real do Chat na Landing Page */
+.mockup-real-chat {
+  background: #070b14;
   border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 16px;
-  box-shadow: 0 30px 100px -20px rgba(0,0,0,0.8), 0 0 40px rgba(79,141,255,0.1);
+  border-radius: 20px;
+  box-shadow: 0 30px 100px -20px rgba(0,0,0,0.9), 0 0 40px rgba(79,141,255,0.15);
   overflow: hidden;
-  transform: rotateX(5deg);
+  transform: rotateX(4deg);
   transition: transform 0.5s ease;
+  text-align: left;
 }
-.app-mockup:hover {
+.mockup-real-chat:hover {
   transform: rotateX(0deg);
 }
-.mockup-header {
+.mockup-chat-messages {
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(79,141,255,0.1), transparent 60%);
+}
+.mockup-real-chat .msg {
+  max-width: 90%;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.mockup-real-chat .msg.user {
+  padding: 12px 18px;
+  border-radius: 16px;
+  border-bottom-right-radius: 4px;
+}
+.mockup-real-chat .msg.ai {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.mockup-real-chat .ai-avatar {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: grid; place-items: center;
+  font-weight: 800; color: #070b14;
+  font-size: 14px; flex-shrink: 0;
+  margin-top: 4px;
+}
+.mockup-real-chat .msg-ai-content {
+  color: rgba(255,255,255,0.85);
+}
+.mockup-real-chat .msg-ai-content strong {
+  color: #fff;
+  font-weight: 600;
+}
+.mockup-real-chat .msg-ai-content p {
+  margin-bottom: 10px;
+}
+.mockup-real-chat .msg-ai-content ul {
+  padding-left: 20px;
+  margin-bottom: 12px;
+}
+.mockup-real-chat .msg-ai-content li {
+  margin-bottom: 6px;
+}
+
+/* Barra de Input Falsa */
+.mockup-chat-bar {
   background: rgba(255,255,255,0.03);
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding: 12px 20px;
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.mockup-dots { display: flex; gap: 6px; }
-.mockup-dots span { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.2); }
-.mockup-title { font-size: 12px; color: rgba(255,255,255,0.5); font-weight: 500; }
-.mockup-body { padding: 24px; display: flex; flex-direction: column; gap: 20px; text-align: left; }
-.mockup-msg { display: flex; gap: 12px; }
-.mockup-msg.user { flex-direction: row-reverse; }
-.mockup-avatar {
-  width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font-weight: bold; font-size: 14px; flex-shrink: 0;
+.mockup-chat-bar .chat-plus {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: rgba(255,255,255,0.06); color: #fff;
+  display: grid; place-items: center; font-size: 18px;
 }
-.mockup-text {
-  background: rgba(255,255,255,0.04);
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 14px;
-  color: rgba(255,255,255,0.8);
-  line-height: 1.5;
-  max-width: 80%;
-  border: 1px solid rgba(255,255,255,0.05);
+.mockup-chat-bar .mockup-input {
+  flex: 1; color: rgba(255,255,255,0.4); font-size: 14px;
 }
-.mockup-msg.user .mockup-text {
-  background: rgba(91, 150, 255, 0.15);
-  border-color: rgba(91, 150, 255, 0.3);
-  color: #fff;
-  border-top-right-radius: 4px;
+.mockup-chat-bar .chat-send {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: linear-gradient(180deg,#5b96ff,#2f6bff); color: #fff;
+  display: grid; place-items: center;
 }
-.mockup-msg.ai .mockup-text { border-top-left-radius: 4px; }
+.mockup-chat-bar .chat-send svg { width: 14px; height: 14px; }
 
-/* Ajuste no celular */
 @media (max-width: 768px) {
-  .app-mockup { transform: none; margin: 0 16px; }
-  .mockup-text { max-width: 90%; }
-  }
+  .mockup-real-chat { transform: none; margin: 0 16px; }
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
