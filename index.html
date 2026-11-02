@@ -960,35 +960,40 @@ function atualizarTelaInicial(modo) {
   if (!title || !chips) return;
 
   if (modo === 'leitura') {
-    icon.textContent = '📄';
-    title.textContent = 'Análise de Documentos';
-    sub.textContent = 'Envie um contrato, laudo ou PDF para eu extrair os pontos mais importantes.';
+    // MODO ANÁLISE (Jurídico / Financeiro / Técnico)
+    icon.textContent = '⚖️';
+    title.textContent = 'Análise e Correção';
+    sub.textContent = 'Envie contratos, laudos ou relatórios. Vou apontar riscos e reescrever as cláusulas para você.';
     chips.innerHTML = `
-      <button class="welcome-chip" onclick="abrirAtalho('Faça um resumo em tópicos deste PDF')">📝 Resumir PDF</button>
-      <button class="welcome-chip" onclick="abrirAtalho('Quais são os riscos e cláusulas importantes deste contrato?')">⚠️ Riscos do Contrato</button>
-      <button class="welcome-chip" onclick="abrirAtalho('Compare estes dois documentos')">⚖️ Comparar Documentos</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Analise este contrato, aponte os riscos e reescreva as cláusulas perigosas para mim: ')">⚖️ Corrigir Contrato</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Verifique se falta alguma cláusula obrigatória neste laudo e sugira a correção: ')">🩺 Revisar Laudo</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Faça um resumo executivo deste documento financeiro: ')">📊 Resumo Financeiro</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Compare estes documentos e me mostre as principais diferenças e riscos: ')">🔍 Comparar Docs</button>
     `;
   } else if (modo === 'refinamento') {
+    // MODO REFINAMENTO (Escrita / Edição)
     icon.textContent = '✍️';
     title.textContent = 'Refinamento de Textos';
-    sub.textContent = 'Melhore e-mails, artigos e documentos. Eu ajusto o tom e a gramática.';
+    sub.textContent = 'Melhore e-mails, artigos e documentos. Eu ajusto o tom, a gramática e a clareza.';
     chips.innerHTML = `
-      <button class="welcome-chip" onclick="abrirAtalho('Escreva um e-mail profissional sobre ')">📧 Escrever E-mail</button>
-      <button class="welcome-chip" onclick="abrirAtalho('Deixe este texto mais formal: ')">👔 Formalizar Texto</button>
-      <button class="welcome-chip" onclick="abrirAtalho('Corrija a gramática deste texto: ')">✏️ Corrigir Gramática</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Reescreva este texto para deixá-lo mais profissional e impactante: ')">✨ Refinar Texto</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Escreva um e-mail profissional e persuasivo sobre ')">📧 Escrever E-mail</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Crie uma introdução e conclusão para um trabalho escolar sobre ')">🎓 Trabalho Escolar</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Corrija a gramática e melhore a coesão deste texto: ')">📝 Corrigir Gramática</button>
     `;
   } else {
-    // Modo Padrão
-    icon.textContent = '✨';
+    // MODO PADRÃO (Produtividade Geral / Dúvidas)
+    icon.textContent = '🚀';
     title.textContent = 'Como posso ajudar?';
-    sub.textContent = 'Tire dúvidas, crie apresentações, resuma arquivos ou escreva textos.';
+    sub.textContent = 'Tire dúvidas, crie apresentações, resuma arquivos ou gere ideias criativas.';
     chips.innerHTML = `
       <button class="welcome-chip" onclick="abrirAtalho('Crie uma apresentação de 5 slides sobre ')">📊 Apresentação</button>
-      <button class="welcome-chip" onclick="abrirAtalho('Me explique de forma simples sobre ')">💡 Tirar Dúvida</button>
-      <button class="welcome-chip" onclick="abrirAtalho('Faça um resumo deste arquivo')">📄 Resumir PDF</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Me explique de forma simples e com exemplos sobre ')">💡 Tirar Dúvida</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Faça um resumo deste arquivo em tópicos')">📄 Resumir PDF</button>
+      <button class="welcome-chip" onclick="abrirAtalho('Escreva um post para o LinkedIn sobre ')">✍️ Criar Post</button>
     `;
-     }
   }
+}
 var idConversaAtual = null;
 var lastSavedIndex = 0;
 
