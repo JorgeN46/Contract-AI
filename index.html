@@ -1983,6 +1983,25 @@ window.addEventListener('DOMContentLoaded', function(){
       }
   });
 });
+// Fica ouvindo as mudanças de login (renovação de token, logout, etc)
+supabase.auth.onAuthStateChange(function(event, session) {
+  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+    if (session && session.user) {
+      localStorage.setItem('contractai_user_id', session.user.id);
+      atualizarDadosUsuario(session.user.email);
+      renderizarHistorico();
+      
+      // Se a tela atual for a de login e ele já estiver logado, manda pro dashboard
+      if (document.getElementById('screen-login').classList.contains('active')) {
+        go('dashboard');
+      }
+    }
+  } else if (event === 'SIGNED_OUT') {
+    localStorage.removeItem('contractai_user_id');
+    atualizarDadosUsuario(null);
+    go('landing'); // Se deslogar, volta pro site
+  }
+});
 function criarParticulas(container) {
   // Limita a quantidade para não travar o celular (só solta se tiver menos de 5 na tela)
   if (container.querySelectorAll('.particle').length > 5) return;
