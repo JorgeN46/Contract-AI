@@ -1187,18 +1187,60 @@ async function resetarPrompt(){
   setTimeout(function(){ fb.textContent = ''; }, 2500);
 }
 function abrirTermos(e){
-if(e) e.preventDefault();
-document.getElementById('modalTitle').textContent = 'Termos de Uso';
-document.getElementById('modalContent').innerHTML = '<p>Estes Termos de Uso regulam o acesso e uso da plataforma Contract AI.</p><h4>1. Sobre o serviço</h4><p>O Contract AI é uma ferramenta de organização e análise assistida por inteligência artificial. Não presta serviços jurídicos, não substitui advogado e não emite pareceres legais.</p><h4>2. Responsabilidades do usuário</h4><ul><li>Manter suas credenciais em segurança</li><li>Não utilizar a plataforma para fins ilícitos</li><li>Garantir que tem direito de enviar os documentos que carregar</li></ul><h4>3. Limitação de responsabilidade</h4><p>As informações geradas são auxiliares. Decisões jurídicas, financeiras ou operacionais devem ser tomadas com apoio de profissionais habilitados.</p><h4>4. Alterações</h4><p>Estes termos podem ser atualizados a qualquer momento. O uso contínuo implica concordância com a versão vigente.</p>';
-document.getElementById('modalOverlay').classList.add('open');
-document.getElementById('modalBox').classList.add('open');
+  if(e) e.preventDefault();
+  document.getElementById('modalTitle').textContent = 'Termos de Uso';
+  document.getElementById('modalContent').innerHTML = `
+    <p>Bem-vindo ao <b>Macrus</b>. Ao acessar ou usar nossa plataforma, você concorda com estes Termos de Uso.</p>
+    
+    <h4>1. Sobre o Serviço</h4>
+    <p>O Macrus é uma ferramenta de produtividade assistida por inteligência artificial. O sistema lê documentos, sugere correções, refina textos e gera resumos. O Macrus <b>não presta serviços jurídicos, médicos ou contábeis definitivos</b> e não substitui a análise de um profissional habilitado.</p>
+    
+    <h4>2. Responsabilidades do Usuário</h4>
+    <ul>
+      <li>Você é o único responsável pela veracidade e legalidade dos documentos que envia.</li>
+      <li>Você deve manter suas credenciais de acesso em segurança.</li>
+      <li>É proibido usar o Macrus para gerar conteúdo ilícito, difamatório ou que viole direitos de terceiros.</li>
+    </ul>
+    
+    <h4>3. Limitação de Responsabilidade</h4>
+    <p>As informações geradas pela IA são de caráter operacional e auxiliar. Decisões jurídicas, financeiras ou operacionais tomadas com base nas respostas do Macrus são de inteira responsabilidade do usuário.</p>
+    
+    <h4>4. Alterações</h4>
+    <p>Estes termos podem ser atualizados a qualquer momento. O uso contínuo da plataforma implica na concordância com a versão vigente.</p>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('modalBox').classList.add('open');
 }
+
 function abrirPrivacidade(e){
-if(e) e.preventDefault();
-document.getElementById('modalTitle').textContent = 'Política de Privacidade';
-document.getElementById('modalContent').innerHTML = '<p>Sua privacidade é levada a sério. Esta política explica como tratamos seus dados.</p><h4>1. Dados coletados</h4><ul><li>E-mail e nome (para autenticação)</li><li>Documentos enviados (para processamento)</li><li>Mensagens de chat (para histórico)</li></ul><h4>2. Como usamos</h4><p>Os dados são usados exclusivamente para operar o serviço. Não vendemos nem compartilhamos com terceiros para fins publicitários.</p><h4>3. Armazenamento</h4><p>Os documentos ficam armazenados de forma privada e são acessíveis apenas pelo próprio usuário.</p><h4>4. Seus direitos (LGPD)</h4><p>Você pode a qualquer momento solicitar acesso, correção ou exclusão dos seus dados.</p>';
-document.getElementById('modalOverlay').classList.add('open');
-document.getElementById('modalBox').classList.add('open');
+  if(e) e.preventDefault();
+  document.getElementById('modalTitle').textContent = 'Política de Privacidade';
+  document.getElementById('modalContent').innerHTML = `
+    <p>Sua privacidade e a segurança dos seus dados são prioridades no Macrus. Esta política explica como tratamos suas informações, em conformidade com a LGPD (Lei nº 13.709/2018).</p>
+    
+    <h4>1. Dados Coletados</h4>
+    <ul>
+      <li><b>Dados de Conta:</b> E-mail e senha (criptografada) para autenticação.</li>
+      <li><b>Documentos e Mensagens:</b> Textos e arquivos que você envia para análise (PDF, Word, Imagens).</li>
+      <li><b>Histórico:</b> Suas conversas são salvas para que você possa acessá-las posteriormente no menu lateral.</li>
+    </ul>
+    
+    <h4>2. Como Usamos seus Dados</h4>
+    <p>Seus dados são usados <b>exclusivamente</b> para operar o serviço e gerar as respostas da IA. Nós <b>não vendemos</b> seus dados e <b>não usamos seus documentos privados</b> para treinar modelos de IA públicos.</p>
+    
+    <h4>3. Armazenamento e Segurança</h4>
+    <p>Os dados são armazenados em servidores seguros (Supabase) com criptografia. O acesso é restrito apenas à sua própria conta.</p>
+    
+    <h4>4. Seus Direitos (LGPD)</h4>
+    <p>Você pode, a qualquer momento:</p>
+    <ul>
+      <li>Excluir suas conversas pelo próprio histórico do app.</li>
+      <li>Solicitar a exclusão definitiva da sua conta e de todos os seus dados.</li>
+      <li>Exportar os textos gerados (via botão de Download PDF/Word).</li>
+    </ul>
+  `;
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('modalBox').classList.add('open');
 }
 function fecharModal(){
 document.getElementById('modalOverlay').classList.remove('open');
