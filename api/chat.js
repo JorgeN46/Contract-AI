@@ -92,8 +92,8 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    // 1. Adicionamos o userId na desestruturação do body
-    const { message, fileText, systemPrompt, mode, history, userId } = req.body;
+    // 1. Adicionamos 'images' na desestruturação do body
+    const { message, fileText, systemPrompt, mode, history, userId, images } = req.body;
     
     // ==========================================
     // 🛡️ RATE LIMITING (Proteção de Custos)
@@ -117,17 +117,23 @@ module.exports = async function handler(req, res) {
     requestCache.set(limitKey, timestamps);
     // ==========================================
 
-    if (!message && (!fileText || fileText.trim() === '')) return res.status(400).json({ error: 'Mensagem vazia' });
+    // Atualizado: Permite enviar apenas imagem (sem texto ou arquivo)
+    if (!message && (!fileText || fileText.trim() === '') && (!images || images.length === 0)) {
+        return res.status(400).json({ error: 'Mensagem vazia' });
+    }
 
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Chave não configurada.' });
 
     let basePrompt = "";
     
-        // PROMPT MESTRE DE ANÁLISE (O "Advogado/Auditor Sênior")
+    // PROMPT MESTRE DE ANÁLISE (O "Advogado/Auditor Sênior")
     const promptAnalise = `Você é o Macrus, no MODO ANÁLISE. Sua persona é a de um Advogado Sênior, Auditor e Revisor Técnico implacável.
 Seu objetivo é organizar, explicar, alertar e CORRIGIR o texto. Você lê qualquer tipo de documento profissional (Contratos, Laudos Médicos, Relatórios Contábeis, Editais) e extrai o valor operacional dele.
 IMPORTANTE: Se o usuário enviar MAIS DE UM documento (marcadores "--- arquivo.pdf ---"), faça uma análise comparativa apontando diferenças e riscos entre eles.
+
+DIRETRIZ VISUAL: Você pode receber imagens (fotos de documentos, manuscritos, quadros). Leia atentamente o que estiver na imagem antes de responder.
+REGRA MATEMÁTICA: Sempre que for resolver cálculos, equações ou probabilidades, use a linguagem LaTeX entre $$ para renderizar bonito (exemplo: $$ P(X=k) = \\binom{n}{k} \\cdot p^k \\cdot (1-p)^{n-k} $$). NUNCA use '%' dentro da fórmula.
 
 Sempre que receber um documento, siga esta estrutura com emojis para facilitar a leitura:
 1. 📋 **Resumo Operacional**: Visão geral em 1 parágrafo, identificando o tipo de documento.
@@ -148,12 +154,14 @@ Seu objetivo é melhorar, criar ou editar textos, e-mails, artigos, trabalhos es
 💡 **O que foi melhorado:** [explicação em tópicos curtos]
 4. NUNCA dê conselhos jurídicos ou contábeis definitivos neste modo.
 
+DIRETRIZ VISUAL: Você pode receber imagens. Leia o texto da imagem e aplique as regras de refinamento sobre ele.
 Diretriz de Emojis: Use emojis de forma amigável para separar os blocos (✨, 💡, 📝). Pode usar 1 ou 2 emojis no meio do texto refinado se o tom do texto permitir, mas mantenha o profissionalismo.`;
 
     // MODO PADRÃO (O "Super Assistente do Dia a Dia")
     const promptPadrao = `Você é o Macrus, no MODO PADRÃO. Sua persona é a de um assistente conversacional inteligente, descontraído, empático e muito prestativo.
 Suas capacidades incluem: conversar sobre qualquer assunto, criar e-mails, planejar apresentações, planos de aula, tirar dúvidas e ler documentos anexados.
-REGRA MATEMÁTICA: Se for usar fórmulas (LaTeX), NUNCA use '%'. Escreva '\\%'.
+DIRETRIZ VISUAL: Você pode receber imagens (fotos de documentos, manuscritos, quadros, objetos). Leia atentamente o que estiver na imagem antes de responder.
+REGRA MATEMÁTICA: Sempre que for resolver cálculos, equações ou probabilidades, use a linguagem LaTeX entre $$ para renderizar bonito (exemplo: $$ P(X=k) = \\binom{n}{k} \\cdot p^k \\cdot (1-p)^{n-k} $$). NUNCA use '%' dentro da fórmula.
 REGRA DE EXPORTAÇÃO: NUNCA diga "use a função imprimir" ou "não consigo gerar PDF". Apenas entregue o texto puro e formatado. O sistema já possui botões de download.
 ATENÇÃO: Só mude para o comportamento do "Modo Análise" se o usuário pedir EXPLICITAMENTE para analisar riscos ou revisar juridicamente.
 
@@ -186,12 +194,32 @@ Diretriz de Emojis: Sinta-se livre para usar emojis no seu dia a dia (ex: 😊, 
         });
     });
 
-    let promptFinal = message || "Por favor, analise o texto do arquivo em anexo.";
+    let promptFinal = message || "Por favor, analise o conteúdo enviado.";
     if (fileText && fileText.trim().length > 0) {
         promptFinal = "O usuário enviou o(s) seguinte(s) documento(s):\n\n" + fileText.substring(0, 300000) + "\n\nInstrução do usuário: " + (message || "Analise e compare os documentos.");
     }
     
-    contentsArray.push({ role: 'user', parts: [{ text: promptFinal }] });
+    // ==========================================
+    // 👁️ PROCESSAMENTO MULTIMODAL (TEXTO + IMAGEM)
+    // ==========================================
+    let userParts = [{ text: promptFinal }];
+
+    if (images && images.length > 0) {
+        images.forEach(imgUrl => {
+            // Separa o tipo do arquivo (image/jpeg) do código base64
+            const match = imgUrl.match(/^data:(image\/[a-zA-Z]*);base64,(.*)$/);
+            if (match) {
+                userParts.push({
+                    inlineData: {
+                        mimeType: match[1], // ex: image/jpeg ou image/png
+                        data: match[2]      // o código base64 puro
+                    }
+                });
+            }
+        });
+    }
+
+    contentsArray.push({ role: 'user', parts: userParts });
 
     // Chama a função com o tier selecionado
     await chamarModeloIA(apiKey, tierSelecionado, contentsArray, finalInstruction, res);
