@@ -2017,7 +2017,8 @@ async function chamarIA(mensagemUsuario){
   systemPrompt: promptPersonalizado,
   mode: modoAtual,
   history: conversaAtual.slice(-10),
-  userId: localStorage.getItem('contractai_user_id') // <--- ADICIONE ESTA LINHA
+  userId: localStorage.getItem('contractai_user_id'),
+  images: imagensAnexadas // <--- ADICIONE ESTA LINHA AQUI
 })
     });
 if (!resposta.ok) {
