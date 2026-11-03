@@ -1740,9 +1740,16 @@ function aoSelecionarArquivo(input){
   });
 
   Promise.all(promises).then(function(texts) {
-      textoArquivoExtraido = texts.join('\n\n');
-      document.getElementById('attachName').textContent = arquivoAnexado + ' (Pronto)';
-  });
+    textoArquivoExtraido = texts.join('\n\n');
+    
+    // AVISO DE ARQUIVO GIGANTE (Limite seguro de 300.000 caracteres)
+    if (textoArquivoExtraido.length > 300000) {
+        alert("Atenção: Este documento é muito grande (mais de 150 páginas). O Macrus vai processar a maior parte, mas o final pode ser cortado para não travar o sistema.");
+        textoArquivoExtraido = textoArquivoExtraido.substring(0, 300000);
+    }
+    
+    document.getElementById('attachName').textContent = arquivoAnexado + ' (Pronto)';
+});
   input.value = '';
 }
   
