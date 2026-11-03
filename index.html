@@ -702,6 +702,40 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   border-color: rgba(79, 141, 255, 0.4);
   box-shadow: 0 15px 35px -15px rgba(79, 141, 255, 0.15);
 }
+#scrollDownBtn {
+  position: fixed;
+  bottom: 90px; /* Fica logo acima da barra de digitação */
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(11, 18, 32, 0.9);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 40;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+  backdrop-filter: blur(10px);
+}
+#scrollDownBtn.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+#scrollDownBtn:hover {
+  background: rgba(79, 141, 255, 0.2);
+  border-color: rgba(79, 141, 255, 0.5);
+}
+#scrollDownBtn svg {
+  width: 20px;
+  height: 20px;
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
