@@ -1106,6 +1106,11 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 <button class="attach-remove" onclick="removerAnexo()">×</button>
 </div>
 
+<!-- Botão de Rolar para Baixo -->
+<button id="scrollDownBtn" onclick="window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'})" title="Ir para o final">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+</button>
+
 <div class="chat-bar">
 <button class="chat-plus" title="Anexar" onclick="toggleAttachMenu(event)">+</button>
 <textarea class="chat-input" placeholder="Olá, como posso ajudar?" rows="1" oninput="autoResize(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();enviarMensagem();}"></textarea>
