@@ -1978,8 +1978,8 @@ if (!resposta.ok) {
     actions.appendChild(btnCopiar);
 
     var textoUsuario = mensagemUsuario.toLowerCase();
-    var pediuDownload = textoUsuario.includes('pdf') || textoUsuario.includes('word') || textoUsuario.includes('arquivo') || textoUsuario.includes('baixar') || textoUsuario.includes('documento');
-
+    var pediuDownload = true; 
+    
     if (pediuDownload) {
         var btnPDF = document.createElement('button');
         btnPDF.className = 'msg-action-btn';
