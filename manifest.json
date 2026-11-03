@@ -1,0 +1,24 @@
+{
+  "name": "Macrus - Inteligência Artificial",
+  "short_name": "Macrus",
+  "description": "A inteligência que resolve o todo.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070b14",
+  "theme_color": "#070b14",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://github.com/user-attachments/assets/c9ae4cf3-7065-41cb-ab7d-c37a706b9847",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://github.com/user-attachments/assets/356f6263-70df-43a5-b96b-bf8fa03e3f60",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
