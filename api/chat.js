@@ -188,7 +188,7 @@ Diretriz de Emojis: Sinta-se livre para usar emojis no seu dia a dia (ex: 😊, 
 
     let promptFinal = message || "Por favor, analise o texto do arquivo em anexo.";
     if (fileText && fileText.trim().length > 0) {
-        promptFinal = "O usuário enviou o(s) seguinte(s) documento(s):\n\n" + fileText.substring(0, 30000) + "\n\nInstrução do usuário: " + (message || "Analise e compare os documentos.");
+        promptFinal = "O usuário enviou o(s) seguinte(s) documento(s):\n\n" + fileText.substring(0, 300000) + "\n\nInstrução do usuário: " + (message || "Analise e compare os documentos.");
     }
     
     contentsArray.push({ role: 'user', parts: [{ text: promptFinal }] });
