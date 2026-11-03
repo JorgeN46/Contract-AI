@@ -658,6 +658,42 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   .mockup-real-chat { transform: none; margin: 0 16px; }
   .mockup-chat-messages { padding: 20px 16px; }
 }
+/* CSS DEFINITIVO DO CHAT DA IA */
+.msg.ai {
+  display: block;
+  position: relative;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 8px 8px 8px 44px !important; /* Abre o espaço exato de 44px para o avatar */
+  max-width: 100%;
+  align-self: flex-start;
+  overflow: visible;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* O Avatar "M" gerado automaticamente via CSS */
+.msg.ai::before {
+  content: 'M';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4f8dff, #4fd1c5);
+  color: #070b14;
+  font-weight: 800;
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 10px rgba(79, 141, 255, 0.2);
+}
+
+.msg-ai-content {
+  width: 100%;
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
