@@ -2557,6 +2557,21 @@ function abrirAtalho(texto) {
     autoResize(inp); // Ajusta a altura do textarea
   }
 }
+// Lógica da Seta de Rolar
+window.addEventListener('scroll', function() {
+  var btn = document.getElementById('scrollDownBtn');
+  if (!btn) return;
+  
+  // Mostra a seta se o usuário estiver a mais de 300px do final
+  var scrollPosition = window.innerHeight + window.scrollY;
+  var pageHeight = document.body.offsetHeight;
+  
+  if (scrollPosition < pageHeight - 300) {
+    btn.classList.add('visible');
+  } else {
+    btn.classList.remove('visible');
+  }
+});
 </script>
 
 <script>
