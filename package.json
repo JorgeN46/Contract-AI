@@ -1,5 +1,5 @@
 {
-  "name": "contract-ai",
+  "name": "MACRUS",
   "version": "1.0.0",
   "dependencies": {
     "@google/genai": "latest"
