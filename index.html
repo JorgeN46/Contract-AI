@@ -195,10 +195,6 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 .msg{max-width:85%;padding:14px 18px;border-radius:16px;font-size:15px;line-height:1.6;animation:fadeUp .3s ease;word-wrap:break-word;overflow-wrap:break-word;word-break:break-word;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 .msg.ai{background:transparent;border:none;border-radius:0;padding:8px 8px 8px 0;max-width:100%;align-self:flex-start}
 /* Estilo Premium para a IA - Versão Branca */
-.msg.ai {
-  padding-left: 12px;
-  padding-right: 12px;
-}
 .msg.ai h1, .msg.ai h2, .msg.ai h3 {
   color: #fff; /* Branco destaque */
   margin-top: 24px;
@@ -348,13 +344,6 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 .img-zoom-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px; }
 .img-zoom-overlay.open { display: flex; }
 .img-zoom-overlay img { max-width: 100%; max-height: 90vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-/* --- NOVO VISUAL DO CHAT --- */
-
-/* Avatar da IA (O "C") */
-.msg.ai {
-  position: relative;
-  padding-left: 44px !important; /* Abre espaço para o avatar */
-}
 
 /* Respiro entre parágrafos e listas */
 .msg.ai p { margin-bottom: 14px; }
@@ -408,17 +397,6 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   color: rgba(255,255,255,.4);
   padding: 16px 8px 8px;
   font-weight: 600;
-}
-/* Efeito de Partículas no Chat */
-.msg.ai { position: relative; overflow: visible; }
-.particle {
-  position: absolute;
-  background: #7db4ff;
-  border-radius: 50%;
-  pointer-events: none;
-  box-shadow: 0 0 10px #7db4ff, 0 0 20px #4fd1c5;
-  animation: floatUp 0.8s ease-out forwards;
-  z-index: 10;
 }
 @keyframes floatUp {
   0% { opacity: 1; transform: translateY(0) scale(1); }
@@ -679,15 +657,6 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 @media (max-width: 768px) {
   .mockup-real-chat { transform: none; margin: 0 16px; }
   .mockup-chat-messages { padding: 20px 16px; }
-}
-.msg.ai {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding-left: 0;
-  padding-right: 0;
-  max-width: 100%;
-  align-self: flex-start;
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
