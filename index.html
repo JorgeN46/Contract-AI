@@ -2865,6 +2865,39 @@ window.addEventListener('scroll', function() {
       }).catch(err => console.log('Erro no SW:', err));
     });
   }
+async function carregarDadosPlano() {
+  var userId = localStorage.getItem('contractai_user_id');
+  if (!userId) return;
+
+  try {
+    let { data } = await supabase.from('profiles').select('plan, messages_today, max_daily_messages, uploads_today, max_daily_uploads').eq('id', userId).maybeSingle();
+    
+    if (data) {
+      // Nome do Plano
+      document.getElementById('planName').textContent = data.plan === 'free' ? 'Gratuito' : data.plan;
+
+      // Lógica da Barra de Mensagens
+      var msgUsadas = data.messages_today || 0;
+      var msgMax = data.max_daily_messages || 10;
+      document.getElementById('messagesText').textContent = msgUsadas + ' / ' + msgMax;
+      var msgPorcento = (msgUsadas / msgMax) * 100;
+      if (msgPorcento > 100) msgPorcento = 100;
+      document.getElementById('messagesBar').style.width = msgPorcento + '%';
+      if (msgPorcento >= 100) document.getElementById('messagesBar').style.background = '#ef4444';
+
+      // Lógica da Barra de Uploads
+      var upUsados = data.uploads_today || 0;
+      var upMax = data.max_daily_uploads || 3;
+      document.getElementById('uploadsText').textContent = upUsados + ' / ' + upMax;
+      var upPorcento = (upUsados / upMax) * 100;
+      if (upPorcento > 100) upPorcento = 100;
+      document.getElementById('uploadsBar').style.width = upPorcento + '%';
+      if (upPorcento >= 100) document.getElementById('uploadsBar').style.background = '#ef4444';
+    }
+  } catch (err) {
+    console.error("Erro ao carregar dados do plano:", err);
+  }
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
