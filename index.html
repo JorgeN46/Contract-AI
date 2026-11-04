@@ -2188,8 +2188,8 @@ function enviarMensagem(){
   var inp = document.querySelector('.chat-input');
   var texto = inp.value.trim();
 
-  // CASO 1: Tem imagem anexada (Manda direto para a Visão da IA, sem botões)
-  if (imagensAnexadas.length > 0) {
+  // CASO 1: Se tem imagem, vai direto para a IA
+  if (isImageAttached) {
       var msgUsuario = texto ? "📎 Imagem enviada\n" + texto : "📎 Imagem enviada";
       adicionarMensagemUsuario(msgUsuario);
       
@@ -2198,12 +2198,12 @@ function enviarMensagem(){
       var welcome = document.getElementById('dashWelcome');
       if(welcome) welcome.style.display = 'none';
 
-      var prompt = texto ? texto : "O que tem nesta imagem? Por favor, transcreva o conteúdo e resolva o que for pedido.";
+      var prompt = texto ? texto : "Analise esta imagem e resolva o que for pedido.";
       
       chamarIA(prompt);
-      removerAnexo(); // Limpa a imagem da memória após enviar
+      removerAnexo(); 
   } 
-  // CASO 2: Tem arquivo (PDF/Word) anexado
+  // CASO 2: Se tem arquivo (PDF/Word)
   else if (arquivoAnexado) {
       var nome = arquivoAnexado;
       var msgUsuario = texto ? "📎 " + nome + "\n" + texto : "📎 " + nome;
@@ -2223,7 +2223,7 @@ function enviarMensagem(){
           }, 500);
       }
   } 
-  // CASO 3: Só texto
+  // CASO 3: Apenas texto
   else if(texto) {
       adicionarMensagemUsuario(texto);
       var area = document.getElementById('chatMessages');
