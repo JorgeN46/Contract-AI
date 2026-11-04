@@ -5,7 +5,7 @@ const requestCache = new Map();
 
 // Inicializa o cliente Admin do Supabase para checar e atualizar limites com segurança
 const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL || '',
+  process.env.URL_SUPABASE || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
