@@ -2734,14 +2734,12 @@ async function carregarPersonalizacaoDoBanco(userId) {
       }
   }
 }
-// INICIALIZAÇÃO DO SITE (DOMContentLoaded)
 window.addEventListener('DOMContentLoaded', function(){
-  carregarMemoriaNaTela();
-  // 1. Puxa o prompt do localStorage (para não piscar na tela)
+  // 1. Puxa o prompt do localStorage
   var salvo = localStorage.getItem('contractai_prompt');
   if(salvo) document.getElementById('customPrompt').value = salvo;
 
-  // 2. Sincroniza o modo ativo (Padrão, Análise, etc)
+  // 2. Sincroniza o modo ativo
   var modoSalvo = localStorage.getItem('contractai_mode') || 'padrao';
   document.querySelectorAll('.personalizacao-item').forEach(function(item) {
       if (item.getAttribute('data-mode') === modoSalvo) {
@@ -2751,21 +2749,27 @@ window.addEventListener('DOMContentLoaded', function(){
           item.classList.remove('active');
       }
   });
-
-  // 👇 ADICIONADO AQUI: Atualiza a tela inicial (Empty State) de acordo com o modo
   atualizarTelaInicial(modoSalvo);
 
-  // 3. Verifica no Supabase se o usuário já está logado e puxa a personalização
+  // 3. Verifica no Supabase se o usuário já está logado
   supabase.auth.getSession().then(function(res) {
       if (res.data.session && res.data.session.user) {
+          // USUÁRIO ESTÁ LOGADO!
           localStorage.setItem('contractai_user_id', res.data.session.user.id);
           atualizarDadosUsuario(res.data.session.user.email);
           carregarPersonalizacaoDoBanco(res.data.session.user.id); 
           renderizarHistorico();
+          
+          // 👇 A MÁGICA ACONTECE AQUI 👇
+          // Se ele já entrou logado, vai direto para o Dashboard
+          go('dashboard'); 
+          
       } else {
+          // USUÁRIO NÃO ESTÁ LOGADO
           localStorage.removeItem('contractai_user_id');
           atualizarDadosUsuario(null);
           renderizarHistorico();
+          // Se não está logado, ele continua na tela de vendas (Landing)
       }
   });
 });
