@@ -2507,6 +2507,62 @@ async function fazerLogout() {
   // Volta para a tela inicial
   go('landing');
 }
+function abrirModalExcluirConta() {
+  document.getElementById('deleteAccountOverlay').classList.add('open');
+  document.getElementById('deleteAccountBox').classList.add('open');
+}
+
+function fecharModalExcluirConta() {
+  document.getElementById('deleteAccountOverlay').classList.remove('open');
+  document.getElementById('deleteAccountBox').classList.remove('open');
+}
+
+async function confirmarExclusaoConta() {
+  var btn = document.getElementById('btnConfirmarExclusao');
+  btn.disabled = true;
+  btn.textContent = 'Excluindo...';
+
+  var userId = localStorage.getItem('contractai_user_id');
+  
+  if (!userId) {
+    fecharModalExcluirConta();
+    return;
+  }
+
+  try {
+    // 1. Pega todos os IDs das conversas do usuário para apagar as mensagens
+    let { data: conversas } = await supabase.from('conversations').select('id').eq('user_id', userId);
+    
+    if (conversas && conversas.length > 0) {
+      var idsConversas = conversas.map(c => c.id);
+      
+      // Apaga as mensagens de todas as conversas
+      await supabase.from('messages').delete().in('conversation_id', idsConversas);
+    }
+
+    // 2. Apaga as conversas
+    await supabase.from('conversations').delete().eq('user_id', userId);
+
+    // 3. Apaga o perfil (prompt e memória)
+    await supabase.from('profiles').delete().eq('id', userId);
+
+    // 4. Desloga e limpa o local storage
+    await supabase.auth.signOut();
+    localStorage.clear();
+
+    // 5. Volta para a tela inicial
+    fecharModalExcluirConta();
+    alert("Sua conta e todos os seus dados foram excluídos com sucesso.");
+    go('landing');
+    window.location.reload(); // Recarrega para limpar a memória do navegador
+
+  } catch (error) {
+    console.error("Erro ao excluir conta:", error);
+    alert("Ocorreu um erro ao excluir os dados. Tente novamente.");
+    btn.disabled = false;
+    btn.textContent = 'Sim, Excluir';
+  }
+}
 async function carregarPersonalizacaoDoBanco(userId) {
   // Busca o prompt e a memória no banco de dados
   let { data, error } = await supabase.from('profiles').select('custom_prompt, memory').eq('id', userId).maybeSingle();
