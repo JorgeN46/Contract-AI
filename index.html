@@ -2712,9 +2712,21 @@ window.addEventListener('scroll', function() {
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(registration => console.log('ServiceWorker registrado com sucesso!', registration))
-        .catch(err => console.log('Falha ao registrar o ServiceWorker', err));
+      navigator.serviceWorker.register('/service-worker.js').then(reg => {
+        // Verifica se há uma atualização a cada 1 minuto
+        setInterval(() => { reg.update(); }, 60000);
+
+        reg.onupdatefound = () => {
+          const installingWorker = reg.installing;
+          installingWorker.onstatechange = () => {
+            // Se uma nova versão foi baixada e instalada, recarrega a página sozinho
+            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('Nova versão disponível. Recarregando...');
+              window.location.reload();
+            }
+          };
+        };
+      }).catch(err => console.log('Erro no SW:', err));
     });
   }
 </script>
