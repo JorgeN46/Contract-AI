@@ -2048,18 +2048,19 @@ async function chamarIA(mensagemUsuario){
     var modoAtual = localStorage.getItem('contractai_mode') || 'padrao';
     
     var resposta = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-  message: mensagemUsuario,
-  fileText: textoArquivoExtraido,
-  systemPrompt: promptPersonalizado,
-  mode: modoAtual,
-  history: conversaAtual.slice(-10),
-  userId: localStorage.getItem('contractai_user_id'),
-  images: imagensAnexadas // <--- ADICIONE ESTA LINHA AQUI
-})
-    });
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    message: mensagemUsuario,
+    fileText: textoArquivoExtraido,
+    systemPrompt: promptPersonalizado,
+    mode: modoAtual,
+    history: conversaAtual.slice(-10),
+    userId: localStorage.getItem('contractai_user_id'),
+    images: imagensAnexadas, // <-- Para as fotos funcionarem
+    memory: JSON.parse(localStorage.getItem('contractai_memory') || '[]') // <-- Para a memória funcionar
+  })
+});
 if (!resposta.ok) {
   if (resposta.status === 429) {
     throw new Error("Calma aí! Você está indo rápido demais. Aguarde um minuto para enviar mais mensagens.");
