@@ -2203,10 +2203,15 @@ function enviarMensagem(){
          chamarIA("Analise o arquivo '" + nome + "'. Instrução do usuário: " + texto);
          removerAnexo(); // Limpa a memória APENAS se for enviar direto
      } else {
-         // Se não digitou nada, mostra os botões. NÃO limpa a memória!
-         setTimeout(function(){
-            adicionarMensagemIA('Recebi o arquivo <b>' + nome + '</b>. O que deseja fazer?<div class="msg-options"><button class="msg-opt" onclick="escolherObjetivo(\'Análise\')">📊 Análise</button><button class="msg-opt" onclick="escolherObjetivo(\'Trabalho\')">💼 Trabalho</button><button class="msg-opt" onclick="escolherObjetivo(\'Resumo\')">📝 Resumo</button></div>');
-         }, 500);
+    // Se for uma imagem, não mostra os botões de contrato. Manda direto para a IA!
+    if (imagensAnexadas.length > 0) {
+        chamarIA("O que tem nesta imagem? Por favor, transcreva o conteúdo e resolva o que for pedido.");
+    } else {
+        // Se for PDF ou Word, aí sim mostra os botões de análise
+        setTimeout(function(){
+           adicionarMensagemIA('Recebi o arquivo <b>' + nome + '</b>. O que deseja fazer?<div class="msg-options"><button class="msg-opt" onclick="escolherObjetivo(\'Análise\')">📊 Análise</button><button class="msg-opt" onclick="escolherObjetivo(\'Trabalho\')">💼 Trabalho</button><button class="msg-opt" onclick="escolherObjetivo(\'Resumo\')">📝 Resumo</button></div>');
+        }, 500);
+    }
      }
   } else if(texto) {
    adicionarMensagemUsuario(texto);
