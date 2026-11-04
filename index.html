@@ -2472,6 +2472,7 @@ async function carregarPersonalizacaoDoBanco(userId) {
 }
 // INICIALIZAÇÃO DO SITE (DOMContentLoaded)
 window.addEventListener('DOMContentLoaded', function(){
+  carregarMemoriaNaTela();
   // 1. Puxa o prompt do localStorage (para não piscar na tela)
   var salvo = localStorage.getItem('contractai_prompt');
   if(salvo) document.getElementById('customPrompt').value = salvo;
