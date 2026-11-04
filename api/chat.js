@@ -92,8 +92,8 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    // 1. Adicionamos 'images' na desestruturação do body
-    const { message, fileText, systemPrompt, mode, history, userId, images } = req.body;
+    // Recebendo todos os parâmetros (incluindo images e memory)
+    const { message, fileText, systemPrompt, mode, history, userId, images, memory } = req.body;
     
     // ==========================================
     // 🛡️ RATE LIMITING (Proteção de Custos)
@@ -101,7 +101,7 @@ module.exports = async function handler(req, res) {
     const limitKey = userId || req.headers['x-forwarded-for'] || 'anonimo';
     const now = Date.now();
     const windowMs = 60000; // 1 minuto
-    const maxRequests = 10; // Máximo de 10 mensagens por minuto
+    const maxRequests = 15; // Aumentei um pouco para não travar o uso contínuo (extração de memória gasta 1 req)
 
     if (!requestCache.has(limitKey)) {
       requestCache.set(limitKey, []);
@@ -110,14 +110,14 @@ module.exports = async function handler(req, res) {
     const timestamps = requestCache.get(limitKey).filter(t => now - t < windowMs);
     
     if (timestamps.length >= maxRequests) {
-      return res.status(429).json({ error: 'Você excedeu o limite de 10 mensagens por minuto.' });
+      return res.status(429).json({ error: 'Você excedeu o limite de mensagens por minuto.' });
     }
 
     timestamps.push(now);
     requestCache.set(limitKey, timestamps);
     // ==========================================
 
-    // Atualizado: Permite enviar apenas imagem (sem texto ou arquivo)
+    // Permite enviar apenas imagem ou apenas texto
     if (!message && (!fileText || fileText.trim() === '') && (!images || images.length === 0)) {
         return res.status(400).json({ error: 'Mensagem vazia' });
     }
@@ -127,7 +127,7 @@ module.exports = async function handler(req, res) {
 
     let basePrompt = "";
     
-    // PROMPT MESTRE DE ANÁLISE (O "Advogado/Auditor Sênior")
+    // PROMPT MESTRE DE ANÁLISE
     const promptAnalise = `Você é o Macrus, no MODO ANÁLISE. Sua persona é a de um Advogado Sênior, Auditor e Revisor Técnico implacável.
 Seu objetivo é organizar, explicar, alertar e CORRIGIR o texto. Você lê qualquer tipo de documento profissional (Contratos, Laudos Médicos, Relatórios Contábeis, Editais) e extrai o valor operacional dele.
 IMPORTANTE: Se o usuário enviar MAIS DE UM documento (marcadores "--- arquivo.pdf ---"), faça uma análise comparativa apontando diferenças e riscos entre eles.
@@ -144,7 +144,7 @@ Sempre que receber um documento, siga esta estrutura com emojis para facilitar a
 
 Diretriz de Emojis: Use emojis apenas nos títulos das seções e para destacar status (❌, ✅, ⚠️). Mantenha o corpo do texto profissional.`;
 
-    // MODO REFINAMENTO (O "Editor de Texto Premium")
+    // MODO REFINAMENTO
     const promptRefinamento = `Você é o Macrus, no MODO REFINAMENTO. Sua persona é a de um Editor e Redator Profissional Sênior.
 Seu objetivo é melhorar, criar ou editar textos, e-mails, artigos, trabalhos escolares e documentos em geral.
 1. Se o usuário pedir para CRIAR um texto, gere um texto de alta qualidade, criativo e envolvente.
@@ -157,7 +157,7 @@ Seu objetivo é melhorar, criar ou editar textos, e-mails, artigos, trabalhos es
 DIRETRIZ VISUAL: Você pode receber imagens. Leia o texto da imagem e aplique as regras de refinamento sobre ele.
 Diretriz de Emojis: Use emojis de forma amigável para separar os blocos (✨, 💡, 📝). Pode usar 1 ou 2 emojis no meio do texto refinado se o tom do texto permitir, mas mantenha o profissionalismo.`;
 
-    // MODO PADRÃO (O "Super Assistente do Dia a Dia")
+    // MODO PADRÃO
     const promptPadrao = `Você é o Macrus, no MODO PADRÃO. Sua persona é a de um assistente conversacional inteligente, descontraído, empático e muito prestativo.
 Suas capacidades incluem: conversar sobre qualquer assunto, criar e-mails, planejar apresentações, planos de aula, tirar dúvidas e ler documentos anexados.
 DIRETRIZ VISUAL: Você pode receber imagens (fotos de documentos, manuscritos, quadros, objetos). Leia atentamente o que estiver na imagem antes de responder.
@@ -166,10 +166,17 @@ REGRA DE EXPORTAÇÃO: NUNCA diga "use a função imprimir" ou "não consigo ger
 ATENÇÃO: Só mude para o comportamento do "Modo Análise" se o usuário pedir EXPLICITAMENTE para analisar riscos ou revisar juridicamente.
 
 Diretriz de Emojis: Sinta-se livre para usar emojis no seu dia a dia (ex: 😊, 🚀, 🤔, 👋) para tornar a conversa mais humana e menos robótica. Use-os para expressar emoção, mas não exagere (máximo 1 ou 2 por parágrafo).`;
+
+    // MODO MEMÓRIA (Usado para extrair fatos em background)
+    const promptMemoria = `Analise as últimas mensagens e extraia FATOS permanentes sobre o usuário (ex: "É advogado", "Gosta de respostas curtas", "Estuda exatas").
+Retorne APENAS um array JSON de strings, sem mais nenhum texto antes ou depois. Exemplo: ["É advogado", "Prefere respostas diretas"]. Se não houver fatos novos, retorne estritamente [].`;
     
     let tierSelecionado = MODEL_TIERS.padrao;
 
-    if (mode === 'leitura') {
+    if (mode === 'memoria') {
+      basePrompt = promptMemoria;
+      tierSelecionado = MODEL_TIERS.padrao; // Flash é suficiente e mais rápido para isso
+    } else if (mode === 'leitura') {
       basePrompt = promptAnalise;
       tierSelecionado = MODEL_TIERS.leitura;
     } else if (mode === 'refinamento') {
@@ -180,7 +187,15 @@ Diretriz de Emojis: Sinta-se livre para usar emojis no seu dia a dia (ex: 😊, 
       tierSelecionado = MODEL_TIERS.padrao;
     }
 
-    const finalInstruction = systemPrompt ? basePrompt + "\n\nPreferências do usuário: " + systemPrompt : basePrompt;
+    // ==========================================
+    // 🧠 INJETANDO A MEMÓRIA NO PROMPT
+    // ==========================================
+    let memoriaTexto = "";
+    if (memory && Array.isArray(memory) && memory.length > 0) {
+      memoriaTexto = "\n\nO que você já sabe sobre este usuário (Memórias de conversas passadas): " + memory.join(", ") + ". Use isso para personalizar a resposta se for relevante.";
+    }
+
+    const finalInstruction = (systemPrompt ? basePrompt + "\n\nPreferências do usuário: " + systemPrompt : basePrompt) + memoriaTexto;
 
     let contentsArray = [];
     let historyToUse = history || [];
@@ -206,13 +221,12 @@ Diretriz de Emojis: Sinta-se livre para usar emojis no seu dia a dia (ex: 😊, 
 
     if (images && images.length > 0) {
         images.forEach(imgUrl => {
-            // Separa o tipo do arquivo (image/jpeg) do código base64
             const match = imgUrl.match(/^data:(image\/[a-zA-Z]*);base64,(.*)$/);
             if (match) {
                 userParts.push({
                     inlineData: {
-                        mimeType: match[1], // ex: image/jpeg ou image/png
-                        data: match[2]      // o código base64 puro
+                        mimeType: match[1],
+                        data: match[2]
                     }
                 });
             }
