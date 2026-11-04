@@ -736,6 +736,36 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   width: 20px;
   height: 20px;
 }
+/* Botão de Upgrade no topo */
+.upgrade-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(79,141,255,0.15), rgba(79,209,197,0.15));
+  border: 1px solid rgba(79,141,255,0.3);
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: #7db4ff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  margin-left: auto; /* Empurra ele e o novo chat para a direita */
+}
+.upgrade-btn:hover {
+  background: linear-gradient(135deg, rgba(79,141,255,0.25), rgba(79,209,197,0.25));
+  color: #fff;
+  border-color: rgba(79,141,255,0.6);
+}
+.upgrade-btn svg {
+  width: 16px;
+  height: 16px;
+}
+/* Ajuste no botão de novo chat para não ter margem extra */
+.new-chat-btn {
+  margin-left: 8px !important; 
+}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
@@ -1062,6 +1092,10 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 <button class="personalizacao-btn" onclick="togglePersonalizacao(event)">
 <span class="label">Personalização</span>
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+</button>
+<button class="upgrade-btn" onclick="go('settings-planos'); carregarDadosPlano();">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+  <span>Upgrade</span>
 </button>
 <button class="new-chat-btn" onclick="novoChat()" aria-label="Novo chat" title="Novo chat">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="10" y1="10" x2="14" y2="10"/></svg>
