@@ -2743,5 +2743,23 @@ window.addEventListener('scroll', function() {
 <div class="img-zoom-overlay" id="imgZoomOverlay" onclick="this.classList.remove('open')">
   <img id="imgZoomTarget" src="" alt="Zoom">
 </div>
+<!-- Modal de Excluir Conta -->
+<div class="modal-overlay" id="deleteAccountOverlay" onclick="fecharModalExcluirConta()"></div>
+<div class="modal-box" id="deleteAccountBox" style="max-width:400px">
+  <div class="modal-header">
+    <h3 style="color:#fca5a5">Excluir Conta</h3>
+    <button class="modal-close" onclick="fecharModalExcluirConta()">×</button>
+  </div>
+  <div class="modal-content" style="text-align:center;">
+    <div style="font-size:40px; margin-bottom:16px;">⚠️</div>
+    <p style="color:#fff; font-size:16px; font-weight:600; margin-bottom:8px;">Tem certeza absoluta?</p>
+    <p style="color:rgba(255,255,255,0.6); font-size:14px; line-height:1.6; margin-bottom:24px;">Todos os seus históricos de conversas, memórias e configurações serão apagados permanentemente. Esta ação não pode ser desfeita.</p>
+    
+    <div style="display:flex; gap:10px;">
+      <button onclick="fecharModalExcluirConta()" class="btn btn-ghost" style="flex:1; padding:12px;">Cancelar</button>
+      <button onclick="confirmarExclusaoConta()" class="btn btn-primary" style="flex:1; padding:12px; background:#ef4444; box-shadow:0 4px 14px rgba(239,68,68,0.39);" id="btnConfirmarExclusao">Sim, Excluir</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
