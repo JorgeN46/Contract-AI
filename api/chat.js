@@ -1,5 +1,13 @@
-// Memória temporária para controle de limites (Rate Limiting)
+const { createClient } = require('@supabase/supabase-js');
+
+// Memória temporária para controle de limites (Rate Limiting básico)
 const requestCache = new Map();
+
+// Inicializa o cliente Admin do Supabase para checar e atualizar limites com segurança
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
 
 // REGISTRO DE MODELOS (MODEL TIERS)
 const MODEL_TIERS = {
@@ -92,16 +100,15 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    // Recebendo todos os parâmetros (incluindo images e memory)
     const { message, fileText, systemPrompt, mode, history, userId, images, memory } = req.body;
     
     // ==========================================
-    // 🛡️ RATE LIMITING (Proteção de Custos)
+    // 🛡️ RATE LIMITING (Proteção contra Spam rápido)
     // ==========================================
     const limitKey = userId || req.headers['x-forwarded-for'] || 'anonimo';
     const now = Date.now();
     const windowMs = 60000; // 1 minuto
-    const maxRequests = 15; // Aumentei um pouco para não travar o uso contínuo (extração de memória gasta 1 req)
+    const maxRequests = 15; // Máximo de 15 msgs por minuto
 
     if (!requestCache.has(limitKey)) {
       requestCache.set(limitKey, []);
@@ -110,74 +117,97 @@ module.exports = async function handler(req, res) {
     const timestamps = requestCache.get(limitKey).filter(t => now - t < windowMs);
     
     if (timestamps.length >= maxRequests) {
-      return res.status(429).json({ error: 'Você excedeu o limite de mensagens por minuto.' });
+      return res.status(429).json({ error: 'Você está indo rápido demais. Aguarde um minuto.' });
     }
 
     timestamps.push(now);
     requestCache.set(limitKey, timestamps);
     // ==========================================
 
-    // Permite enviar apenas imagem ou apenas texto
+    // ==========================================
+    // 💳 CONTROLE DE LIMITES DIÁRIOS
+    // ==========================================
+    if (userId && process.env.SUPABASE_URL) {
+      let { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
+      
+      if (profile) {
+        const hoje = new Date().toISOString().split('T')[0];
+        let msgHoje = profile.messages_today || 0;
+        let upHoje = profile.uploads_today || 0;
+
+        // 1. Reseta os limites se for um novo dia
+        if (profile.last_active_date !== hoje) {
+          msgHoje = 0;
+          upHoje = 0;
+          await supabaseAdmin.from('profiles').update({ 
+             last_active_date: hoje, 
+             messages_today: 0, 
+             uploads_today: 0 
+          }).eq('id', userId);
+        }
+
+        // 2. Verifica se o usuário está tentando enviar arquivo/imagem
+        const temUpload = (fileText && fileText.trim().length > 0) || (images && images.length > 0);
+
+        // 3. Bloqueia se estourou os limites
+        if (msgHoje >= profile.max_daily_messages) {
+           return res.status(403).json({ error: 'Você atingiu seu limite diário de mensagens. Volte amanhã ou faça upgrade.' });
+        }
+        if (temUpload && upHoje >= profile.max_daily_uploads) {
+           return res.status(403).json({ error: 'Você atingiu seu limite diário de uploads. Volte amanhã ou faça upgrade.' });
+        }
+
+        // 4. Atualiza os contadores
+        await supabaseAdmin.from('profiles').update({ 
+           messages_today: msgHoje + 1,
+           uploads_today: temUpload ? upHoje + 1 : upHoje
+        }).eq('id', userId);
+      }
+    }
+    // ==========================================
+
     if (!message && (!fileText || fileText.trim() === '') && (!images || images.length === 0)) {
         return res.status(400).json({ error: 'Mensagem vazia' });
     }
 
     const apiKey = process.env.GOOGLE_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'Chave não configurada.' });
+    if (!apiKey) return res.status(500).json({ error: 'Chave do Gemini não configurada.' });
 
     let basePrompt = "";
     
-    // PROMPT MESTRE DE ANÁLISE
+    // PROMPTS
     const promptAnalise = `Você é o Macrus, no MODO ANÁLISE. Sua persona é a de um Advogado Sênior, Auditor e Revisor Técnico implacável.
-Seu objetivo é organizar, explicar, alertar e CORRIGIR o texto. Você lê qualquer tipo de documento profissional (Contratos, Laudos Médicos, Relatórios Contábeis, Editais) e extrai o valor operacional dele.
-IMPORTANTE: Se o usuário enviar MAIS DE UM documento (marcadores "--- arquivo.pdf ---"), faça uma análise comparativa apontando diferenças e riscos entre eles.
+Seu objetivo é organizar, explicar, alertar e CORRIGIR o texto. Você lê qualquer tipo de documento profissional (Contratos, Laudos Médicos, Relatórios Contábeis, Editais).
+IMPORTANTE: Se o usuário enviar MAIS DE UM documento, faça uma análise comparativa apontando diferenças e riscos.
+DIRETRIZ VISUAL: Leia atentamente o que estiver na imagem antes de responder.
+REGRA MATEMÁTICA: Use LaTeX entre $$ (exemplo: $$ P(X=k) = \\binom{n}{k} \\cdot p^k \\cdot (1-p)^{n-k} $$). NUNCA use '%' dentro da fórmula.
+Estrutura: 1. 📋 Resumo Operacional. 2. 🚨 Diagnóstico de Riscos (com Evidências). 3. 🛠️ Reescrita e Correção (❌ Original / ✅ Corrigido). 4. ➕ Cláusulas Sugeridas. 5. ⚖️ Aviso Legal.
+Diretriz de Emojis: Use apenas nos títulos.`;
 
-DIRETRIZ VISUAL: Você pode receber imagens (fotos de documentos, manuscritos, quadros). Leia atentamente o que estiver na imagem antes de responder.
-REGRA MATEMÁTICA: Sempre que for resolver cálculos, equações ou probabilidades, use a linguagem LaTeX entre $$ para renderizar bonito (exemplo: $$ P(X=k) = \\binom{n}{k} \\cdot p^k \\cdot (1-p)^{n-k} $$). NUNCA use '%' dentro da fórmula.
-
-Sempre que receber um documento, siga esta estrutura com emojis para facilitar a leitura:
-1. 📋 **Resumo Operacional**: Visão geral em 1 parágrafo, identificando o tipo de documento.
-2. 🚨 **Diagnóstico de Riscos e Falhas**: Use tópicos. Para CADA risco, cite a Evidência (Fonte: Cláusula X / Página Y / Trecho: "texto exato"). Aponte o que está faltando, ilegível ou juridicamente perigoso.
-3. 🛠️ **Reescrita e Correção (O Ponto Principal)**: Para os erros encontrados, mostre o "❌ Texto Original" e forneça o "✅ Texto Corrigido". Dê as palavras exatas para o usuário substituir.
-4. ➕ **Cláusulas Sugeridas**: Se faltar alguma cláusula de proteção essencial (ex: LGPD, foro, multa), escreva a cláusula completa pronta para copiar e colar.
-5. ⚖️ **Aviso Legal**: Termine SEMPRE com: "Lembrete: Este relatório é operacional e não substitui a análise de um profissional habilitado."
-
-Diretriz de Emojis: Use emojis apenas nos títulos das seções e para destacar status (❌, ✅, ⚠️). Mantenha o corpo do texto profissional.`;
-
-    // MODO REFINAMENTO
     const promptRefinamento = `Você é o Macrus, no MODO REFINAMENTO. Sua persona é a de um Editor e Redator Profissional Sênior.
 Seu objetivo é melhorar, criar ou editar textos, e-mails, artigos, trabalhos escolares e documentos em geral.
-1. Se o usuário pedir para CRIAR um texto, gere um texto de alta qualidade, criativo e envolvente.
-2. Se o usuário enviar um texto e pedir para MELHORAR, reescreva aplicando o tom desejado.
-3. Ao entregar um resultado, formate EXATAMENTE assim:
-✨ **Texto Refinado:** [texto final]
-💡 **O que foi melhorado:** [explicação em tópicos curtos]
-4. NUNCA dê conselhos jurídicos ou contábeis definitivos neste modo.
+1. Se o usuário pedir para CRIAR, gere um texto de alta qualidade.
+2. Se pedir para MELHORAR, reescreva aplicando o tom desejado.
+3. Formate como: ✨ **Texto Refinado:** [texto] e 💡 **O que foi melhorado:** [explicação].
+4. NUNCA dê conselhos jurídicos ou contábeis definitivos.
+DIRETRIZ VISUAL: Leia o texto da imagem e aplique as regras de refinamento.`;
 
-DIRETRIZ VISUAL: Você pode receber imagens. Leia o texto da imagem e aplique as regras de refinamento sobre ele.
-Diretriz de Emojis: Use emojis de forma amigável para separar os blocos (✨, 💡, 📝). Pode usar 1 ou 2 emojis no meio do texto refinado se o tom do texto permitir, mas mantenha o profissionalismo.
-ATENÇÃO CRÍTICA: Você está no MODO REFINAMENTO. NUNCA, em hipótese alguma, use a estrutura de "Resumo Operacional", "Diagnóstico de Riscos" ou "Aviso Legal". Essas estruturas são EXCLUSIVAS do Modo Análise. Seja natural e conversacional.`;
-
-    // MODO PADRÃO
     const promptPadrao = `Você é o Macrus, no MODO PADRÃO. Sua persona é a de um assistente conversacional inteligente, descontraído, empático e muito prestativo.
-Suas capacidades incluem: conversar sobre qualquer assunto, criar e-mails, planejar apresentações, planos de aula, tirar dúvidas e ler documentos anexados.
-DIRETRIZ VISUAL: Você pode receber imagens (fotos de documentos, manuscritos, quadros, objetos). Leia atentamente o que estiver na imagem antes de responder.
-REGRA MATEMÁTICA: Sempre que for resolver cálculos, equações ou probabilidades, use a linguagem LaTeX entre $$ para renderizar bonito (exemplo: $$ P(X=k) = \\binom{n}{k} \\cdot p^k \\cdot (1-p)^{n-k} $$). NUNCA use '%' dentro da fórmula.
-REGRA DE EXPORTAÇÃO: NUNCA diga "use a função imprimir" ou "não consigo gerar PDF". Apenas entregue o texto puro e formatado. O sistema já possui botões de download.
-ATENÇÃO: Só mude para o comportamento do "Modo Análise" se o usuário pedir EXPLICITAMENTE para analisar riscos ou revisar juridicamente.
+Suas capacidades incluem: conversar, criar e-mails, planos de aula, tirar dúvidas e ler documentos.
+DIRETRIZ VISUAL CRÍTICA: Se receber uma imagem, leia o que está nela. Se for um problema de matemática, transcreva e resolva EXATAMENTE o que está na imagem. NUNCA invente um contrato se a imagem contiver cálculos.
+REGRA MATEMÁTICA: Use LaTeX entre $$. NUNCA use '%' dentro da fórmula.
+REGRA DE EXPORTAÇÃO: NUNCA diga "use a função imprimir". O sistema já possui botões.
+ATENÇÃO CRÍTICA: Você está no MODO PADRÃO. NUNCA use a estrutura de "Resumo Operacional", "Diagnóstico de Riscos" ou "Aviso Legal". Seja natural e conversacional.
+Diretriz de Emojis: Sinta-se livre para usar emojis (ex: 😊, 🚀, 🤔).`;
 
-Diretriz de Emojis: Sinta-se livre para usar emojis no seu dia a dia (ex: 😊, 🚀, 🤔, 👋) para tornar a conversa mais humana e menos robótica. Use-os para expressar emoção, mas não exagere (máximo 1 ou 2 por parágrafo).
-ATENÇÃO CRÍTICA: Você está no MODO PADRÃO. NUNCA, em hipótese alguma, use a estrutura de "Resumo Operacional", "Diagnóstico de Riscos" ou "Aviso Legal". Essas estruturas são EXCLUSIVAS do Modo Análise. Seja natural e conversacional.`;
-
-    // MODO MEMÓRIA (Usado para extrair fatos em background)
-    const promptMemoria = `Analise as últimas mensagens e extraia FATOS permanentes sobre o usuário (ex: "É advogado", "Gosta de respostas curtas", "Estuda exatas").
-Retorne APENAS um array JSON de strings, sem mais nenhum texto antes ou depois. Exemplo: ["É advogado", "Prefere respostas diretas"]. Se não houver fatos novos, retorne estritamente [].`;
+    const promptMemoria = `Analise as últimas mensagens e extraia FATOS permanentes sobre o usuário.
+Retorne APENAS um array JSON de strings, sem mais nenhum texto. Exemplo: ["É advogado", "Prefere respostas diretas"]. Se não houver fatos novos, retorne estritamente [].`;
     
     let tierSelecionado = MODEL_TIERS.padrao;
 
     if (mode === 'memoria') {
       basePrompt = promptMemoria;
-      tierSelecionado = MODEL_TIERS.padrao; // Flash é suficiente e mais rápido para isso
+      tierSelecionado = MODEL_TIERS.padrao;
     } else if (mode === 'leitura') {
       basePrompt = promptAnalise;
       tierSelecionado = MODEL_TIERS.leitura;
@@ -189,12 +219,10 @@ Retorne APENAS um array JSON de strings, sem mais nenhum texto antes ou depois. 
       tierSelecionado = MODEL_TIERS.padrao;
     }
 
-    // ==========================================
-    // 🧠 INJETANDO A MEMÓRIA NO PROMPT
-    // ==========================================
+    // INJETANDO A MEMÓRIA
     let memoriaTexto = "";
     if (memory && Array.isArray(memory) && memory.length > 0) {
-      memoriaTexto = "\n\nO que você já sabe sobre este usuário (Memórias de conversas passadas): " + memory.join(", ") + ". Use isso para personalizar a resposta se for relevante.";
+      memoriaTexto = "\n\nO que você já sabe sobre este usuário: " + memory.join(", ") + ". Use isso para personalizar a resposta se for relevante.";
     }
 
     const finalInstruction = (systemPrompt ? basePrompt + "\n\nPreferências do usuário: " + systemPrompt : basePrompt) + memoriaTexto;
@@ -216,9 +244,7 @@ Retorne APENAS um array JSON de strings, sem mais nenhum texto antes ou depois. 
         promptFinal = "O usuário enviou o(s) seguinte(s) documento(s):\n\n" + fileText.substring(0, 300000) + "\n\nInstrução do usuário: " + (message || "Analise e compare os documentos.");
     }
     
-    // ==========================================
-    // 👁️ PROCESSAMENTO MULTIMODAL (TEXTO + IMAGEM)
-    // ==========================================
+    // MULTIMODAL (TEXTO + IMAGEM)
     let userParts = [{ text: promptFinal }];
 
     if (images && images.length > 0) {
@@ -237,7 +263,6 @@ Retorne APENAS um array JSON de strings, sem mais nenhum texto antes ou depois. 
 
     contentsArray.push({ role: 'user', parts: userParts });
 
-    // Chama a função com o tier selecionado
     await chamarModeloIA(apiKey, tierSelecionado, contentsArray, finalInstruction, res);
 
   } catch (error) {
