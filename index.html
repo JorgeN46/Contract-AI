@@ -2532,6 +2532,39 @@ async function submitLogin(e) {
   }, 1500);
   }
 }
+async function esqueceuSenha(e) {
+  if(e) e.preventDefault();
+  
+  var email = document.getElementById('loginEmail').value;
+  
+  if(!email) {
+    alert("Por favor, digite seu e-mail no campo acima para que possamos enviar o link de recuperação.");
+    document.getElementById('loginEmail').focus();
+    return;
+  }
+
+  var linkOriginal = e.target;
+  linkOriginal.textContent = "Enviando...";
+  linkOriginal.style.pointerEvents = "none";
+
+  // Chama a API do Supabase para enviar o e-mail
+  let { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin, // Redireciona de volta para o seu site
+  });
+
+  if (error) {
+    alert("Erro ao enviar e-mail: " + error.message);
+    linkOriginal.textContent = "Esqueci minha senha";
+    linkOriginal.style.pointerEvents = "auto";
+  } else {
+    alert("✅ Link enviado! Verifique sua caixa de entrada e a pasta de spam.");
+    linkOriginal.textContent = "E-mail enviado!";
+    setTimeout(() => {
+        linkOriginal.textContent = "Esqueci minha senha";
+        linkOriginal.style.pointerEvents = "auto";
+    }, 5000);
+  }
+}
 function atualizarDadosUsuario(email) {
   var elPerfil = document.getElementById('perfilEmail');
   var elConta = document.getElementById('contaEmail');
