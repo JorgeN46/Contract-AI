@@ -2558,6 +2558,82 @@ function abrirAtalho(texto) {
     autoResize(inp); // Ajusta a altura do textarea
   }
 }
+// 1. Chama a IA para extrair memórias (roda de forma invisível após a resposta)
+async function extrairMemorias() {
+  if (conversaAtual.length < 4) return; // Só extrai se a conversa tiver um mínimo de contexto
+  
+  var userId = localStorage.getItem('contractai_user_id');
+  if(!userId) return;
+
+  try {
+    var resposta = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: "Extraia memórias desta conversa.",
+        mode: 'memoria',
+        history: conversaAtual.slice(-6), // Pega as últimas 6 mensagens
+        userId: userId
+      })
+    });
+
+    if(!resposta.ok) return;
+    var texto = await resposta.text();
+    
+    // Tenta transformar o texto em JSON
+    var novasMemorias = JSON.parse(texto);
+    if (Array.isArray(novasMemorias) && novasMemorias.length > 0) {
+      var memoriaAtual = JSON.parse(localStorage.getItem('contractai_memory') || '[]');
+      
+      // Junta as novas com as antigas, evitando duplicatas
+      var memoriaFinal = [...new Set([...memoriaAtual, ...novasMemorias])];
+      
+      localStorage.setItem('contractai_memory', JSON.stringify(memoriaFinal));
+      
+      // Salva no Supabase
+      await supabase.from('profiles').upsert({ id: userId, memory: memoriaFinal });
+      carregarMemoriaNaTela(); // Atualiza a tela de configurações
+    }
+  } catch (e) {
+    console.log("Erro ao extrair memória (silencioso):", e);
+  }
+}
+
+// 2. Mostra as memórias na tela de Configurações > Memória
+async function carregarMemoriaNaTela() {
+  var container = document.querySelector('#screen-settings-memoria .card');
+  if(!container) return;
+
+  var memory = JSON.parse(localStorage.getItem('contractai_memory') || '[]');
+
+  if (memory.length === 0) {
+    container.innerHTML = '<p class="muted" style="margin:0">A IA ainda não guardou nenhuma memória sobre você. Conforme você conversar, ela vai aprender suas preferências.</p>';
+    return;
+  }
+
+  container.innerHTML = '';
+  memory.forEach(function(fato, index) {
+    var item = document.createElement('div');
+    item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid rgba(255,255,255,0.05); text-align:left;';
+    item.innerHTML = `
+      <span style="font-size:14px; color:#fff;">🧠 ${fato}</span>
+      <button onclick="apagarMemoria(${index})" style="background:none; border:none; color:#fca5a5; cursor:pointer; font-size:18px;">×</button>
+    `;
+    container.appendChild(item);
+  });
+}
+
+// 3. Apagar uma memória específica
+async function apagarMemoria(index) {
+  var memory = JSON.parse(localStorage.getItem('contractai_memory') || '[]');
+  memory.splice(index, 1);
+  localStorage.setItem('contractai_memory', JSON.stringify(memory));
+  
+  var userId = localStorage.getItem('contractai_user_id');
+  if(userId) await supabase.from('profiles').upsert({ id: userId, memory: memory });
+  
+  carregarMemoriaNaTela();
+}
 // Lógica da Seta de Rolar
 window.addEventListener('scroll', function() {
   var btn = document.getElementById('scrollDownBtn');
