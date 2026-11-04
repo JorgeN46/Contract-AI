@@ -2772,40 +2772,28 @@ window.addEventListener('DOMContentLoaded', function(){
 // Fica ouvindo as mudanças de login (renovação de token, logout, etc)
 supabase.auth.onAuthStateChange(async function(event, session) {
   
-  // 👇 BLOCO DE RECUPERAÇÃO DE SENHA 👇
+  // Bloco de Recuperação de Senha
   if (event === "PASSWORD_RECOVERY") {
     var novaSenha = prompt("Digite a sua NOVA senha (mínimo 6 caracteres):");
-    
     if (novaSenha && novaSenha.length >= 6) {
       const { data, error } = await supabase.auth.updateUser({ password: novaSenha });
-      
-      if (error) {
-        alert("Erro ao atualizar a senha: " + error.message);
-      } else {
-        alert("✅ Sua senha foi atualizada com sucesso! Você já está logado.");
-        go('dashboard'); 
-      }
+      if (error) alert("Erro ao atualizar a senha: " + error.message);
+      else { alert("✅ Sua senha foi atualizada!"); go('dashboard'); }
     } else {
-      alert("A senha deve ter pelo menos 6 caracteres. Tente novamente.");
+      alert("A senha deve ter pelo menos 6 caracteres.");
     }
   }
-  // 👆 FIM DO BLOCO DE RECUPERAÇÃO 👆
 
   if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
     if (session && session.user) {
       localStorage.setItem('contractai_user_id', session.user.id);
-      atualizarDadosUsuário(session.user.email);
+      atualizarDadosUsuario(session.user.email);
       renderizarHistorico();
-      
-      // Se a tela atual for a de login e ele já estiver logado, manda pro dashboard
-      if (document.getElementById('screen-login').classList.contains('active')) {
-        go('dashboard');
-      }
     }
   } else if (event === 'SIGNED_OUT') {
     localStorage.removeItem('contractai_user_id');
     atualizarDadosUsuario(null);
-    go('landing'); // Se deslogar, volta pro site
+    go('landing'); 
   }
 });
 function criarParticulas(container) {
