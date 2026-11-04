@@ -2217,7 +2217,6 @@ function enviarMensagem(){
   var inp = document.querySelector('.chat-input');
   var texto = inp.value.trim();
 
-  // CASO 1: Se tem imagem, vai direto para a IA
   if (isImageAttached) {
       var msgUsuario = texto ? "📎 Imagem enviada\n" + texto : "📎 Imagem enviada";
       adicionarMensagemUsuario(msgUsuario);
@@ -2230,9 +2229,8 @@ function enviarMensagem(){
       var prompt = texto ? texto : "Analise esta imagem e resolva o que for pedido.";
       
       chamarIA(prompt);
-      removerAnexo(); 
+      // NÃO APAGUE O ANEXO AQUI! O chamarIA já vai apagar quando terminar.
   } 
-  // CASO 2: Se tem arquivo (PDF/Word)
   else if (arquivoAnexado) {
       var nome = arquivoAnexado;
       var msgUsuario = texto ? "📎 " + nome + "\n" + texto : "📎 " + nome;
@@ -2245,14 +2243,12 @@ function enviarMensagem(){
 
       if(texto) {
           chamarIA("Analise o arquivo '" + nome + "'. Instrução do usuário: " + texto);
-          removerAnexo(); 
       } else {
           setTimeout(function(){
               adicionarMensagemIA('Recebi o arquivo <b>' + nome + '</b>. O que deseja fazer?<div class="msg-options"><button class="msg-opt" onclick="escolherObjetivo(\'Análise\')">📊 Análise</button><button class="msg-opt" onclick="escolherObjetivo(\'Trabalho\')">💼 Trabalho</button><button class="msg-opt" onclick="escolherObjetivo(\'Resumo\')">📝 Resumo</button></div>');
           }, 500);
       }
   } 
-  // CASO 3: Apenas texto
   else if(texto) {
       adicionarMensagemUsuario(texto);
       var area = document.getElementById('chatMessages');
