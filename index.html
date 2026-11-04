@@ -2033,7 +2033,7 @@ async function chamarIA(mensagemUsuario){
   divTemp.className = 'msg ai';
   divTemp.id = 'msg-streaming';
 
-  // Cria a estrutura com o Avatar e a caixa de texto
+  // Cria a estrutura com a caixa de texto (o avatar é gerado pelo CSS)
   divTemp.innerHTML = `
     <div class="msg-ai-content">
       <div class="typing-indicator"><span></span><span></span><span></span></div>
@@ -2048,25 +2048,27 @@ async function chamarIA(mensagemUsuario){
     var modoAtual = localStorage.getItem('contractai_mode') || 'padrao';
     
     var resposta = await fetch('/api/chat', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    message: mensagemUsuario,
-    fileText: textoArquivoExtraido,
-    systemPrompt: promptPersonalizado,
-    mode: modoAtual,
-    history: conversaAtual.slice(-10),
-    userId: localStorage.getItem('contractai_user_id'),
-    images: imagensAnexadas, // <-- Para as fotos funcionarem
-    memory: JSON.parse(localStorage.getItem('contractai_memory') || '[]') // <-- Para a memória funcionar
-  })
-});
-if (!resposta.ok) {
-  if (resposta.status === 429) {
-    throw new Error("Calma aí! Você está indo rápido demais. Aguarde um minuto para enviar mais mensagens.");
-  }
-  throw new Error("Falha na comunicação com o servidor.");
-}
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: mensagemUsuario,
+        fileText: textoArquivoExtraido,
+        systemPrompt: promptPersonalizado,
+        mode: modoAtual,
+        history: conversaAtual.slice(-10),
+        userId: localStorage.getItem('contractai_user_id'),
+        images: imagensAnexadas, // <-- Envia as fotos
+        memory: JSON.parse(localStorage.getItem('contractai_memory') || '[]') // <-- Envia a memória
+      })
+    });
+
+    if (!resposta.ok) {
+      if (resposta.status === 429) {
+        throw new Error("Calma aí! Você está indo rápido demais. Aguarde um minuto para enviar mais mensagens.");
+      }
+      throw new Error("Falha na comunicação com o servidor.");
+    }
+
     var textoAcumulado = "";
 
     const reader = resposta.body.getReader();
@@ -2089,7 +2091,6 @@ if (!resposta.ok) {
 
     divTemp.id = 'msg-ai-' + Date.now();
 
-    // Pega a caixa de conteúdo de dentro do avatar e coloca o texto final
     var contentBoxFinal = divTemp.querySelector('.msg-ai-content');
     contentBoxFinal.innerHTML = marked.parse(textoAcumulado.trim());
     
@@ -2119,9 +2120,8 @@ if (!resposta.ok) {
     };
     actions.appendChild(btnCopiar);
 
-    var textoUsuario = mensagemUsuario.toLowerCase();
-    var pediuDownload = true; 
-    
+    var pediuDownload = true; // Botões de download sempre visíveis
+
     if (pediuDownload) {
         var btnPDF = document.createElement('button');
         btnPDF.className = 'msg-action-btn';
@@ -2137,7 +2137,10 @@ if (!resposta.ok) {
     }
 
     contentBoxFinal.appendChild(actions);
+    
+    // Salva a conversa e dispara a extração de memórias em segundo plano
     salvarConversaAtual(); 
+    extrairMemorias(); // <-- AQUI ESTÁ A NOVA LINHA!
 
   } catch(err) {
     var boxErro = divTemp.querySelector('.msg-ai-content');
@@ -2147,7 +2150,7 @@ if (!resposta.ok) {
       divTemp.innerHTML = '❌ Erro de conexão: ' + err.message;
     }
   }
-} // <--- ESSA É A CHAVE QUE ESTAVA FALTANDO! 🎯
+}
 function escolherObjetivo(objetivo){
 adicionarMensagemUsuario(objetivo);
 var prompt = '';
@@ -2460,14 +2463,26 @@ async function fazerLogout() {
   go('landing');
 }
 async function carregarPersonalizacaoDoBanco(userId) {
-  let { data, error } = await supabase.from('profiles').select('custom_prompt').eq('id', userId).maybeSingle();
+  // Busca o prompt e a memória no banco de dados
+  let { data, error } = await supabase.from('profiles').select('custom_prompt, memory').eq('id', userId).maybeSingle();
   
-  if (data && data.custom_prompt) {
-      document.getElementById('customPrompt').value = data.custom_prompt;
-      localStorage.setItem('contractai_prompt', data.custom_prompt); // Atualiza a memória local
-  } else {
-      document.getElementById('customPrompt').value = '';
-      localStorage.removeItem('contractai_prompt');
+  if (data) {
+      // 1. Configura o Prompt de Personalização
+      if (data.custom_prompt) {
+          document.getElementById('customPrompt').value = data.custom_prompt;
+          localStorage.setItem('contractai_prompt', data.custom_prompt);
+      } else {
+          document.getElementById('customPrompt').value = '';
+          localStorage.removeItem('contractai_prompt');
+      }
+
+      // 2. Configura a Memória de Longo Prazo
+      if (data.memory && Array.isArray(data.memory)) {
+          localStorage.setItem('contractai_memory', JSON.stringify(data.memory));
+          if (typeof carregarMemoriaNaTela === 'function') {
+              carregarMemoriaNaTela(); // Atualiza a tela de configurações com as memórias salvas
+          }
+      }
   }
 }
 // INICIALIZAÇÃO DO SITE (DOMContentLoaded)
