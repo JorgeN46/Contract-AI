@@ -2188,39 +2188,51 @@ function enviarMensagem(){
   var inp = document.querySelector('.chat-input');
   var texto = inp.value.trim();
 
-  if(arquivoAnexado) {
-     var nome = arquivoAnexado;
-     var msgUsuario = texto ? "📎 " + nome + "\n" + texto : "📎 " + nome;
-     adicionarMensagemUsuario(msgUsuario);
-     
-     var area = document.getElementById('chatMessages');
-     if(area) area.classList.add('active');
-     var welcome = document.getElementById('dashWelcome');
-     if(welcome) welcome.style.display = 'none';
+  // CASO 1: Tem imagem anexada (Manda direto para a Visão da IA, sem botões)
+  if (imagensAnexadas.length > 0) {
+      var msgUsuario = texto ? "📎 Imagem enviada\n" + texto : "📎 Imagem enviada";
+      adicionarMensagemUsuario(msgUsuario);
+      
+      var area = document.getElementById('chatMessages');
+      if(area) area.classList.add('active');
+      var welcome = document.getElementById('dashWelcome');
+      if(welcome) welcome.style.display = 'none';
 
-     if(texto) {
-         // Se o usuário já digitou algo, manda direto para a IA
-         chamarIA("Analise o arquivo '" + nome + "'. Instrução do usuário: " + texto);
-         removerAnexo(); // Limpa a memória APENAS se for enviar direto
-     } else {
-    // Se for uma imagem, não mostra os botões de contrato. Manda direto para a IA!
-    if (imagensAnexadas.length > 0) {
-        chamarIA("O que tem nesta imagem? Por favor, transcreva o conteúdo e resolva o que for pedido.");
-    } else {
-        // Se for PDF ou Word, aí sim mostra os botões de análise
-        setTimeout(function(){
-           adicionarMensagemIA('Recebi o arquivo <b>' + nome + '</b>. O que deseja fazer?<div class="msg-options"><button class="msg-opt" onclick="escolherObjetivo(\'Análise\')">📊 Análise</button><button class="msg-opt" onclick="escolherObjetivo(\'Trabalho\')">💼 Trabalho</button><button class="msg-opt" onclick="escolherObjetivo(\'Resumo\')">📝 Resumo</button></div>');
-        }, 500);
-    }
-     }
-  } else if(texto) {
-   adicionarMensagemUsuario(texto);
-   var area = document.getElementById('chatMessages');
-   if(area) area.classList.add('active');
-   var welcome = document.getElementById('dashWelcome');
-   if(welcome) welcome.style.display = 'none';
-   chamarIA(texto);
+      var prompt = texto ? texto : "O que tem nesta imagem? Por favor, transcreva o conteúdo e resolva o que for pedido.";
+      
+      chamarIA(prompt);
+      removerAnexo(); // Limpa a imagem da memória após enviar
+  } 
+  // CASO 2: Tem arquivo (PDF/Word) anexado
+  else if (arquivoAnexado) {
+      var nome = arquivoAnexado;
+      var msgUsuario = texto ? "📎 " + nome + "\n" + texto : "📎 " + nome;
+      adicionarMensagemUsuario(msgUsuario);
+      
+      var area = document.getElementById('chatMessages');
+      if(area) area.classList.add('active');
+      var welcome = document.getElementById('dashWelcome');
+      if(welcome) welcome.style.display = 'none';
+
+      if(texto) {
+          chamarIA("Analise o arquivo '" + nome + "'. Instrução do usuário: " + texto);
+          removerAnexo(); 
+      } else {
+          setTimeout(function(){
+              adicionarMensagemIA('Recebi o arquivo <b>' + nome + '</b>. O que deseja fazer?<div class="msg-options"><button class="msg-opt" onclick="escolherObjetivo(\'Análise\')">📊 Análise</button><button class="msg-opt" onclick="escolherObjetivo(\'Trabalho\')">💼 Trabalho</button><button class="msg-opt" onclick="escolherObjetivo(\'Resumo\')">📝 Resumo</button></div>');
+          }, 500);
+      }
+  } 
+  // CASO 3: Só texto
+  else if(texto) {
+      adicionarMensagemUsuario(texto);
+      var area = document.getElementById('chatMessages');
+      if(area) area.classList.add('active');
+      var welcome = document.getElementById('dashWelcome');
+      if(welcome) welcome.style.display = 'none';
+      chamarIA(texto);
   }
+
   limparInput();
   salvarConversaAtual();
 }
