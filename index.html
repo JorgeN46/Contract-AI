@@ -2213,10 +2213,13 @@ async function chamarIA(mensagemUsuario){
     });
 
     if (!resposta.ok) {
-      if (resposta.status === 429) {
-        throw new Error("Calma aí! Você está indo rápido demais. Aguarde um minuto para enviar mais mensagens.");
-      }
-      throw new Error("Falha na comunicação com o servidor.");
+  if (resposta.status === 429) {
+    throw new Error("Calma aí! Você está indo rápido demais. Aguarde um minuto para enviar mais mensagens.");
+  }
+  
+  // 👇 DIAGNÓSTICO: Vai ler o erro real do backend
+  let erroReal = await resposta.text();
+  throw new Error(`Status ${resposta.status}: ${erroReal}`);
     }
 
     var textoAcumulado = "";
