@@ -3,7 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 // Memória temporária para controle de limites (Rate Limiting básico)
 const requestCache = new Map();
 
-// Inicializa o cliente Admin do Supabase para checar e atualizar limites com segurança
+// Inicializa o cliente Admin do Supabase (Usando os nomes exatos da sua Vercel)
 const supabaseAdmin = createClient(
   process.env.URL_SUPABASE || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -20,7 +20,7 @@ const MODEL_TIERS = {
     fallback: ['gemini-3.5-flash-lite']
   },
   leitura: {
-    primary: 'gemini-3.8-pro',
+    primary: 'gemini-3.8-pro', // Modelo mais caro e inteligente para plano pago
     fallback: ['gemini-3.8-flash']
   }
 };
@@ -84,7 +84,7 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
           await new Promise(r => setTimeout(r, Math.pow(2, tentativa - 1) * 1000));
           continue;
         }
-        break; // Se for erro de modelo inválido, pula para o próximo fallback
+        break;
       }
     }
   }
@@ -101,70 +101,52 @@ module.exports = async function handler(req, res) {
 
   try {
     const { message, fileText, systemPrompt, mode, history, userId, images, memory } = req.body;
-    
+    let profile = null;
+
     // ==========================================
-    // 🛡️ RATE LIMITING (Proteção contra Spam rápido)
+    // 🛡️ RATE LIMITING (Proteção contra Spam)
     // ==========================================
     const limitKey = userId || req.headers['x-forwarded-for'] || 'anonimo';
     const now = Date.now();
-    const windowMs = 60000; // 1 minuto
-    const maxRequests = 15; // Máximo de 15 msgs por minuto
+    const windowMs = 60000;
+    const maxRequests = 15;
 
-    if (!requestCache.has(limitKey)) {
-      requestCache.set(limitKey, []);
-    }
-
+    if (!requestCache.has(limitKey)) requestCache.set(limitKey, []);
     const timestamps = requestCache.get(limitKey).filter(t => now - t < windowMs);
-    
-    if (timestamps.length >= maxRequests) {
-      return res.status(429).json({ error: 'Você está indo rápido demais. Aguarde um minuto.' });
-    }
-
+    if (timestamps.length >= maxRequests) return res.status(429).json({ error: 'Você está indo rápido demais. Aguarde um minuto.' });
     timestamps.push(now);
     requestCache.set(limitKey, timestamps);
-    // ==========================================
 
     // ==========================================
-    // 💳 CONTROLE DE LIMITES DIÁRIOS
+    // 💳 CONTROLE DE LIMITES DIÁRIOS E PLANO
     // ==========================================
-    if (userId && process.env.SUPABASE_URL) {
-      let { data: profile } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
+    if (userId && process.env.URL_SUPABASE) {
+      let { data } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
+      profile = data;
       
       if (profile) {
         const hoje = new Date().toISOString().split('T')[0];
         let msgHoje = profile.messages_today || 0;
         let upHoje = profile.uploads_today || 0;
 
-        // 1. Reseta os limites se for um novo dia
+        // Reseta os limites se for um novo dia
         if (profile.last_active_date !== hoje) {
           msgHoje = 0;
           upHoje = 0;
-          await supabaseAdmin.from('profiles').update({ 
-             last_active_date: hoje, 
-             messages_today: 0, 
-             uploads_today: 0 
-          }).eq('id', userId);
+          await supabaseAdmin.from('profiles').update({ last_active_date: hoje, messages_today: 0, uploads_today: 0 }).eq('id', userId);
         }
 
-        // 2. Verifica se o usuário está tentando enviar arquivo/imagem
         const temUpload = (fileText && fileText.trim().length > 0) || (images && images.length > 0);
 
-        // 3. Bloqueia se estourou os limites
-        if (msgHoje >= profile.max_daily_messages) {
-           return res.status(403).json({ error: 'Você atingiu seu limite diário de mensagens. Volte amanhã ou faça upgrade.' });
-        }
-        if (temUpload && upHoje >= profile.max_daily_uploads) {
-           return res.status(403).json({ error: 'Você atingiu seu limite diário de uploads. Volte amanhã ou faça upgrade.' });
-        }
+        if (msgHoje >= profile.max_daily_messages) return res.status(403).json({ error: 'Você atingiu seu limite diário de mensagens. Volte amanhã ou faça upgrade.' });
+        if (temUpload && upHoje >= profile.max_daily_uploads) return res.status(403).json({ error: 'Você atingiu seu limite diário de uploads. Volte amanhã ou faça upgrade.' });
 
-        // 4. Atualiza os contadores
         await supabaseAdmin.from('profiles').update({ 
            messages_today: msgHoje + 1,
            uploads_today: temUpload ? upHoje + 1 : upHoje
         }).eq('id', userId);
       }
     }
-    // ==========================================
 
     if (!message && (!fileText || fileText.trim() === '') && (!images || images.length === 0)) {
         return res.status(400).json({ error: 'Mensagem vazia' });
@@ -177,31 +159,23 @@ module.exports = async function handler(req, res) {
     
     // PROMPTS
     const promptAnalise = `Você é o Macrus, no MODO ANÁLISE. Sua persona é a de um Advogado Sênior, Auditor e Revisor Técnico implacável.
-Seu objetivo é organizar, explicar, alertar e CORRIGIR o texto. Você lê qualquer tipo de documento profissional (Contratos, Laudos Médicos, Relatórios Contábeis, Editais).
-IMPORTANTE: Se o usuário enviar MAIS DE UM documento, faça uma análise comparativa apontando diferenças e riscos.
-DIRETRIZ VISUAL: Leia atentamente o que estiver na imagem antes de responder.
+Seu objetivo é organizar, explicar, alertar e CORRIGIR o texto. Você lê qualquer tipo de documento profissional.
+DIRETRIZ VISUAL: Leia atentamente o que estiver na imagem.
 REGRA MATEMÁTICA: Use LaTeX entre $$ (exemplo: $$ P(X=k) = \\binom{n}{k} \\cdot p^k \\cdot (1-p)^{n-k} $$). NUNCA use '%' dentro da fórmula.
-Estrutura: 1. 📋 Resumo Operacional. 2. 🚨 Diagnóstico de Riscos (com Evidências). 3. 🛠️ Reescrita e Correção (❌ Original / ✅ Corrigido). 4. ➕ Cláusulas Sugeridas. 5. ⚖️ Aviso Legal.
-Diretriz de Emojis: Use apenas nos títulos.`;
+Estrutura: 1. 📋 Resumo Operacional. 2. 🚨 Diagnóstico de Riscos (com Evidências). 3. 🛠️ Reescrita e Correção (❌ Original / ✅ Corrigido). 4. ➕ Cláusulas Sugeridas. 5. ⚖️ Aviso Legal.`;
 
     const promptRefinamento = `Você é o Macrus, no MODO REFINAMENTO. Sua persona é a de um Editor e Redator Profissional Sênior.
-Seu objetivo é melhorar, criar ou editar textos, e-mails, artigos, trabalhos escolares e documentos em geral.
-1. Se o usuário pedir para CRIAR, gere um texto de alta qualidade.
+1. Se pedir para CRIAR, gere um texto de alta qualidade.
 2. Se pedir para MELHORAR, reescreva aplicando o tom desejado.
 3. Formate como: ✨ **Texto Refinado:** [texto] e 💡 **O que foi melhorado:** [explicação].
-4. NUNCA dê conselhos jurídicos ou contábeis definitivos.
 DIRETRIZ VISUAL: Leia o texto da imagem e aplique as regras de refinamento.`;
 
-    const promptPadrao = `Você é o Macrus, no MODO PADRÃO. Sua persona é a de um assistente conversacional inteligente, descontraído, empático e muito prestativo.
-Suas capacidades incluem: conversar, criar e-mails, planos de aula, tirar dúvidas e ler documentos.
-DIRETRIZ VISUAL CRÍTICA: Se receber uma imagem, leia o que está nela. Se for um problema de matemática, transcreva e resolva EXATAMENTE o que está na imagem. NUNCA invente um contrato se a imagem contiver cálculos.
-REGRA MATEMÁTICA: Use LaTeX entre $$. NUNCA use '%' dentro da fórmula.
-REGRA DE EXPORTAÇÃO: NUNCA diga "use a função imprimir". O sistema já possui botões.
-ATENÇÃO CRÍTICA: Você está no MODO PADRÃO. NUNCA use a estrutura de "Resumo Operacional", "Diagnóstico de Riscos" ou "Aviso Legal". Seja natural e conversacional.
-Diretriz de Emojis: Sinta-se livre para usar emojis (ex: 😊, 🚀, 🤔).`;
+    const promptPadrao = `Você é o Macrus, no MODO PADRÃO. Sua persona é a de um assistente conversacional inteligente e muito prestativo.
+DIRETRIZ VISUAL CRÍTICA: Se receber uma imagem, leia o que está nela. NUNCA invente um contrato se a imagem contiver cálculos, anotações ou textos aleatórios.
+REGRA MATEMÁTICA: Use LaTeX entre $$ (exemplo: $$ x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a} $$). NUNCA use '%' dentro da fórmula.
+ATENÇÃO: NUNCA use a estrutura de "Resumo Operacional" ou "Aviso Legal" neste modo. Seja natural e conversacional.`;
 
-    const promptMemoria = `Analise as últimas mensagens e extraia FATOS permanentes sobre o usuário.
-Retorne APENAS um array JSON de strings, sem mais nenhum texto. Exemplo: ["É advogado", "Prefere respostas diretas"]. Se não houver fatos novos, retorne estritamente [].`;
+    const promptMemoria = `Analise as últimas mensagens e extraia FATOS permanentes sobre o usuário. Retorne APENAS um array JSON de strings. Exemplo: ["É advogado"]. Se não houver, retorne [].`;
     
     let tierSelecionado = MODEL_TIERS.padrao;
 
@@ -210,7 +184,13 @@ Retorne APENAS um array JSON de strings, sem mais nenhum texto. Exemplo: ["É ad
       tierSelecionado = MODEL_TIERS.padrao;
     } else if (mode === 'leitura') {
       basePrompt = promptAnalise;
-      tierSelecionado = MODEL_TIERS.leitura;
+      
+      // LÓGICA DE PLANO: Grátis usa Flash. Pro usa Pro.
+      if (profile && profile.plan === 'free') {
+          tierSelecionado = MODEL_TIERS.padrao; // Força o modelo barato
+      } else {
+          tierSelecionado = MODEL_TIERS.leitura; // Libera o modelo avançado
+      }
     } else if (mode === 'refinamento') {
       basePrompt = promptRefinamento;
       tierSelecionado = MODEL_TIERS.refinamento;
@@ -219,13 +199,19 @@ Retorne APENAS um array JSON de strings, sem mais nenhum texto. Exemplo: ["É ad
       tierSelecionado = MODEL_TIERS.padrao;
     }
 
-    // INJETANDO A MEMÓRIA
+    // MEMÓRIA
     let memoriaTexto = "";
     if (memory && Array.isArray(memory) && memory.length > 0) {
-      memoriaTexto = "\n\nO que você já sabe sobre este usuário: " + memory.join(", ") + ". Use isso para personalizar a resposta se for relevante.";
+      memoriaTexto = "\n\nO que você já sabe sobre este usuário: " + memory.join(", ") + ".";
     }
 
-    const finalInstruction = (systemPrompt ? basePrompt + "\n\nPreferências do usuário: " + systemPrompt : basePrompt) + memoriaTexto;
+    // AVISO DE PLANO GRÁTIS
+    let avisoPlano = "";
+    if (profile && profile.plan === 'free') {
+        avisoPlano = "\n\nAVISO DO SISTEMA: O usuário está no plano gratuito. Se o documento for muito complexo, finalize a resposta com a frase em itálico: '💡 Dica: Para análises mais profundas com IA de última geração, faça upgrade para o Plano Pro.'";
+    }
+
+    const finalInstruction = (systemPrompt ? basePrompt + "\n\nPreferências do usuário: " + systemPrompt : basePrompt) + memoriaTexto + avisoPlano;
 
     let contentsArray = [];
     let historyToUse = history || [];
@@ -246,16 +232,12 @@ Retorne APENAS um array JSON de strings, sem mais nenhum texto. Exemplo: ["É ad
     
     // MULTIMODAL (TEXTO + IMAGEM)
     let userParts = [{ text: promptFinal }];
-
     if (images && images.length > 0) {
         images.forEach(imgUrl => {
             const match = imgUrl.match(/^data:(image\/[a-zA-Z]*);base64,(.*)$/);
             if (match) {
                 userParts.push({
-                    inlineData: {
-                        mimeType: match[1],
-                        data: match[2]
-                    }
+                    inlineData: { mimeType: match[1], data: match[2] }
                 });
             }
         });
