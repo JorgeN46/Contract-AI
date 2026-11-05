@@ -3,12 +3,6 @@ const { createClient } = require('@supabase/supabase-js');
 // Memória temporária para controle de limites (Rate Limiting básico)
 const requestCache = new Map();
 
-// Inicializa o cliente Admin do Supabase (Usando os nomes exatos da sua Vercel)
-const supabaseAdmin = createClient(
-  process.env.URL_SUPABASE || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-);
-
 // REGISTRO DE MODELOS (MODEL TIERS)
 const MODEL_TIERS = {
   padrao: {
@@ -84,7 +78,7 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
           await new Promise(r => setTimeout(r, Math.pow(2, tentativa - 1) * 1000));
           continue;
         }
-        break;
+        break; // Se for erro de modelo inválido, pula para o próximo fallback
       }
     }
   }
@@ -99,52 +93,82 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  // Inicializa o Supabase Admin aqui dentro para garantir que as variáveis de ambiente estejam prontas
+  const supabaseAdmin = createClient(
+    process.env.URL_SUPABASE || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  );
+
   try {
     const { message, fileText, systemPrompt, mode, history, userId, images, memory } = req.body;
     let profile = null;
 
     // ==========================================
-    // 🛡️ RATE LIMITING (Proteção contra Spam)
+    // 🛡️ RATE LIMITING (Proteção contra Spam rápido)
     // ==========================================
     const limitKey = userId || req.headers['x-forwarded-for'] || 'anonimo';
     const now = Date.now();
-    const windowMs = 60000;
-    const maxRequests = 15;
+    const windowMs = 60000; // 1 minuto
+    const maxRequests = 15; // Máximo de 15 msgs por minuto
 
-    if (!requestCache.has(limitKey)) requestCache.set(limitKey, []);
+    if (!requestCache.has(limitKey)) {
+      requestCache.set(limitKey, []);
+    }
+
     const timestamps = requestCache.get(limitKey).filter(t => now - t < windowMs);
-    if (timestamps.length >= maxRequests) return res.status(429).json({ error: 'Você está indo rápido demais. Aguarde um minuto.' });
+    
+    if (timestamps.length >= maxRequests) {
+      return res.status(429).json({ error: 'Você está indo rápido demais. Aguarde um minuto.' });
+    }
+
     timestamps.push(now);
     requestCache.set(limitKey, timestamps);
 
     // ==========================================
-    // 💳 CONTROLE DE LIMITES DIÁRIOS E PLANO
+    // 💳 CONTROLE DE LIMITES DIÁRIOS (BLINDADO)
     // ==========================================
     if (userId && process.env.URL_SUPABASE) {
-      let { data } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).single();
-      profile = data;
-      
-      if (profile) {
-        const hoje = new Date().toISOString().split('T')[0];
-        let msgHoje = profile.messages_today || 0;
-        let upHoje = profile.uploads_today || 0;
-
-        // Reseta os limites se for um novo dia
-        if (profile.last_active_date !== hoje) {
-          msgHoje = 0;
-          upHoje = 0;
-          await supabaseAdmin.from('profiles').update({ last_active_date: hoje, messages_today: 0, uploads_today: 0 }).eq('id', userId);
+      try {
+        // Usamos maybeSingle() para não quebrar se o perfil ainda não existir
+        let { data, error } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).maybeSingle();
+        
+        if (error) {
+          console.error("⚠️ Erro ao buscar perfil no banco:", error.message);
         }
 
-        const temUpload = (fileText && fileText.trim().length > 0) || (images && images.length > 0);
+        profile = data;
 
-        if (msgHoje >= profile.max_daily_messages) return res.status(403).json({ error: 'Você atingiu seu limite diário de mensagens. Volte amanhã ou faça upgrade.' });
-        if (temUpload && upHoje >= profile.max_daily_uploads) return res.status(403).json({ error: 'Você atingiu seu limite diário de uploads. Volte amanhã ou faça upgrade.' });
+        if (profile) {
+          const hoje = new Date().toISOString().split('T')[0];
+          let msgHoje = profile.messages_today || 0;
+          let upHoje = profile.uploads_today || 0;
 
-        await supabaseAdmin.from('profiles').update({ 
-           messages_today: msgHoje + 1,
-           uploads_today: temUpload ? upHoje + 1 : upHoje
-        }).eq('id', userId);
+          // Reseta os limites se for um novo dia
+          if (profile.last_active_date !== hoje) {
+            msgHoje = 0;
+            upHoje = 0;
+            await supabaseAdmin.from('profiles').update({ last_active_date: hoje, messages_today: 0, uploads_today: 0 }).eq('id', userId);
+          }
+
+          const temUpload = (fileText && fileText.trim().length > 0) || (images && images.length > 0);
+
+          // Verifica os limites
+          if (msgHoje >= profile.max_daily_messages) {
+            return res.status(403).json({ error: 'Você atingiu seu limite diário de mensagens. Volte amanhã ou faça upgrade.' });
+          }
+          if (temUpload && upHoje >= profile.max_daily_uploads) {
+            return res.status(403).json({ error: 'Você atingiu seu limite diário de uploads. Volte amanhã ou faça upgrade.' });
+          }
+
+          // Atualiza os contadores
+          await supabaseAdmin.from('profiles').update({ 
+             messages_today: msgHoje + 1,
+             uploads_today: temUpload ? upHoje + 1 : upHoje
+          }).eq('id', userId);
+        }
+      } catch (dbError) {
+        // Se o banco falhar (ex: colunas não existem), avisa no log mas NÃO TRAVA O CHAT.
+        console.error("⚠️ Falha na checagem de limites, o chat continuará:", dbError.message);
       }
     }
 
@@ -248,7 +272,7 @@ ATENÇÃO: NUNCA use a estrutura de "Resumo Operacional" ou "Aviso Legal" neste 
     await chamarModeloIA(apiKey, tierSelecionado, contentsArray, finalInstruction, res);
 
   } catch (error) {
-    console.error('Erro geral:', error.message);
+    console.error('Erro geral no handler:', error.message);
     if (!res.headersSent) res.status(500).json({ error: 'Erro no servidor', details: error.message });
     else res.end();
   }
