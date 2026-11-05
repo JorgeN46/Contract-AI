@@ -14,7 +14,7 @@ const MODEL_TIERS = {
     fallback: ['gemini-3.5-flash-lite']
   },
   leitura: {
-    primary: 'gemini-3.8-pro', // Modelo mais caro e inteligente para plano pago
+    primary: 'gemini-3.8-pro', 
     fallback: ['gemini-3.8-flash']
   }
 };
@@ -75,10 +75,10 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
         ultimoErro = err;
         const msg = err.message || '';
         if (msg.includes('503') || msg.includes('UNAVAILABLE') || msg.includes('high demand') || msg.includes('429')) {
-          await new Promise(r => setTimeout(r, Math.pow(2, tentativa - 1) * 1000));
+          await new Promise(r => setTimeout(r, Math.pow(tentativa, 2) * 1000));
           continue;
         }
-        break; // Se for erro de modelo inválido, pula para o próximo fallback
+        break; 
       }
     }
   }
@@ -93,7 +93,13 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Inicializa o Supabase Admin aqui dentro para garantir que as variáveis de ambiente estejam prontas
+  // 👇 LOGS DE DIAGNÓSTICO PARA DESCOBRIR O ERRO 👇
+  console.log("--- INICIANDO REQUISIÇÃO ---");
+  console.log("URL_SUPABASE:", process.env.URL_SUPABASE ? "Configurada" : "FALTANDO");
+  console.log("SUPABASE_KEY:", process.env.SUPABASE_SERVICE_ROLE_KEY ? "Configurada" : "FALTANDO");
+  console.log("GOOGLE_API_KEY:", process.env.GOOGLE_API_KEY ? "Configurada" : "FALTANDO");
+  // 👆 FIM DOS LOGS 👆
+
   const supabaseAdmin = createClient(
     process.env.URL_SUPABASE || '',
     process.env.SUPABASE_SERVICE_ROLE_KEY || ''
@@ -108,8 +114,8 @@ module.exports = async function handler(req, res) {
     // ==========================================
     const limitKey = userId || req.headers['x-forwarded-for'] || 'anonimo';
     const now = Date.now();
-    const windowMs = 60000; // 1 minuto
-    const maxRequests = 15; // Máximo de 15 msgs por minuto
+    const windowMs = 60000; 
+    const maxRequests = 15; 
 
     if (!requestCache.has(limitKey)) {
       requestCache.set(limitKey, []);
@@ -129,7 +135,6 @@ module.exports = async function handler(req, res) {
     // ==========================================
     if (userId && process.env.URL_SUPABASE) {
       try {
-        // Usamos maybeSingle() para não quebrar se o perfil ainda não existir
         let { data, error } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).maybeSingle();
         
         if (error) {
@@ -143,7 +148,6 @@ module.exports = async function handler(req, res) {
           let msgHoje = profile.messages_today || 0;
           let upHoje = profile.uploads_today || 0;
 
-          // Reseta os limites se for um novo dia
           if (profile.last_active_date !== hoje) {
             msgHoje = 0;
             upHoje = 0;
@@ -152,7 +156,6 @@ module.exports = async function handler(req, res) {
 
           const temUpload = (fileText && fileText.trim().length > 0) || (images && images.length > 0);
 
-          // Verifica os limites
           if (msgHoje >= profile.max_daily_messages) {
             return res.status(403).json({ error: 'Você atingiu seu limite diário de mensagens. Volte amanhã ou faça upgrade.' });
           }
@@ -160,14 +163,12 @@ module.exports = async function handler(req, res) {
             return res.status(403).json({ error: 'Você atingiu seu limite diário de uploads. Volte amanhã ou faça upgrade.' });
           }
 
-          // Atualiza os contadores
           await supabaseAdmin.from('profiles').update({ 
              messages_today: msgHoje + 1,
              uploads_today: temUpload ? upHoje + 1 : upHoje
           }).eq('id', userId);
         }
       } catch (dbError) {
-        // Se o banco falhar (ex: colunas não existem), avisa no log mas NÃO TRAVA O CHAT.
         console.error("⚠️ Falha na checagem de limites, o chat continuará:", dbError.message);
       }
     }
@@ -208,12 +209,10 @@ ATENÇÃO: NUNCA use a estrutura de "Resumo Operacional" ou "Aviso Legal" neste 
       tierSelecionado = MODEL_TIERS.padrao;
     } else if (mode === 'leitura') {
       basePrompt = promptAnalise;
-      
-      // LÓGICA DE PLANO: Grátis usa Flash. Pro usa Pro.
       if (profile && profile.plan === 'free') {
-          tierSelecionado = MODEL_TIERS.padrao; // Força o modelo barato
+          tierSelecionado = MODEL_TIERS.padrao; 
       } else {
-          tierSelecionado = MODEL_TIERS.leitura; // Libera o modelo avançado
+          tierSelecionado = MODEL_TIERS.leitura; 
       }
     } else if (mode === 'refinamento') {
       basePrompt = promptRefinamento;
@@ -223,13 +222,11 @@ ATENÇÃO: NUNCA use a estrutura de "Resumo Operacional" ou "Aviso Legal" neste 
       tierSelecionado = MODEL_TIERS.padrao;
     }
 
-    // MEMÓRIA
     let memoriaTexto = "";
     if (memory && Array.isArray(memory) && memory.length > 0) {
       memoriaTexto = "\n\nO que você já sabe sobre este usuário: " + memory.join(", ") + ".";
     }
 
-    // AVISO DE PLANO GRÁTIS
     let avisoPlano = "";
     if (profile && profile.plan === 'free') {
         avisoPlano = "\n\nAVISO DO SISTEMA: O usuário está no plano gratuito. Se o documento for muito complexo, finalize a resposta com a frase em itálico: '💡 Dica: Para análises mais profundas com IA de última geração, faça upgrade para o Plano Pro.'";
@@ -254,7 +251,6 @@ ATENÇÃO: NUNCA use a estrutura de "Resumo Operacional" ou "Aviso Legal" neste 
         promptFinal = "O usuário enviou o(s) seguinte(s) documento(s):\n\n" + fileText.substring(0, 300000) + "\n\nInstrução do usuário: " + (message || "Analise e compare os documentos.");
     }
     
-    // MULTIMODAL (TEXTO + IMAGEM)
     let userParts = [{ text: promptFinal }];
     if (images && images.length > 0) {
         images.forEach(imgUrl => {
