@@ -1,7 +1,7 @@
 {
-  "name": "MACRUS",
+  "name": "macrus",
   "version": "1.0.0",
   "dependencies": {
-    "@google/genai": "latest"
+    "@supabase/supabase-js": "^2.39.0"
   }
 }
