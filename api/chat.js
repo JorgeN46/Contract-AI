@@ -93,21 +93,14 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // 👇 INICIALIZAÇÃO SEGURA DENTRO DO HANDLER 👇
   const supabaseUrl = process.env.URL_SUPABASE;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  // Se der erro, ele vai cuspir na tela o que ele está vendo
-  return res.status(500).json({ 
-    error: "Faltando chaves do Supabase.",
-    o_que_a_vercel_esta_lendo_url: supabaseUrl || "VAZIO",
-    o_que_a_vercel_esta_lendo_key: supabaseKey ? "EXISTE" : "VAZIO"
-  });
-}
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(500).json({ error: "Configuração do servidor incompleta (Faltando chaves)." });
+  }
 
   const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
-  // 👆 FIM DA INICIALIZAÇÃO SEGURA 👆
 
   try {
     const { message, fileText, systemPrompt, mode, history, userId, images, memory } = req.body;
@@ -128,32 +121,38 @@ if (!supabaseUrl || !supabaseKey) {
     requestCache.set(limitKey, timestamps);
 
     // ==========================================
-    // 💳 CONTROLE DE LIMITES DIÁRIOS
+    // 💳 CONTROLE DE CRÉDITOS
     // ==========================================
     if (userId) {
       try {
         let { data, error } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).maybeSingle();
         if (error) console.error("Erro ao buscar perfil:", error.message);
         profile = data;
+
         if (profile) {
-          const hoje = new Date().toISOString().split('T')[0];
-          let msgHoje = profile.messages_today || 0;
-          let upHoje = profile.uploads_today || 0;
-          if (profile.last_active_date !== hoje) {
-            msgHoje = 0; upHoje = 0;
-            await supabaseAdmin.from('profiles').update({ last_active_date: hoje, messages_today: 0, uploads_today: 0 }).eq('id', userId);
-          }
           const temUpload = (fileText && fileText.trim().length > 0) || (images && images.length > 0);
-          if (msgHoje >= profile.max_daily_messages) return res.status(403).json({ error: 'Limite diário de mensagens atingido.' });
-          if (temUpload && upHoje >= profile.max_daily_uploads) return res.status(403).json({ error: 'Limite diário de uploads atingido.' });
-          await supabaseAdmin.from('profiles').update({ messages_today: msgHoje + 1, uploads_today: temUpload ? upHoje + 1 : upHoje }).eq('id', userId);
+          let custo = temUpload ? 5 : 1; // 5 créditos para upload, 1 para texto
+
+          // Verifica se tem saldo
+          if (profile.credits < custo) {
+            return res.status(403).json({ error: 'Créditos insuficientes. Faça upgrade para continuar.' });
+          }
+
+          // Debita do banco
+          await supabaseAdmin.from('profiles').update({ 
+             credits: profile.credits - custo
+          }).eq('id', userId);
+          
+          profile.credits = profile.credits - custo;
         }
       } catch (dbError) {
-        console.error("Falha na checagem de limites (continuando):", dbError.message);
+        console.error("⚠️ Falha na checagem de créditos, o chat continuará:", dbError.message);
       }
     }
 
-    if (!message && (!fileText || fileText.trim() === '') && (!images || images.length === 0)) return res.status(400).json({ error: 'Mensagem vazia' });
+    if (!message && (!fileText || fileText.trim() === '') && (!images || images.length === 0)) {
+        return res.status(400).json({ error: 'Mensagem vazia' });
+    }
 
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Chave do Gemini não configurada.' });
@@ -164,46 +163,64 @@ if (!supabaseUrl || !supabaseKey) {
     const promptAnalise = `Você é o Macrus, no MODO ANÁLISE. Sua persona é a de um Advogado Sênior, Auditor e Revisor Técnico implacável.
 Seu objetivo é organizar, explicar, alertar e CORRIGIR o texto. Você lê qualquer tipo de documento profissional.
 DIRETRIZ VISUAL: Leia atentamente o que estiver na imagem.
-REGRA MATEMÁTICA: Use LaTeX entre $$. NUNCA use '%'.
-Estrutura: 1. 📋 Resumo Operacional. 2. 🚨 Diagnóstico de Riscos. 3. 🛠️ Reescrita e Correção. 4. ➕ Cláusulas Sugeridas. 5. ⚖️ Aviso Legal.`;
+REGRA MATEMÁTICA: Use LaTeX entre $$ (exemplo: $$ P(X=k) = \\binom{n}{k} \\cdot p^k \\cdot (1-p)^{n-k} $$). NUNCA use '%' dentro da fórmula.
+Estrutura: 1. 📋 Resumo Operacional. 2. 🚨 Diagnóstico de Riscos (com Evidências). 3. 🛠️ Reescrita e Correção (❌ Original / ✅ Corrigido). 4. ➕ Cláusulas Sugeridas. 5. ⚖️ Aviso Legal.`;
 
     const promptRefinamento = `Você é o Macrus, no MODO REFINAMENTO. Sua persona é a de um Editor e Redator Profissional Sênior.
 1. Se pedir para CRIAR, gere um texto de alta qualidade.
 2. Se pedir para MELHORAR, reescreva aplicando o tom desejado.
-3. Formate como: ✨ **Texto Refinado:** [texto] e 💡 **O que foi melhorado:** [explicação].`;
+3. Formate como: ✨ **Texto Refinado:** [texto] e 💡 **O que foi melhorado:** [explicação].
+DIRETRIZ VISUAL: Leia o texto da imagem e aplique as regras de refinamento.`;
 
-    const promptPadrao = `Você é o Macrus, no MODO PADRÃO. Sua persona é a de um assistente conversacional inteligente.
-DIRETRIZ VISUAL CRÍTICA: Se receber uma imagem, leia o que está nela. NUNCA invente um contrato se a imagem contiver cálculos.
-REGRA MATEMÁTICA: Use LaTeX entre $$. NUNCA use '%'.
-ATENÇÃO: NUNCA use a estrutura de "Resumo Operacional" neste modo. Seja natural.`;
+    const promptPadrao = `Você é o Macrus, no MODO PADRÃO. Sua persona é a de um assistente conversacional inteligente e muito prestativo.
+DIRETRIZ VISUAL CRÍTICA: Se receber uma imagem, leia o que está nela. NUNCA invente um contrato se a imagem contiver cálculos, anotações ou textos aleatórios.
+REGRA MATEMÁTICA: Use LaTeX entre $$ (exemplo: $$ x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a} $$). NUNCA use '%' dentro da fórmula.
+ATENÇÃO: NUNCA use a estrutura de "Resumo Operacional" ou "Aviso Legal" neste modo. Seja natural e conversacional.`;
 
-    const promptMemoria = `Analise as últimas mensagens e extraia FATOS permanentes sobre o usuário. Retorne APENAS um array JSON de strings. Se não houver, retorne [].`;
+    const promptMemoria = `Analise as últimas mensagens e extraia FATOS permanentes sobre o usuário. Retorne APENAS um array JSON de strings. Exemplo: ["É advogado"]. Se não houver, retorne [].`;
     
     let tierSelecionado = MODEL_TIERS.padrao;
 
     if (mode === 'memoria') {
       basePrompt = promptMemoria;
+      tierSelecionado = MODEL_TIERS.padrao;
     } else if (mode === 'leitura') {
       basePrompt = promptAnalise;
-      tierSelecionado = (profile && profile.plan === 'free') ? MODEL_TIERS.padrao : MODEL_TIERS.leitura;
+      if (profile && profile.plan === 'free') {
+          tierSelecionado = MODEL_TIERS.padrao; 
+      } else {
+          tierSelecionado = MODEL_TIERS.leitura; 
+      }
     } else if (mode === 'refinamento') {
       basePrompt = promptRefinamento;
       tierSelecionado = MODEL_TIERS.refinamento;
     } else {
       basePrompt = promptPadrao;
+      tierSelecionado = MODEL_TIERS.padrao;
     }
 
-    let memoriaTexto = (memory && Array.isArray(memory) && memory.length > 0) ? "\n\nO que você já sabe sobre este usuário: " + memory.join(", ") + "." : "";
-    let avisoPlano = (profile && profile.plan === 'free') ? "\n\nAVISO DO SISTEMA: O usuário está no plano gratuito. Se o documento for muito complexo, finalize a resposta com: '💡 Dica: Para análises mais profundas, faça upgrade para o Plano Pro.'" : "";
+    let memoriaTexto = "";
+    if (memory && Array.isArray(memory) && memory.length > 0) {
+      memoriaTexto = "\n\nO que você já sabe sobre este usuário: " + memory.join(", ") + ".";
+    }
+
+    let avisoPlano = "";
+    if (profile && profile.plan === 'free') {
+        avisoPlano = "\n\nAVISO DO SISTEMA: O usuário está no plano gratuito. Se o documento for muito complexo, finalize a resposta com a frase em itálico: '💡 Dica: Para análises mais profundas com IA de última geração, faça upgrade para o Plano Pro.'";
+    }
 
     const finalInstruction = (systemPrompt ? basePrompt + "\n\nPreferências do usuário: " + systemPrompt : basePrompt) + memoriaTexto + avisoPlano;
 
     let contentsArray = [];
     let historyToUse = history || [];
+
     if (historyToUse.length > 0 && historyToUse[historyToUse.length - 1].role === 'user') historyToUse.pop();
 
     historyToUse.forEach(msg => {
-        contentsArray.push({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] });
+        contentsArray.push({
+            role: msg.role === 'ai' ? 'model' : 'user',
+            parts: [{ text: msg.content }]
+        });
     });
 
     let promptFinal = message || "Por favor, analise o conteúdo enviado.";
@@ -215,11 +232,16 @@ ATENÇÃO: NUNCA use a estrutura de "Resumo Operacional" neste modo. Seja natura
     if (images && images.length > 0) {
         images.forEach(imgUrl => {
             const match = imgUrl.match(/^data:(image\/[a-zA-Z]*);base64,(.*)$/);
-            if (match) userParts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+            if (match) {
+                userParts.push({
+                    inlineData: { mimeType: match[1], data: match[2] }
+                });
+            }
         });
     }
 
     contentsArray.push({ role: 'user', parts: userParts });
+
     await chamarModeloIA(apiKey, tierSelecionado, contentsArray, finalInstruction, res);
 
   } catch (error) {
