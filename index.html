@@ -2758,11 +2758,7 @@ async function carregarPersonalizacaoDoBanco(userId) {
   }
 }
 window.addEventListener('DOMContentLoaded', function(){
-  // 1. Puxa o prompt do localStorage
-  var salvo = localStorage.getItem('contractai_prompt');
-  if(salvo) document.getElementById('customPrompt').value = salvo;
-
-  // 2. Sincroniza o modo ativo
+  // 1. Sincroniza o modo ativo (rápido)
   var modoSalvo = localStorage.getItem('contractai_mode') || 'padrao';
   document.querySelectorAll('.personalizacao-item').forEach(function(item) {
       if (item.getAttribute('data-mode') === modoSalvo) {
@@ -2774,7 +2770,7 @@ window.addEventListener('DOMContentLoaded', function(){
   });
   atualizarTelaInicial(modoSalvo);
 
-  // 3. Verifica no Supabase se o usuário já está logado
+  // 2. Verifica no Supabase se o usuário já está logado
   supabase.auth.getSession().then(function(res) {
       if (res.data.session && res.data.session.user) {
           // USUÁRIO ESTÁ LOGADO!
@@ -2783,16 +2779,15 @@ window.addEventListener('DOMContentLoaded', function(){
           carregarPersonalizacaoDoBanco(res.data.session.user.id); 
           renderizarHistorico();
           
-          // 👇 A MÁGICA ACONTECE AQUI 👇
-          // Se ele já entrou logado, vai direto para o Dashboard
+          // Abre direto no chat
           go('dashboard'); 
-          
       } else {
           // USUÁRIO NÃO ESTÁ LOGADO
           localStorage.removeItem('contractai_user_id');
           atualizarDadosUsuario(null);
-          renderizarHistorico();
-          // Se não está logado, ele continua na tela de vendas (Landing)
+          
+          // Mostra a Landing Page para vender o produto
+          document.getElementById('screen-landing').style.display = 'block'; 
       }
   });
 });
