@@ -1526,9 +1526,20 @@ var supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
   }
 });
 function go(name){
-document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
-document.getElementById('screen-' + name).classList.add('active');
-window.scrollTo(0,0);
+  document.querySelectorAll('.screen').forEach(function(s){ 
+      s.classList.remove('active'); 
+      s.style.display = 'none'; // Esconde todas
+  });
+  
+  var telaAlvo = document.getElementById('screen-' + name);
+  if (telaAlvo) {
+      telaAlvo.classList.add('active');
+      telaAlvo.style.display = 'block'; // Força a exibição
+  } else {
+      console.error("Tela não encontrada:", name);
+  }
+  
+  window.scrollTo(0,0);
 }
 function togglePersonalizacao(e){
 if(e) e.stopPropagation();
@@ -2645,21 +2656,27 @@ async function confirmarDelete() {
   renderizarHistorico(); // Atualiza a lista sem a conversa apagada
 }
 async function fazerLogout() {
-  // Desloga do Supabase
-  await supabase.auth.signOut();
+  try {
+    await supabase.auth.signOut();
+  } catch (error) {
+    console.log("Erro ao deslogar do Supabase:", error);
+  }
   
-  // Limpa a memória do navegador
+  // Limpa TUDO do usuário anterior
   localStorage.removeItem('contractai_user_id');
   localStorage.removeItem('contractai_historico');
+  localStorage.removeItem('contractai_memory');
+  localStorage.removeItem('contractai_prompt');
   
-  // Limpa a tela
+  // Limpa a tela do chat
   var area = document.getElementById('chatMessages');
   var lista = document.getElementById('listaConversas');
   if(area) { area.innerHTML = ''; area.classList.remove('active'); }
-  if(lista) lista.innerHTML = '';
+  if(lista) { lista.innerHTML = ''; }
   
-  // Volta para a tela inicial
-  go('landing');
+  // Limpa o dashboard e vai para o login
+  novoChat(); // Reseta as variáveis do chat
+  go('login'); // 👈 Volta para o LOGIN e não para a Landing
 }
 function abrirModalExcluirConta() {
   document.getElementById('deleteAccountOverlay').classList.add('open');
