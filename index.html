@@ -1218,6 +1218,23 @@ Câmera
 </button>
 <h1 style="font-size:32px;font-weight:700;letter-spacing:-.02em;margin:20px 0 32px">Configurações</h1>
 
+<div class="card" style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <div class="settings-icon" style="color: #4fd1c5; background: rgba(79, 209, 197, 0.1);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+    </div>
+    <div class="settings-text">
+      <div class="settings-label">Idioma do App</div>
+    </div>
+  </div>
+  
+  <select id="seletorIdioma" onchange="mudarIdioma(this.value)" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 8px 12px; border-radius: 8px; font-family: inherit; outline: none; cursor: pointer;">
+    <option value="pt">🇧🇷 Português</option>
+    <option value="en">🇺🇸 English</option>
+    <option value="es">🇪🇸 Español</option>
+  </select>
+</div>
+
 <div class="card" style="text-align:center;padding:32px;margin-bottom:24px">
 <div class="avatar-fab" style="width:64px;height:64px;font-size:24px;margin:0 auto 16px">U</div>
 <h3 style="margin-bottom:4px">Usuário</h3>
