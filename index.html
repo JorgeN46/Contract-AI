@@ -1879,7 +1879,7 @@ async function carregarConversa(id){
     } else {
       var div = document.createElement('div');
       div.className = 'msg ai';
-      div.innerHTML = marked.parse(msg.content);
+      div.innerHTML = DOMPurify.sanitize(marked.parse(msg.content));
       
       if (typeof renderMathInElement !== 'undefined') {
         renderMathInElement(div, {
@@ -2120,7 +2120,7 @@ var area = document.getElementById('chatMessages');
 var div = document.createElement('div');
 div.className = 'msg ai';
 div.id = 'msg-ai-' + Date.now() + '-' + Math.floor(Math.random() * 1000); // Cria um ID único
-div.innerHTML = marked.parse(html);
+div.innerHTML = DOMPurify.sanitize(marked.parse(html));
 
   if (typeof renderMathInElement !== 'undefined') {
     renderMathInElement(div, {
@@ -2274,7 +2274,7 @@ async function chamarIA(mensagemUsuario){
       textoAcumulado += chunk;
       
       var contentBox = divTemp.querySelector('.msg-ai-content');
-      contentBox.innerHTML = marked.parse(textoAcumulado) + '<span style="color:#7db4ff;">▍</span>';
+      contentBox.innerHTML = DOMPurify.sanitize(marked.parse(textoAcumulado)) + '<span style="color:#7db4ff;">▍</span>';
       
       criarParticulas(divTemp); // ✨ Mágica das partículas
       
@@ -2284,7 +2284,7 @@ async function chamarIA(mensagemUsuario){
     divTemp.id = 'msg-ai-' + Date.now();
 
     var contentBoxFinal = divTemp.querySelector('.msg-ai-content');
-    contentBoxFinal.innerHTML = marked.parse(textoAcumulado.trim());
+    contentBoxFinal.innerHTML = DOMPurify.sanitize(marked.parse(textoAcumulado.trim()));
     
     if (typeof renderMathInElement !== 'undefined') {
       renderMathInElement(contentBoxFinal, {
