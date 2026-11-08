@@ -2775,6 +2775,9 @@ async function carregarPersonalizacaoDoBanco(userId) {
   }
 }
 window.addEventListener('DOMContentLoaded', function(){
+    var idiomaSalvo = localStorage.getItem('contractai_idioma') || 'pt';
+  document.getElementById('seletorIdioma').value = idiomaSalvo;
+  aplicarIdioma(idiomaSalvo);
   // 1. Sincroniza o modo ativo (rápido)
   var modoSalvo = localStorage.getItem('contractai_mode') || 'padrao';
   document.querySelectorAll('.personalizacao-item').forEach(function(item) {
