@@ -95,13 +95,16 @@ module.exports = async function handler(req, res) {
 
   // 👇 INICIALIZAÇÃO SEGURA DENTRO DO HANDLER 👇
   const supabaseUrl = process.env.URL_SUPABASE;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // Se por algum motivo a Vercel não entregar as variáveis, avisamos claramente
-  if (!supabaseUrl || !supabaseKey) {
-    console.error("ERRO CRÍTICO: Variáveis de ambiente do Supabase não configuradas.");
-    return res.status(500).json({ error: "Configuração do servidor incompleta (Faltando chaves do Supabase)." });
-  }
+if (!supabaseUrl || !supabaseKey) {
+  // Se der erro, ele vai cuspir na tela o que ele está vendo
+  return res.status(500).json({ 
+    error: "Faltando chaves do Supabase.",
+    o_que_a_vercel_esta_lendo_url: supabaseUrl || "VAZIO",
+    o_que_a_vercel_esta_lendo_key: supabaseKey ? "EXISTE" : "VAZIO"
+  });
+}
 
   const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
   // 👆 FIM DA INICIALIZAÇÃO SEGURA 👆
