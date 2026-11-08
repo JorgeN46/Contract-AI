@@ -3004,6 +3004,38 @@ async function carregarDadosPlano() {
     console.error("Erro ao carregar dados do plano:", err);
   }
 }
+async function loginComProvedor(provedor, event) {
+  if(event) event.preventDefault();
+  
+  // Feedback visual no botão
+  var btn = event.currentTarget;
+  var textoOriginal = btn.innerHTML;
+  btn.innerHTML = 'Redirecionando...';
+  btn.style.opacity = '0.7';
+
+  try {
+    // Chama o Supabase para iniciar o login
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: provedor,
+      options: {
+        // O redirectTo manda o usuário de volta para o seu site após o login
+        redirectTo: window.location.origin 
+      }
+    });
+
+    if (error) throw error;
+    
+    // O Supabase vai redirecionar a página automaticamente.
+    // Não precisamos fazer nada aqui depois do successo.
+
+  } catch (error) {
+    console.error("Erro no login social:", error.message);
+    alert("Erro ao tentar conectar: " + error.message);
+    // Se der erro, volta o botão ao normal
+    btn.innerHTML = textoOriginal;
+    btn.style.opacity = '1';
+  }
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
