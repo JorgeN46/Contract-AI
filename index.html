@@ -3007,31 +3007,41 @@ async function carregarDadosPlano() {
 async function loginComProvedor(provedor, event) {
   if(event) event.preventDefault();
   
-  // Feedback visual no botão
   var btn = event.currentTarget;
   var textoOriginal = btn.innerHTML;
   btn.innerHTML = 'Redirecionando...';
   btn.style.opacity = '0.7';
 
   try {
-    // Chama o Supabase para iniciar o login
+    // Configuração extra para forçar o seletor de contas
+    const opcoes = {
+      redirectTo: window.location.origin
+    };
+
+    // Força o Google a mostrar a tela de escolha de contas
+    if (provedor === 'google') {
+      opcoes.queryParams = {
+        prompt: 'select_account' // Parâmetro oficial do Google [citation:2][citation:12]
+      };
+    }
+
+    // Força a Microsoft a mostrar a tela de escolha de contas
+    if (provedor === 'azure') {
+      opcoes.queryParams = {
+        prompt: 'select_account' // Parâmetro oficial da Microsoft [citation:5]
+      };
+    }
+
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: provedor,
-      options: {
-        // O redirectTo manda o usuário de volta para o seu site após o login
-        redirectTo: window.location.origin 
-      }
+      options: opcoes
     });
 
     if (error) throw error;
-    
-    // O Supabase vai redirecionar a página automaticamente.
-    // Não precisamos fazer nada aqui depois do successo.
 
   } catch (error) {
     console.error("Erro no login social:", error.message);
     alert("Erro ao tentar conectar: " + error.message);
-    // Se der erro, volta o botão ao normal
     btn.innerHTML = textoOriginal;
     btn.style.opacity = '1';
   }
