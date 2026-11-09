@@ -1517,26 +1517,20 @@ Sair da conta
     </div>
   </div>
 
-  <!-- 4. Retenção de Assinantes -->
+  <!-- 4. Gráfico de Tendência desde o Início -->
   <div class="card" style="margin-bottom: 24px;">
-    <h3 style="font-size:16px; margin-bottom:12px; color:#fff;">💳 Retenção de Assinantes (MRR)</h3>
-    <p class="muted" style="font-size:12px; margin-bottom:16px;">Novos assinantes nos últimos meses.</p>
-    <div style="display:flex; gap:8px; justify-content:space-between; align-items:flex-end; height: 100px;">
-      <!-- Mês -2 -->
-      <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;">
-        <div id="barraMes2" style="width:100%; background:rgba(79,141,255,0.3); border-radius:4px 4px 0 0; height: 10%;"></div>
-        <span style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:4px;">M-2</span>
-      </div>
-      <!-- Mês -1 -->
-      <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;">
-        <div id="barraMes1" style="width:100%; background:rgba(79,141,255,0.6); border-radius:4px 4px 0 0; height: 30%;"></div>
-        <span style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:4px;">M-1</span>
-      </div>
-      <!-- Mês Atual -->
-      <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;">
-        <div id="barraMesAtual" style="width:100%; background:#4fd1c5; border-radius:4px 4px 0 0; height: 50%;"></div>
-        <span style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:4px;">Atual</span>
-      </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <h3 style="font-size:16px; color:#fff; margin:0;">📊 Tendência de Tokens (Histórico)</h3>
+      <button onclick="gerarGraficoHistorico()" style="background:rgba(79,141,255,0.15); border:1px solid rgba(79,141,255,0.3); color:#7db4ff; padding:6px 12px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer;">
+        Carregar Gráfico
+      </button>
+    </div>
+    <p class="muted" style="font-size:12px; margin-bottom:16px;">Consumo de tokens desde o primeiro dia do Macrus.</p>
+    
+    <!-- Container do Gráfico com Rolagem Horizontal -->
+    <div id="containerGrafico" style="display:flex; gap:12px; align-items:flex-end; height: 120px; overflow-x: auto; padding-bottom: 8px;">
+      <!-- As barras vão ser geradas via JavaScript aqui -->
+      <div style="width:100%; text-align:center; color:rgba(255,255,255,0.4); font-size:12px; margin-top:40px;">Clique em "Carregar Gráfico" para ver o histórico.</div>
     </div>
   </div>
 
@@ -3385,6 +3379,67 @@ function calcularCustoAPI() {
   var custoBRL = custoUSD * 5.5; // Conversão estimada Dólar -> Real
 
   resultadoEl.innerHTML = `Custo: US$ ${custoUSD.toFixed(4)} <br><span style="font-size:12px; color:rgba(255,255,255,0.6);">(Aprox. R$ ${custoBRL.toFixed(4).replace('.', ',')})</span>`;
+}
+async function gerarGraficoHistorico() {
+  const container = document.getElementById('containerGrafico');
+  container.innerHTML = '<div style="width:100%; text-align:center; color:#7db4ff; font-size:12px; margin-top:40px;">Buscando dados...</div>';
+
+  try {
+    // Puxa todo o histórico de tokens registrado
+    let { data: historico, error } = await supabase.from('credit_history').select('created_at, tokens_in, tokens_out').order('created_at', { ascending: true });
+    
+    if (error || !historico || historico.length === 0) {
+      container.innerHTML = '<div style="width:100%; text-align:center; color:rgba(255,255,255,0.5); font-size:12px; margin-top:40px;">Nenhum dado registrado ainda.</div>';
+      return;
+    }
+
+    // Agrupa os dados por Mês/Ano
+    let dadosPorMes = {};
+    
+    historico.forEach(item => {
+      const data = new Date(item.created_at);
+      const mesAno = data.toLocaleString('pt-BR', { month: 'short', year: '2-digit' }); // ex: "jan/24"
+      const totalTokens = (item.tokens_in || 0) + (item.tokens_out || 0);
+      
+      if (!dadosPorMes[mesAno]) {
+        dadosPorMes[mesAno] = 0;
+      }
+      dadosPorMes[mesAno] += totalTokens;
+    });
+
+    // Transforma o objeto em array para ordenar cronologicamente
+    const meses = Object.keys(dadosPorMes);
+    const valores = Object.values(dadosPorMes);
+    const maiorValor = Math.max(...valores, 1); // Evita divisão por zero
+
+    // Limpa o container para desenhar as barras
+    container.innerHTML = '';
+
+    // Cria cada barrinha dinamicamente
+    meses.forEach((mes, index) => {
+      const valor = dadosPorMes[mes];
+      const alturaPorcento = Math.max((valor / maiorValor) * 100, 5); // Mínimo de 5% para aparecer a barrinha
+
+      // Define a cor: o último mês (atual) fica ciano, os anteriores azul
+      const isUltimoMes = index === meses.length - 1;
+      const corBarra = isUltimoMes ? '#4fd1c5' : 'rgba(79,141,255,0.6)';
+
+      const divMes = document.createElement('div');
+      divMes.style.cssText = 'display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; min-width: 40px;';
+
+      divMes.innerHTML = `
+        <div style="font-size:10px; color:#fff; margin-bottom:4px;">${(valor/1000).toFixed(1)}k</div>
+        <div style="width:100%; background:${corBarra}; border-radius:4px 4px 0 0; height: ${alturaPorcento}%; transition: height 0.5s ease;"></div>
+        <span style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:6px; white-space:nowrap;">${mes}</span>
+      `;
+      
+      container.appendChild(divMes);
+    });
+
+  } catch (error) {
+    console.error("Erro ao gerar histórico:", error);
+    container.innerHTML = '<div style="width:100%; text-align:center; color:#fca5a5; font-size:12px; margin-top:40px;">Erro ao carregar o gráfico.</div>';
+  }
 }
 </script>
 <!-- Menu de Contexto do Histórico -->
