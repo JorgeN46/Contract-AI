@@ -1534,6 +1534,31 @@ Sair da conta
     </div>
   </div>
 
+  <!-- 5. Ferramenta de Teste Beta (Conceder Acesso VIP) -->
+<div class="card" style="margin-bottom: 24px; border-color: rgba(79,209,197,0.3); background: rgba(79,209,197,0.02);">
+  <h3 style="font-size:16px; margin-bottom:12px; color:#4fd1c5;">🎁 Conceder Acesso Beta (VIP)</h3>
+  <p class="muted" style="font-size:12px; margin-bottom:16px;">Dê créditos ou um plano gratuito para testadores específicos. Use o e-mail exato que a pessoa usou para se cadastrar.</p>
+  
+  <div style="display:flex; flex-direction:column; gap:10px;">
+    <input type="email" id="adminEmailPresente" placeholder="E-mail do usuário (ex: agencia@email.com)" style="width:100%; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:#fff; padding:12px; border-radius:8px; font-family:inherit;">
+    
+    <div style="display:flex; gap:10px;">
+      <select id="adminPlanoPresente" style="flex:1; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:#fff; padding:12px; border-radius:8px; font-family:inherit;">
+        <option value="essencial">Plano Essencial</option>
+        <option value="profissional">Plano Profissional</option>
+        <option value="free">Apenas Créditos (Manter Free)</option>
+      </select>
+      
+      <input type="number" id="adminCreditosPresente" placeholder="Créditos (ex: 500)" value="100" style="flex:1; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:#fff; padding:12px; border-radius:8px; font-family:inherit;">
+    </div>
+
+    <button onclick="concederAcessoVIP()" style="background:linear-gradient(180deg, #4fd1c5, #2f9b8e); border:none; color:#070b14; padding:12px; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; transition:0.2s; margin-top:8px;">
+      Liberar Acesso VIP
+    </button>
+    <p id="adminFeedbackVip" style="font-size:12px; text-align:center; min-height:18px; margin-top:8px;"></p>
+  </div>
+</div>
+  
 </div>
 </div><!-- /settings-admin -->
 
@@ -3439,6 +3464,67 @@ async function gerarGraficoHistorico() {
   } catch (error) {
     console.error("Erro ao gerar histórico:", error);
     container.innerHTML = '<div style="width:100%; text-align:center; color:#fca5a5; font-size:12px; margin-top:40px;">Erro ao carregar o gráfico.</div>';
+  }
+}
+async function concederAcessoVIP() {
+  var email = document.getElementById('adminEmailPresente').value.trim();
+  var plano = document.getElementById('adminPlanoPresente').value;
+  var creditos = parseInt(document.getElementById('adminCreditosPresente').value) || 0;
+  var fb = document.getElementById('adminFeedbackVip');
+
+  if (!email) {
+    fb.style.color = '#fca5a5';
+    fb.textContent = 'Por favor, digite um e-mail.';
+    return;
+  }
+
+  fb.style.color = '#7db4ff';
+  fb.textContent = 'Buscando usuário e atualizando...';
+
+  try {
+    // 1. Encontra o ID do usuário através do e-mail
+    // (Como estamos no frontend, o Supabase não permite listar auth.users por e-mail diretamente por segurança)
+    // Então nós buscamos na tabela 'profiles', onde o e-mail está salvo.
+    let { data: usuario, error: buscaError } = await supabase
+      .from('profiles')
+      .select('id, plan')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (buscaError || !usuario) {
+      fb.style.color = '#fca5a5';
+      fb.textContent = 'Usuário não encontrado. Verifique se o e-mail está correto e se a pessoa já criou a conta.';
+      return;
+    }
+
+    // 2. Atualiza o plano e os créditos
+    let updateData = {
+      credits: creditos
+    };
+
+    if (plano !== 'free') {
+      updateData.plan = plano;
+    }
+
+    let { error: updateError } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', usuario.id);
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    fb.style.color = '#4fd1c5';
+    fb.textContent = `✅ Sucesso! O usuário ${email} agora tem o plano "${plano}" e ${creditos} créditos.`;
+    
+    // Limpa o campo de e-mail após o sucesso
+    document.getElementById('adminEmailPresente').value = '';
+
+  } catch (error) {
+    console.error(error);
+    fb.style.color = '#fca5a5';
+    fb.textContent = 'Erro ao atualizar: ' + error.message;
   }
 }
 </script>
