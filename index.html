@@ -3182,6 +3182,16 @@ window.addEventListener('DOMContentLoaded', function() {
   
   aplicarIdioma(idiomaSalvo);
 });
+// Verifica se o usuário logado é o administrador
+async function verificarAdmin(userId) {
+  let { data } = await supabase.from('profiles').select('is_admin').eq('id', userId).maybeSingle();
+  
+  if (data && data.is_admin) {
+    document.getElementById('btnAdminPanel').style.display = 'flex';
+  } else {
+    document.getElementById('btnAdminPanel').style.display = 'none';
+  }
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
