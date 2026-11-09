@@ -2849,7 +2849,9 @@ window.addEventListener('DOMContentLoaded', function(){
           atualizarDadosUsuario(res.data.session.user.email);
           carregarPersonalizacaoDoBanco(res.data.session.user.id); 
           renderizarHistorico();
-          
+
+          verificarAdmin(res.data.session.user.id); 
+        
           // Abre direto no chat
           go('dashboard'); 
       } else {
