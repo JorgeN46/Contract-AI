@@ -3341,27 +3341,65 @@ async function carregarDadosAdmin() {
       document.getElementById('msgsMes').textContent = countMes;
     }
 
-    // 3. MÉDIA DE TOKENS (Aproximação via credit_history)
-    let { data: tokensData } = await supabase.from('credit_history').select('tokens_in, tokens_out, action');
-    if (tokensData && tokensData.length > 0) {
-      let somaConversa = 0, countConversa = 0;
-      let somaArquivo = 0, countArquivo = 0;
+async function carregarDadosAdmin() {
+  try {
+    // 1. MÉTRICAS DE USUÁRIOS E PLANOS (Continua igual)
+    let { data: usuarios } = await supabase.from('profiles').select('plan, created_at');
+    if (usuarios) {
+      document.getElementById('adminTotalUsuarios').textContent = usuarios.length;
       
-      tokensData.forEach(t => {
-        let total = (t.tokens_in || 0) + (t.tokens_out || 0);
-        if (t.action.includes('Upload') || t.action.includes('Análise')) {
-          somaArquivo += total; countArquivo++;
-        } else {
-          somaConversa += total; countConversa++;
+      let pro = usuarios.filter(u => u.plan === 'pro' || u.plan === 'profissional').length;
+      let essencial = usuarios.filter(u => u.plan === 'essencial').length;
+      document.getElementById('adminAssinantesPro').textContent = pro;
+      document.getElementById('adminAssinantesEssencial').textContent = essencial;
+      
+      let mesAtual = new Date().getMonth();
+      let anoAtual = new Date().getFullYear();
+      let ativosMes = usuarios.filter(u => {
+        let d = new Date(u.created_at);
+        return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+      }).length;
+      document.getElementById('adminUsuariosMes').textContent = ativosMes;
+    }
+
+    // 2. MÉTRICAS DE MENSAGENS E TOKENS (Lendo da nova tabela usage_logs)
+    let { data: logs } = await supabase.from('usage_logs').select('*');
+    
+    if (logs) {
+      let hoje = new Date().toDateString();
+      let ontem = new Date(); ontem.setDate(ontem.getDate() - 1); ontem = ontem.toDateString();
+      let mesAtual = new Date().getMonth();
+      
+      let countHoje = 0, countOntem = 0, countMes = 0;
+      let somaTokens = 0, countTokens = 0;
+
+      logs.forEach(log => {
+        let dataLog = new Date(log.created_at);
+        
+        // Contagem de mensagens
+        if (log.event_type === 'message') {
+          if (dataLog.toDateString() === hoje) countHoje++;
+          if (dataLog.toDateString() === ontem) countOntem++;
+          if (dataLog.getMonth() === mesAtual) countMes++;
+        }
+        
+        // Contagem de tokens (Média)
+        if (log.event_type === 'token_usage') {
+          somaTokens += (log.tokens_in + log.tokens_out);
+          countTokens++;
         }
       });
       
-      document.getElementById('mediaTokensConversa').textContent = countConversa > 0 ? Math.round(somaConversa / countConversa) : 0;
-      document.getElementById('mediaTokensArquivo').textContent = countArquivo > 0 ? Math.round(somaArquivo / countArquivo) : 0;
+      document.getElementById('msgsHoje').textContent = countHoje;
+      document.getElementById('msgsOntem').textContent = countOntem;
+      document.getElementById('msgsMes').textContent = countMes;
+      
+      let mediaTokens = countTokens > 0 ? Math.round(somaTokens / countTokens) : 0;
+      document.getElementById('mediaTokensConversa').textContent = mediaTokens.toLocaleString('pt-BR');
+      document.getElementById('mediaTokensArquivo').textContent = mediaTokens.toLocaleString('pt-BR');
     }
 
-    // 4. GRÁFICO DE RETENÇÃO (Simulação de Assinantes - Ajustar com dados reais do Stripe)
-    // Como não temos a data exata da assinatura no banco, simulamos um crescimento para o gráfico
+    // 3. GRÁFICO DE RETENÇÃO (Visual, ajuste os valores conforme os meses reais)
     document.getElementById('barraMes2').style.height = '15%';
     document.getElementById('barraMes1').style.height = '40%';
     document.getElementById('barraMesAtual').style.height = '75%';
