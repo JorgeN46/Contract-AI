@@ -2232,22 +2232,21 @@ async function chamarIA(mensagemUsuario){
         mode: modoAtual,
         history: conversaAtual.slice(-10),
         userId: localStorage.getItem('contractai_user_id'),
-        images: imagensAnexadas, // <-- Envia as fotos
-        memory: JSON.parse(localStorage.getItem('contractai_memory') || '[]') // <-- Envia a memória
+        images: imagensAnexadas,
+        memory: JSON.parse(localStorage.getItem('contractai_memory') || '[]')
       })
     });
 
     if (!resposta.ok) {
-  if (resposta.status === 429) {
-    throw new Error("Calma aí! Você está indo rápido demais. Aguarde um minuto para enviar mais mensagens.");
-  }
-  
-  // 👇 DIAGNÓSTICO: Vai ler o erro real do backend
-  let erroReal = await resposta.text();
-  throw new Error(`Status ${resposta.status}: ${erroReal}`);
+      if (resposta.status === 429) {
+        throw new Error("Calma aí! Você está indo rápido demais. Aguarde um minuto para enviar mais mensagens.");
+      }
+      let erroReal = await resposta.text();
+      throw new Error(`Status ${resposta.status}: ${erroReal}`);
     }
 
     var textoAcumulado = "";
+    let dadosTokens = null; // Variável para guardar os tokens
 
     const reader = resposta.body.getReader();
     const decoder = new TextDecoder();
@@ -2260,17 +2259,45 @@ async function chamarIA(mensagemUsuario){
       textoAcumulado += chunk;
       
       var contentBox = divTemp.querySelector('.msg-ai-content');
-      contentBox.innerHTML = DOMPurify.sanitize(marked.parse(textoAcumulado)) + '<span style="color:#7db4ff;">▍</span>';
       
-      criarParticulas(divTemp); // ✨ Mágica das partículas
+      // Limpa a tag secreta de tokens da tela em tempo real
+      let textoLimpo = textoAcumulado;
+      const matchTokens = textoAcumulado.match(/<TOKENS_INFO>(.*?)<\/TOKENS_INFO>/s);
+      if (matchTokens) {
+          try { dadosTokens = JSON.parse(matchTokens[1]); } catch(e){}
+          textoLimpo = textoAcumulado.replace(matchTokens[0], '');
+      }
+
+      contentBox.innerHTML = DOMPurify.sanitize(marked.parse(textoLimpo)) + '<span style="color:#7db4ff;">▍</span>';
+      
+      criarParticulas(divTemp); 
       
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 
     divTemp.id = 'msg-ai-' + Date.now();
 
+    // Limpa a tag secreta da versão final
+    let textoFinalLimpo = textoAcumulado;
+    const matchTokensFinal = textoAcumulado.match(/<TOKENS_INFO>(.*?)<\/TOKENS_INFO>/s);
+    if (matchTokensFinal) {
+        try { dadosTokens = JSON.parse(matchTokensFinal[1]); } catch(e){}
+        textoFinalLimpo = textoAcumulado.replace(matchTokensFinal[0], '');
+    }
+
     var contentBoxFinal = divTemp.querySelector('.msg-ai-content');
-    contentBoxFinal.innerHTML = DOMPurify.sanitize(marked.parse(textoAcumulado.trim()));
+    contentBoxFinal.innerHTML = DOMPurify.sanitize(marked.parse(textoFinalLimpo.trim()));
+    
+    // 👇 EXIBE OS TOKENS NO FINAL DA MENSAGEM
+    if (dadosTokens) {
+        var tokenInfoDiv = document.createElement('div');
+        tokenInfoDiv.style.cssText = 'margin-top: 12px; font-size: 11px; color: rgba(255,255,255,0.4); display: flex; gap: 12px; align-items: center; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);';
+        tokenInfoDiv.innerHTML = `
+            <span title="Tokens de entrada">📥 Entrada: ${dadosTokens.prompt}</span>
+            <span title="Tokens de saída">📤 Saída: ${dadosTokens.output}</span>
+        `;
+        contentBoxFinal.appendChild(tokenInfoDiv);
+    }
     
     if (typeof renderMathInElement !== 'undefined') {
       renderMathInElement(contentBoxFinal, {
@@ -2279,7 +2306,7 @@ async function chamarIA(mensagemUsuario){
       });
     }
 
-    conversaAtual.push({ role: 'ai', content: textoAcumulado });
+    conversaAtual.push({ role: 'ai', content: textoFinalLimpo }); // Salva sem a tag de tokens
     textoArquivoExtraido = ""; 
     removerAnexo();
     
@@ -2291,14 +2318,14 @@ async function chamarIA(mensagemUsuario){
     btnCopiar.innerHTML = '📋 Copiar';
     btnCopiar.onclick = function(e){
       e.stopPropagation();
-      navigator.clipboard.writeText(textoAcumulado).then(function(){
+      navigator.clipboard.writeText(textoFinalLimpo).then(function(){ // Copia o texto limpo
         btnCopiar.innerHTML = '✓ Copiado';
         setTimeout(function(){ btnCopiar.innerHTML = '📋 Copiar'; }, 2000);
       });
     };
     actions.appendChild(btnCopiar);
 
-    var pediuDownload = true; // Botões de download sempre visíveis
+    var pediuDownload = true;
 
     if (pediuDownload) {
         var btnPDF = document.createElement('button');
@@ -2314,11 +2341,16 @@ async function chamarIA(mensagemUsuario){
         actions.appendChild(btnWord);
     }
 
-    contentBoxFinal.appendChild(actions);
+    // Adiciona os botões ANTES da linha de tokens (para não ficar embaixo do texto)
+    var tokenInfoDiv = contentBoxFinal.querySelector('div[style*="border-top"]');
+    if (tokenInfoDiv) {
+        contentBoxFinal.insertBefore(actions, tokenInfoDiv);
+    } else {
+        contentBoxFinal.appendChild(actions);
+    }
     
-    // Salva a conversa e dispara a extração de memórias em segundo plano
     salvarConversaAtual(); 
-    extrairMemorias(); // <-- AQUI ESTÁ A NOVA LINHA!
+    extrairMemorias(); 
 
   } catch(err) {
     var boxErro = divTemp.querySelector('.msg-ai-content');
