@@ -48,6 +48,7 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let tokensInfo = null; // 👈 Variável para guardar os tokens
 
         while (true) {
           const { done, value } = await reader.read();
@@ -63,11 +64,25 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
               try {
                 const data = JSON.parse(dataStr);
                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (text) res.write(text); 
+                if (text) res.write(text);
+
+                // 👇 CAPTURA OS DADOS DE TOKENS DA API DO GEMINI
+                if (data.usageMetadata) {
+                    tokensInfo = {
+                        prompt: data.usageMetadata.promptTokenCount || 0,
+                        output: data.usageMetadata.candidatesTokenCount || 0
+                    };
+                }
               } catch (e) {}
             }
           }
         }
+
+        // 👇 ENVIA O MARCADOR SECRETO NO FINAL COM OS TOKENS
+        if (tokensInfo) {
+            res.write(`\n\n<TOKENS_INFO>${JSON.stringify(tokensInfo)}</TOKENS_INFO>`);
+        }
+
         res.end();
         return; 
 
