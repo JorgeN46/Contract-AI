@@ -141,34 +141,45 @@ module.exports = async function handler(req, res) {
     requestCache.set(limitKey, timestamps);
 
     // ==========================================
-    // 💳 CONTROLE DE CRÉDITOS
-    // ==========================================
-    if (userId) {
-      try {
-        let { data, error } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).maybeSingle();
-        if (error) console.error("Erro ao buscar perfil:", error.message);
-        profile = data;
+// 💳 CREDIT ENGINE (Cálculo por Faixa de Processamento)
+// ==========================================
+let profile = null;
+let custoEstimado = 1; // Custo base para mensagens de texto
 
-        if (profile) {
-          const temUpload = (fileText && fileText.trim().length > 0) || (images && images.length > 0);
-          let custo = temUpload ? 5 : 1; // 5 créditos para upload, 1 para texto
-
-          // Verifica se tem saldo
-          if (profile.credits < custo) {
-            return res.status(403).json({ error: 'Créditos insuficientes. Faça upgrade para continuar.' });
-          }
-
-          // Debita do banco
-          await supabaseAdmin.from('profiles').update({ 
-             credits: profile.credits - custo
-          }).eq('id', userId);
-          
-          profile.credits = profile.credits - custo;
-        }
-      } catch (dbError) {
-        console.error("⚠️ Falha na checagem de créditos, o chat continuará:", dbError.message);
-      }
+// Estimativa baseada no tamanho do texto recebido
+if (fileText && fileText.length > 0) {
+    const tamanhoTexto = fileText.length;
+    if (tamanhoTexto < 50000) { // Até ~15 mil tokens (~76 páginas)
+        custoEstimado = 5; // Análise Padrão
+    } else if (tamanhoTexto < 150000) { // Até ~45 mil tokens (~150 páginas)
+        custoEstimado = 10; // Análise Extensa
+    } else {
+        custoEstimado = 20; // Análise Avançada (200+ páginas)
     }
+}
+
+if (userId) {
+  try {
+    let { data, error } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).maybeSingle();
+    if (error) console.error("Erro ao buscar perfil:", error.message);
+    profile = data;
+
+    if (profile) {
+      if (profile.credits < custoEstimado) {
+        return res.status(403).json({ error: `Créditos insuficientes. Esta operação custa ${custoEstimado} créditos, mas você tem ${profile.credits}. Faça upgrade para continuar.` });
+      }
+
+      // 1. Reserva os créditos
+      await supabaseAdmin.from('profiles').update({ 
+         credits: profile.credits - custoEstimado
+      }).eq('id', userId);
+      
+      profile.credits = profile.credits - custoEstimado;
+    }
+  } catch (dbError) {
+    console.error("⚠️ Falha na checagem de créditos:", dbError.message);
+  }
+}
 
     if (!message && (!fileText || fileText.trim() === '') && (!images || images.length === 0)) {
         return res.status(400).json({ error: 'Mensagem vazia' });
