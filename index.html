@@ -2884,6 +2884,7 @@ supabase.auth.onAuthStateChange(async function(event, session) {
       localStorage.setItem('contractai_user_id', session.user.id);
       atualizarDadosUsuario(session.user.email);
       renderizarHistorico();
+      verificarAdmin(session.user.id);
     }
   } else if (event === 'SIGNED_OUT') {
     localStorage.removeItem('contractai_user_id');
