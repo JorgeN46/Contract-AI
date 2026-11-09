@@ -1401,30 +1401,44 @@ Sair da conta
       </div>
     </div>
     
-    <p class="muted" style="font-size:12px; margin-top:16px; text-align:center;">Texto = 1 crédito. Upload de arquivo = 5 créditos.</p>
+    <p class="muted" style="font-size:12px; margin-top:16px; text-align:center;">Consumo médio: Texto = 1 crédito | Análise de arquivo = 5 a 20 créditos.</p>
   </div>
 
   <!-- Opções de Upgrade -->
   <h3 style="font-size:18px; margin-bottom:16px;">Faça Upgrade</h3>
   
-  <div class="card" style="margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center;">
-    <div>
-      <h4 style="color:#fff; font-size:16px; margin-bottom:4px;">Plano Essencial</h4>
-      <p class="muted" style="font-size:13px; margin:0;">150 créditos/mês. Ideal para autônomos.</p>
+  <!-- Plano Essencial -->
+  <div class="card" style="margin-bottom: 16px; display:flex; flex-direction:column;">
+    <h4 style="color:#fff; font-size:16px; margin-bottom:4px;">Plano Essencial</h4>
+    <p class="muted" style="font-size:13px; margin:0 0 12px 0;">150 créditos/mês. Ideal para autônomos.</p>
+    
+    <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px; font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 16px;">
+      <strong>Consumo estimado por operação:</strong><br>
+      • Conversa simples: 1 crédito<br>
+      • Análise de contrato padrão (até ~75 pág.): ~5 créditos<br>
+      • Contrato extenso (100+ páginas): ~10 créditos
     </div>
-    <button class="btn btn-primary" style="padding:8px 16px; font-size:13px;" onclick="window.open('COLE_O_LINK_DO_STRIPE_ESSENCIAL_AQUI', '_blank')">R$ 59,90</button>
+    
+    <button class="btn btn-primary" style="width:100%; padding:12px; font-size:14px;" onclick="window.open('COLE_O_LINK_DO_STRIPE_ESSENCIAL_AQUI', '_blank')">Assinar por R$ 59,90/mês</button>
   </div>
 
-  <div class="card" style="margin-bottom: 12px; display:flex; justify-content:space-between; align-items:center;">
-    <div>
-      <h4 style="color:#fff; font-size:16px; margin-bottom:4px;">Plano Profissional</h4>
-      <p class="muted" style="font-size:13px; margin:0;">400 créditos/mês. Análise de contratos grandes.</p>
+  <!-- Plano Profissional -->
+  <div class="card" style="margin-bottom: 16px; display:flex; flex-direction:column;">
+    <h4 style="color:#fff; font-size:16px; margin-bottom:4px;">Plano Profissional</h4>
+    <p class="muted" style="font-size:13px; margin:0 0 12px 0;">400 créditos/mês. Para escritórios e uso intenso.</p>
+    
+    <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px; font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 16px;">
+      <strong>Consumo estimado por operação:</strong><br>
+      • Conversa simples: 1 crédito<br>
+      • Análise de contrato padrão: ~5 créditos<br>
+      • Contrato extenso (200+ páginas): ~20 créditos
     </div>
-    <button class="btn btn-ghost" style="padding:8px 16px; font-size:13px;" onclick="window.open('COLE_O_LINK_DO_STRIPE_PRO_AQUI', '_blank')">R$ 119,90</button>
+    
+    <button class="btn btn-ghost" style="width:100%; padding:12px; font-size:14px; border-color: #4fd1c5; color: #4fd1c5;" onclick="window.open('COLE_O_LINK_DO_STRIPE_PRO_AQUI', '_blank')">Assinar por R$ 119,90/mês</button>
   </div>
 
 </div>
-</div>
+</div><!-- /settings-planos -->
 
 <script>
 async function salvarPrompt(){
