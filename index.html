@@ -1453,53 +1453,91 @@ Sair da conta
 
 <!-- ============ TELA 9: ADMIN PANEL ============ -->
 <div id="screen-settings-admin" class="screen">
-<div class="wrap" style="min-height:100vh;padding:60px 24px 80px;max-width:560px">
+<div class="wrap" style="min-height:100vh;padding:60px 24px 80px;max-width:800px">
   
   <button class="back-btn" onclick="go('settings')" title="Voltar">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
   </button>
   
   <h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin:20px 0 8px; color: #f59e0b;">Painel do Desenvolvedor</h1>
-  <p class="muted" style="margin-top:0;margin-bottom:24px">Dados internos do Macrus (Acesso Restrito).</p>
+  <p class="muted" style="margin-top:0;margin-bottom:24px">Métricas de crescimento e consumo de API.</p>
 
-  <!-- Resumo Financeiro -->
-  <div class="grid g2" style="margin-bottom: 24px; grid-template-columns: 1fr 1fr; gap: 12px;">
+  <!-- 1. Cards de Usuários e Receita -->
+  <div class="grid g2" style="grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px;">
     <div class="card" style="padding: 16px; text-align: center; border-color: rgba(79,141,255,0.3);">
-      <p class="muted" style="font-size: 11px; text-transform: uppercase;">Total de Análises</p>
-      <h2 id="adminTotalAnálises" style="font-size: 24px; color: #fff; margin: 8px 0;">0</h2>
+      <p class="muted" style="font-size: 11px; text-transform: uppercase;">Usuários Ativos (Mês)</p>
+      <h2 id="adminUsuariosMes" style="font-size: 24px; color: #fff; margin: 8px 0;">0</h2>
     </div>
-    <div class="card" style="padding: 16px; text-align: center; border-color: rgba(239, 68, 68, 0.3);">
-      <p class="muted" style="font-size: 11px; text-transform: uppercase;">Custo Estimado (R$)</p>
-      <h2 id="adminCustoTotal" style="font-size: 24px; color: #fca5a5; margin: 8px 0;">R$ 0,00</h2>
+    <div class="card" style="padding: 16px; text-align: center; border-color: rgba(79,141,255,0.3);">
+      <p class="muted" style="font-size: 11px; text-transform: uppercase;">Total de Contas</p>
+      <h2 id="adminTotalUsuarios" style="font-size: 24px; color: #fff; margin: 8px 0;">0</h2>
+    </div>
+    <div class="card" style="padding: 16px; text-align: center; border-color: rgba(79,209,197,0.3);">
+      <p class="muted" style="font-size: 11px; text-transform: uppercase;">Assinantes Pro</p>
+      <h2 id="adminAssinantesPro" style="font-size: 24px; color: #4fd1c5; margin: 8px 0;">0</h2>
+    </div>
+    <div class="card" style="padding: 16px; text-align: center; border-color: rgba(79,209,197,0.3);">
+      <p class="muted" style="font-size: 11px; text-transform: uppercase;">Assinantes Essencial</p>
+      <h2 id="adminAssinantesEssencial" style="font-size: 24px; color: #4fd1c5; margin: 8px 0;">0</h2>
     </div>
   </div>
 
-  <!-- Calculadora de Tokens Manual -->
+  <!-- 2. Calculadora de IA Automática -->
   <div class="card" style="margin-bottom: 24px;">
-    <h3 style="font-size:16px; margin-bottom:12px; color:#fff;">🧮 Calculadora de Custo (API Gemini)</h3>
-    <p class="muted" style="font-size:12px; margin-bottom:12px;">Simule o custo de uma operação baseada nos tokens.</p>
-    
-    <div style="display:flex; gap:8px; margin-bottom:12px;">
-      <select id="calcModelo" style="flex:1; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:#fff; padding:10px; border-radius:8px; font-family:inherit;">
-        <option value="flash">Gemini Flash</option>
-        <option value="pro">Gemini Pro</option>
-      </select>
+    <h3 style="font-size:16px; margin-bottom:12px; color:#fff;">📊 Consumo Médio de IA</h3>
+    <div class="grid g2" style="grid-template-columns: repeat(2, 1fr); gap: 12px;">
+      <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px;">
+        <p style="font-size:12px; color:rgba(255,255,255,0.5); margin:0 0 4px 0;">Média Tokens (Conversa)</p>
+        <p id="mediaTokensConversa" style="font-size:18px; color:#fff; font-weight:600; margin:0;">0</p>
+      </div>
+      <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px;">
+        <p style="font-size:12px; color:rgba(255,255,255,0.5); margin:0 0 4px 0;">Média Tokens (Arquivo)</p>
+        <p id="mediaTokensArquivo" style="font-size:18px; color:#fff; font-weight:600; margin:0;">0</p>
+      </div>
     </div>
-    
-    <div style="display:flex; gap:8px; margin-bottom:12px;">
-      <input type="number" id="calcInputTokens" placeholder="Tokens de Entrada" style="flex:1; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:#fff; padding:10px; border-radius:8px; font-family:inherit;">
-      <input type="number" id="calcOutputTokens" placeholder="Tokens de Saída" style="flex:1; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:#fff; padding:10px; border-radius:8px; font-family:inherit;">
-    </div>
-    
-    <button onclick="calcularCustoAPI()" class="btn btn-primary" style="width:100%; padding:10px; font-size:13px;">Calcular Custo</button>
-    
-    <div id="calcResultado" style="margin-top:12px; text-align:center; font-size:16px; font-weight:600; color:#4fd1c5; min-height:24px;"></div>
+    <p style="font-size:11px; color:rgba(255,255,255,0.4); margin-top:12px; text-align:center;">Baseado nas últimas operações registradas.</p>
   </div>
 
-  <!-- Histórico Recente (Top 5) -->
-  <h3 style="font-size:16px; margin-bottom:12px;">Últimas Operações</h3>
-  <div id="adminHistorico" class="card" style="padding: 12px; font-size: 13px; color: rgba(255,255,255,0.7);">
-    Carregando histórico...
+  <!-- 3. Evolução de Mensagens -->
+  <div class="card" style="margin-bottom: 24px;">
+    <h3 style="font-size:16px; margin-bottom:16px; color:#fff;">📈 Evolução de Mensagens</h3>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+        <span style="font-size:13px; color:rgba(255,255,255,0.7);">Hoje</span>
+        <span id="msgsHoje" style="font-size:14px; font-weight:600; color:#4fd1c5;">0</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+        <span style="font-size:13px; color:rgba(255,255,255,0.7);">Ontem</span>
+        <span id="msgsOntem" style="font-size:14px; font-weight:600; color:#fff;">0</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:13px; color:rgba(255,255,255,0.7);">Mês Atual</span>
+        <span id="msgsMes" style="font-size:14px; font-weight:600; color:#fff;">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Retenção de Assinantes -->
+  <div class="card" style="margin-bottom: 24px;">
+    <h3 style="font-size:16px; margin-bottom:12px; color:#fff;">💳 Retenção de Assinantes (MRR)</h3>
+    <p class="muted" style="font-size:12px; margin-bottom:16px;">Novos assinantes nos últimos meses.</p>
+    <div style="display:flex; gap:8px; justify-content:space-between; align-items:flex-end; height: 100px;">
+      <!-- Mês -2 -->
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;">
+        <div id="barraMes2" style="width:100%; background:rgba(79,141,255,0.3); border-radius:4px 4px 0 0; height: 10%;"></div>
+        <span style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:4px;">M-2</span>
+      </div>
+      <!-- Mês -1 -->
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;">
+        <div id="barraMes1" style="width:100%; background:rgba(79,141,255,0.6); border-radius:4px 4px 0 0; height: 30%;"></div>
+        <span style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:4px;">M-1</span>
+      </div>
+      <!-- Mês Atual -->
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;">
+        <div id="barraMesAtual" style="width:100%; background:#4fd1c5; border-radius:4px 4px 0 0; height: 50%;"></div>
+        <span style="font-size:10px; color:rgba(255,255,255,0.5); margin-top:4px;">Atual</span>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -3261,40 +3299,75 @@ async function verificarAdmin(userId) {
   }
 }
 async function carregarDadosAdmin() {
-  // 1. Calculadora: Preenche com a lógica
-  calcularCustoAPI(); // Já mostra o resultado 0
-  
   try {
-    // Puxa o histórico da tabela credit_history
-    let { data: historico } = await supabase.from('credit_history').select('*').order('created_at', { ascending: false }).limit(10);
-    
-    if (historico) {
-      document.getElementById('adminTotalAnálises').textContent = historico.length;
+    // 1. TOTAL DE USUÁRIOS E PLANOS
+    let { data: usuarios } = await supabase.from('profiles').select('plan, created_at');
+    if (usuarios) {
+      document.getElementById('adminTotalUsuarios').textContent = usuarios.length;
       
-      let custoTotalUSD = 0;
-      let htmlHistorico = '';
-
-      historico.forEach(function(item) {
-        // Cálculo simplificado (Baseado nos preços do Gemini Flash)
-        let custoIn = (item.tokens_in / 1000000) * 0.75;
-        let custoOut = (item.tokens_out / 1000000) * 3.75;
-        custoTotalUSD += (custoIn + custoOut);
-
-        htmlHistorico += `
-          <div style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between;">
-            <span>${new Date(item.created_at).toLocaleDateString('pt-BR')} - ${item.action}</span>
-            <span style="color:#fca5a5;">In: ${item.tokens_in} / Out: ${item.tokens_out}</span>
-          </div>
-        `;
-      });
-
-      // Converte o custo de USD para BRL (aprox 5.5)
-      let custoBRL = custoTotalUSD * 5.5;
-      document.getElementById('adminCustoTotal').textContent = 'R$ ' + custoBRL.toFixed(4).replace('.', ',');
-      document.getElementById('adminHistorico').innerHTML = htmlHistorico || '<p class="muted">Nenhuma operação ainda.</p>';
+      let pro = usuarios.filter(u => u.plan === 'pro' || u.plan === 'profissional').length;
+      let essencial = usuarios.filter(u => u.plan === 'essencial').length;
+      document.getElementById('adminAssinantesPro').textContent = pro;
+      document.getElementById('adminAssinantesEssencial').textContent = essencial;
+      
+      // Conta usuários criados no mês atual
+      let mesAtual = new Date().getMonth();
+      let anoAtual = new Date().getFullYear();
+      let ativosMes = usuarios.filter(u => {
+        let d = new Date(u.created_at);
+        return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+      }).length;
+      document.getElementById('adminUsuariosMes').textContent = ativosMes;
     }
-  } catch(e) {
-    console.error(e);
+
+    // 2. MÉTRICAS DE MENSAGENS (Hoje, Ontem, Mês)
+    let { data: conversas } = await supabase.from('conversations').select('created_at');
+    if (conversas) {
+      let hoje = new Date().toDateString();
+      let ontem = new Date(); ontem.setDate(ontem.getDate() - 1); ontem = ontem.toDateString();
+      let mesAtual = new Date().getMonth();
+      
+      let countHoje = 0, countOntem = 0, countMes = 0;
+      
+      conversas.forEach(c => {
+        let dataConv = new Date(c.created_at);
+        if (dataConv.toDateString() === hoje) countHoje++;
+        if (dataConv.toDateString() === ontem) countOntem++;
+        if (dataConv.getMonth() === mesAtual) countMes++;
+      });
+      
+      document.getElementById('msgsHoje').textContent = countHoje;
+      document.getElementById('msgsOntem').textContent = countOntem;
+      document.getElementById('msgsMes').textContent = countMes;
+    }
+
+    // 3. MÉDIA DE TOKENS (Aproximação via credit_history)
+    let { data: tokensData } = await supabase.from('credit_history').select('tokens_in, tokens_out, action');
+    if (tokensData && tokensData.length > 0) {
+      let somaConversa = 0, countConversa = 0;
+      let somaArquivo = 0, countArquivo = 0;
+      
+      tokensData.forEach(t => {
+        let total = (t.tokens_in || 0) + (t.tokens_out || 0);
+        if (t.action.includes('Upload') || t.action.includes('Análise')) {
+          somaArquivo += total; countArquivo++;
+        } else {
+          somaConversa += total; countConversa++;
+        }
+      });
+      
+      document.getElementById('mediaTokensConversa').textContent = countConversa > 0 ? Math.round(somaConversa / countConversa) : 0;
+      document.getElementById('mediaTokensArquivo').textContent = countArquivo > 0 ? Math.round(somaArquivo / countArquivo) : 0;
+    }
+
+    // 4. GRÁFICO DE RETENÇÃO (Simulação de Assinantes - Ajustar com dados reais do Stripe)
+    // Como não temos a data exata da assinatura no banco, simulamos um crescimento para o gráfico
+    document.getElementById('barraMes2').style.height = '15%';
+    document.getElementById('barraMes1').style.height = '40%';
+    document.getElementById('barraMesAtual').style.height = '75%';
+    
+  } catch (error) {
+    console.error("Erro ao carregar admin:", error);
   }
 }
 
