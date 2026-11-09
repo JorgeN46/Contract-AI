@@ -3260,6 +3260,66 @@ async function verificarAdmin(userId) {
     document.getElementById('btnAdminPanel').style.display = 'none';
   }
 }
+async function carregarDadosAdmin() {
+  // 1. Calculadora: Preenche com a lógica
+  calcularCustoAPI(); // Já mostra o resultado 0
+  
+  try {
+    // Puxa o histórico da tabela credit_history
+    let { data: historico } = await supabase.from('credit_history').select('*').order('created_at', { ascending: false }).limit(10);
+    
+    if (historico) {
+      document.getElementById('adminTotalAnálises').textContent = historico.length;
+      
+      let custoTotalUSD = 0;
+      let htmlHistorico = '';
+
+      historico.forEach(function(item) {
+        // Cálculo simplificado (Baseado nos preços do Gemini Flash)
+        let custoIn = (item.tokens_in / 1000000) * 0.75;
+        let custoOut = (item.tokens_out / 1000000) * 3.75;
+        custoTotalUSD += (custoIn + custoOut);
+
+        htmlHistorico += `
+          <div style="padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between;">
+            <span>${new Date(item.created_at).toLocaleDateString('pt-BR')} - ${item.action}</span>
+            <span style="color:#fca5a5;">In: ${item.tokens_in} / Out: ${item.tokens_out}</span>
+          </div>
+        `;
+      });
+
+      // Converte o custo de USD para BRL (aprox 5.5)
+      let custoBRL = custoTotalUSD * 5.5;
+      document.getElementById('adminCustoTotal').textContent = 'R$ ' + custoBRL.toFixed(4).replace('.', ',');
+      document.getElementById('adminHistorico').innerHTML = htmlHistorico || '<p class="muted">Nenhuma operação ainda.</p>';
+    }
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function calcularCustoAPI() {
+  var modelo = document.getElementById('calcModelo').value;
+  var tkIn = parseFloat(document.getElementById('calcInputTokens').value) || 0;
+  var tkOut = parseFloat(document.getElementById('calcOutputTokens').value) || 0;
+  var resultadoEl = document.getElementById('calcResultado');
+
+  // Preços por milhão de tokens (Baseado na documentação oficial)
+  var precoIn, precoOut;
+  
+  if (modelo === 'flash') {
+      precoIn = 0.75;  // USD
+      precoOut = 3.75; // USD
+  } else { // Pro
+      precoIn = 1.25;
+      precoOut = 5.00;
+  }
+
+  var custoUSD = (tkIn / 1000000 * precoIn) + (tkOut / 1000000 * precoOut);
+  var custoBRL = custoUSD * 5.5; // Conversão estimada Dólar -> Real
+
+  resultadoEl.innerHTML = `Custo: US$ ${custoUSD.toFixed(4)} <br><span style="font-size:12px; color:rgba(255,255,255,0.6);">(Aprox. R$ ${custoBRL.toFixed(4).replace('.', ',')})</span>`;
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
