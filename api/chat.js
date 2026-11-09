@@ -48,37 +48,42 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let tokensInfo = null; // 👈 Variável para guardar os tokens
+        let tokensInfo = null;
+        let buffer = ""; // Buffer para acumular pedaços de linhas
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
           
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // Guarda a última linha incompleta para o próximo loop
           
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const dataStr = line.replace('data: ', '').trim();
               if (dataStr === '[DONE]') continue;
+              
               try {
                 const data = JSON.parse(dataStr);
                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (text) res.write(text);
 
-                // 👇 CAPTURA OS DADOS DE TOKENS DA API DO GEMINI
+                // Captura os metadados de uso (tokens) quando aparecerem
                 if (data.usageMetadata) {
                     tokensInfo = {
                         prompt: data.usageMetadata.promptTokenCount || 0,
                         output: data.usageMetadata.candidatesTokenCount || 0
                     };
                 }
-              } catch (e) {}
+              } catch (e) {
+                // Ignora erros de JSON em pedaços incompletos
+              }
             }
           }
         }
 
-        // 👇 ENVIA O MARCADOR SECRETO NO FINAL COM OS TOKENS
+        // Envia os tokens no final, se encontrados
         if (tokensInfo) {
             res.write(`\n\n<TOKENS_INFO>${JSON.stringify(tokensInfo)}</TOKENS_INFO>`);
         }
