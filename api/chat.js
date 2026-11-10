@@ -1,22 +1,12 @@
 const { createClient } = require('@supabase/supabase-js');
+const { promptAnalise, promptRefinamento, promptPadrao, promptMemoria } = require('./lib/prompts');
+const { verificarEDebitarCreditos, registrarUsoTokens } = require('./lib/creditos');
 
-// Memória temporária para controle de limites (Rate Limiting básico)
 const requestCache = new Map();
-
-// REGISTRO DE MODELOS (MODEL TIERS)
 const MODEL_TIERS = {
-  padrao: {
-    primary: 'gemini-3.8-flash',
-    fallback: ['gemini-3.5-flash-lite']
-  },
-  refinamento: {
-    primary: 'gemini-3.8-flash',
-    fallback: ['gemini-3.5-flash-lite']
-  },
-  leitura: {
-    primary: 'gemini-3.8-pro', 
-    fallback: ['gemini-3.8-flash']
-  }
+  padrao: { primary: 'gemini-3.8-flash', fallback: ['gemini-3.5-flash-lite'] },
+  refinamento: { primary: 'gemini-3.8-flash', fallback: ['gemini-3.5-flash-lite'] },
+  leitura: { primary: 'gemini-3.8-pro', fallback: ['gemini-3.8-flash'] }
 };
 
 async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstruction, res) {
@@ -38,10 +28,7 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
           })
         });
 
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(JSON.stringify(errData));
-        }
+        if (!response.ok) throw new Error(JSON.stringify(await response.json()));
 
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.setHeader('Transfer-Encoding', 'chunked');
@@ -49,7 +36,7 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let tokensInfo = null;
-        let buffer = ""; // Buffer para acumular pedaços de linhas
+        let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
@@ -57,40 +44,34 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
           
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
-          buffer = lines.pop(); // Guarda a última linha incompleta para o próximo loop
+          buffer = lines.pop();
           
           for (const line of lines) {
             if (line.startsWith('data: ')) {
               const dataStr = line.replace('data: ', '').trim();
               if (dataStr === '[DONE]') continue;
-              
               try {
                 const data = JSON.parse(dataStr);
                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (text) res.write(text);
 
-                // Captura os metadados de uso (tokens) quando aparecerem
                 if (data.usageMetadata) {
                     tokensInfo = {
                         prompt: data.usageMetadata.promptTokenCount || 0,
                         output: data.usageMetadata.candidatesTokenCount || 0
                     };
                 }
-              } catch (e) {
-                // Ignora erros de JSON em pedaços incompletos
-              }
+              } catch (e) {}
             }
           }
         }
 
-        // Envia os tokens no final, se encontrados
         if (tokensInfo) {
             res.write(`\n\n<TOKENS_INFO>${JSON.stringify(tokensInfo)}</TOKENS_INFO>`);
         }
 
         res.end();
-        return; 
-
+        return tokensInfo; 
       } catch (err) {
         ultimoErro = err;
         const msg = err.message || '';
@@ -103,11 +84,8 @@ async function chamarModeloIA(apiKey, tierConfig, contentsArray, systemInstructi
     }
   }
   
-  if (!res.headersSent) {
-    res.status(500).json({ error: 'Todos os modelos falharam', details: ultimoErro.message });
-  } else {
-    res.end();
-  }
+  if (!res.headersSent) res.status(500).json({ error: 'Todos os modelos falharam', details: ultimoErro.message });
+  else res.end();
 }
 
 module.exports = async function handler(req, res) {
@@ -124,11 +102,8 @@ module.exports = async function handler(req, res) {
 
   try {
     const { message, fileText, systemPrompt, mode, history, userId, images, memory } = req.body;
-    let profile = null;
 
-    // ==========================================
-    // 🛡️ RATE LIMITING
-    // ==========================================
+    // 1. Rate Limiting
     const limitKey = userId || req.headers['x-forwarded-for'] || 'anonimo';
     const now = Date.now();
     const windowMs = 60000; 
@@ -140,46 +115,9 @@ module.exports = async function handler(req, res) {
     timestamps.push(now);
     requestCache.set(limitKey, timestamps);
 
-    // ==========================================
-// 💳 CREDIT ENGINE (Cálculo por Faixa de Processamento)
-// ==========================================
-let profile = null;
-let custoEstimado = 1; // Custo base para mensagens de texto
-
-// Estimativa baseada no tamanho do texto recebido
-if (fileText && fileText.length > 0) {
-    const tamanhoTexto = fileText.length;
-    if (tamanhoTexto < 50000) { // Até ~15 mil tokens (~76 páginas)
-        custoEstimado = 5; // Análise Padrão
-    } else if (tamanhoTexto < 150000) { // Até ~45 mil tokens (~150 páginas)
-        custoEstimado = 10; // Análise Extensa
-    } else {
-        custoEstimado = 20; // Análise Avançada (200+ páginas)
-    }
-}
-
-if (userId) {
-  try {
-    let { data, error } = await supabaseAdmin.from('profiles').select('*').eq('id', userId).maybeSingle();
-    if (error) console.error("Erro ao buscar perfil:", error.message);
-    profile = data;
-
-    if (profile) {
-      if (profile.credits < custoEstimado) {
-        return res.status(403).json({ error: `Créditos insuficientes. Esta operação custa ${custoEstimado} créditos, mas você tem ${profile.credits}. Faça upgrade para continuar.` });
-      }
-
-      // 1. Reserva os créditos
-      await supabaseAdmin.from('profiles').update({ 
-         credits: profile.credits - custoEstimado
-      }).eq('id', userId);
-      
-      profile.credits = profile.credits - custoEstimado;
-    }
-  } catch (dbError) {
-    console.error("⚠️ Falha na checagem de créditos:", dbError.message);
-  }
-}
+    // 2. Verificação de Créditos (Arquivo lib/creditos.js)
+    const { profile, custoEstimado, error } = await verificarEDebitarCreditos(supabaseAdmin, userId, fileText, images);
+    if (error) return res.status(403).json({ error });
 
     if (!message && (!fileText || fileText.trim() === '') && (!images || images.length === 0)) {
         return res.status(400).json({ error: 'Mensagem vazia' });
@@ -188,75 +126,33 @@ if (userId) {
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Chave do Gemini não configurada.' });
 
+    // 3. Seleção de Prompts (Arquivo lib/prompts.js)
     let basePrompt = "";
-    
-    // PROMPTS
-    const promptAnalise = `Você é o Macrus, no MODO ANÁLISE. Sua persona é a de um Consultor de Negócios Sênior e Advogado Empresarial focado em proteger o bolso e a operação do seu cliente.
-Você lê documentos, contratos e relatórios para o usuário (que é o dono do negócio), e não para outro advogado.
-Evite citar leis complexas ou artigos de código. Fale em "português claro".
-
-Sempre que receber um documento, siga ESTRITAMENTE esta estrutura (sem introduções ou enrolação):
-1. 🚨 **Onde você pode perder dinheiro ou ter dor de cabeça**: Vá direto ao ponto. Aponte os riscos operacionais, fiscais e de prejuízo. Para cada risco, cite a Evidência (Cláusula/Página) e o Impacto Prático no bolso da empresa.
-2. 🛠️ **Como corrigir (Reescrita Prática)**: Mostre o "❌ Texto Original" e forneça o "✅ Texto Corrigido". A correção deve proteger o dono do negócio (ex: limitar escopo, cobrar multas, etc).
-3. 💡 **Dica de Negociação**: Dê uma dica de como o usuário pode conversar com a outra parte para mudar essa cláusula sem gerar briga.
-4. 📋 **Resumo do Documento (Contexto)**: Agora sim, em 1 parágrafo, o que esse documento significa na prática para a empresa do usuário.
-5. ⚖️ **Aviso Legal**: Termine SEMPRE com: "Lembrete: Este relatório é operacional e não substitui a análise de um profissional habilitado."`;
-    
-    const promptRefinamento = `Você é o Macrus, no MODO REFINAMENTO. Sua persona é a de um Editor e Redator Profissional Sênior.
-1. Se pedir para CRIAR, gere um texto de alta qualidade.
-2. Se pedir para MELHORAR, reescreva aplicando o tom desejado.
-3. Formate como: ✨ **Texto Refinado:** [texto] e 💡 **O que foi melhorado:** [explicação].
-DIRETRIZ VISUAL: Leia o texto da imagem e aplique as regras de refinamento.`;
-
-    const promptPadrao = `Você é o Macrus, no MODO PADRÃO. Sua persona é a de um assistente conversacional inteligente e muito prestativo.
-DIRETRIZ VISUAL CRÍTICA: Se receber uma imagem, leia o que está nela. NUNCA invente um contrato se a imagem contiver cálculos, anotações ou textos aleatórios.
-REGRA MATEMÁTICA: Use LaTeX entre $$ (exemplo: $$ x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a} $$). NUNCA use '%' dentro da fórmula.
-ATENÇÃO: NUNCA use a estrutura de "Resumo Operacional" ou "Aviso Legal" neste modo. Seja natural e conversacional.`;
-
-    const promptMemoria = `Analise as últimas mensagens e extraia FATOS permanentes sobre o usuário. Retorne APENAS um array JSON de strings. Exemplo: ["É advogado"]. Se não houver, retorne [].`;
-    
     let tierSelecionado = MODEL_TIERS.padrao;
 
     if (mode === 'memoria') {
       basePrompt = promptMemoria;
-      tierSelecionado = MODEL_TIERS.padrao;
     } else if (mode === 'leitura') {
       basePrompt = promptAnalise;
-      if (profile && profile.plan === 'free') {
-          tierSelecionado = MODEL_TIERS.padrao; 
-      } else {
-          tierSelecionado = MODEL_TIERS.leitura; 
-      }
+      tierSelecionado = (profile && profile.plan === 'free') ? MODEL_TIERS.padrao : MODEL_TIERS.leitura;
     } else if (mode === 'refinamento') {
       basePrompt = promptRefinamento;
       tierSelecionado = MODEL_TIERS.refinamento;
     } else {
       basePrompt = promptPadrao;
-      tierSelecionado = MODEL_TIERS.padrao;
     }
 
-    let memoriaTexto = "";
-    if (memory && Array.isArray(memory) && memory.length > 0) {
-      memoriaTexto = "\n\nO que você já sabe sobre este usuário: " + memory.join(", ") + ".";
-    }
-
-    let avisoPlano = "";
-    if (profile && profile.plan === 'free') {
-        avisoPlano = "\n\nAVISO DO SISTEMA: O usuário está no plano gratuito. Se o documento for muito complexo, finalize a resposta com a frase em itálico: '💡 Dica: Para análises mais profundas com IA de última geração, faça upgrade para o Plano Pro.'";
-    }
-
+    // 4. Montagem do Conteúdo
+    let memoriaTexto = (memory && Array.isArray(memory) && memory.length > 0) ? "\n\nO que você já sabe sobre este usuário: " + memory.join(", ") + "." : "";
+    let avisoPlano = (profile && profile.plan === 'free') ? "\n\nAVISO DO SISTEMA: O usuário está no plano gratuito. Se o documento for muito complexo, finalize a resposta com: '💡 Dica: Para análises mais profundas, faça upgrade para o Plano Pro.'" : "";
     const finalInstruction = (systemPrompt ? basePrompt + "\n\nPreferências do usuário: " + systemPrompt : basePrompt) + memoriaTexto + avisoPlano;
 
     let contentsArray = [];
     let historyToUse = history || [];
-
     if (historyToUse.length > 0 && historyToUse[historyToUse.length - 1].role === 'user') historyToUse.pop();
 
     historyToUse.forEach(msg => {
-        contentsArray.push({
-            role: msg.role === 'ai' ? 'model' : 'user',
-            parts: [{ text: msg.content }]
-        });
+        contentsArray.push({ role: msg.role === 'ai' ? 'model' : 'user', parts: [{ text: msg.content }] });
     });
 
     let promptFinal = message || "Por favor, analise o conteúdo enviado.";
@@ -268,17 +164,19 @@ ATENÇÃO: NUNCA use a estrutura de "Resumo Operacional" ou "Aviso Legal" neste 
     if (images && images.length > 0) {
         images.forEach(imgUrl => {
             const match = imgUrl.match(/^data:(image\/[a-zA-Z]*);base64,(.*)$/);
-            if (match) {
-                userParts.push({
-                    inlineData: { mimeType: match[1], data: match[2] }
-                });
-            }
+            if (match) userParts.push({ inlineData: { mimeType: match[1], data: match[2] } });
         });
     }
 
     contentsArray.push({ role: 'user', parts: userParts });
 
-    await chamarModeloIA(apiKey, tierSelecionado, contentsArray, finalInstruction, res);
+    // 5. Chamada da IA e registro dos tokens
+    const tokensInfo = await chamarModeloIA(apiKey, tierSelecionado, contentsArray, finalInstruction, res);
+    
+    // 6. Registra o uso real (Arquivo lib/creditos.js)
+    if (tokensInfo) {
+      await registrarUsoTokens(supabaseAdmin, userId, tokensInfo, custoEstimado, profile);
+    }
 
   } catch (error) {
     console.error('Erro geral no handler:', error.message);
