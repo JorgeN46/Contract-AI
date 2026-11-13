@@ -3294,6 +3294,9 @@ window.addEventListener('scroll', function() {
       }).catch(err => console.log('Erro no SW:', err));
     });
   }
+// Variável para controlar o monitoramento
+let monitorarPagamento = null;
+
 async function carregarDadosPlano() {
   var userId = localStorage.getItem('contractai_user_id');
   if (!userId) return;
@@ -3305,7 +3308,7 @@ async function carregarDadosPlano() {
       document.getElementById('planName').textContent = data.plan === 'free' ? 'Gratuito' : data.plan;
       
       var creditos = data.credits || 0;
-      var limite = data.plan === 'free' ? 50 : (data.plan === 'essencial' ? 150 : 400); // Limite para a barra
+      var limite = data.plan === 'free' ? 50 : (data.plan === 'essencial' ? 150 : 400);
 
       document.getElementById('creditsText').textContent = creditos + ' / ' + limite;
       
@@ -3315,12 +3318,38 @@ async function carregarDadosPlano() {
       var barra = document.getElementById('creditsBar');
       barra.style.width = porcento + '%';
       
-      if (porcento <= 20) barra.style.background = '#ef4444'; // Vermelho se tiver pouco
+      if (porcento <= 20) barra.style.background = '#ef4444';
       else barra.style.background = 'linear-gradient(90deg, #4f8dff, #4fd1c5)';
+
+      // 👇 SE O PLANO FOR FREE, COMEÇA A MONITORAR O PAGAMENTO
+      if (data.plan === 'free') {
+        iniciarMonitoramentoPagamento(userId);
+      }
     }
   } catch (err) {
     console.error("Erro ao carregar dados do plano:", err);
   }
+}
+
+// Função que fica checando o banco a cada 3 segundos
+function iniciarMonitoramentoPagamento(userId) {
+  // Se já estiver monitorando, não cria outro
+  if (monitorarPagamento) clearInterval(monitorarPagamento);
+
+  monitorarPagamento = setInterval(async () => {
+    let { data } = await supabase.from('profiles').select('plan, credits').eq('id', userId).maybeSingle();
+    
+    // Se o plano mudou, para o monitoramento e avisa o usuário
+    if (data && data.plan !== 'free') {
+      clearInterval(monitorarPagamento);
+      monitorarPagamento = null;
+      
+      alert("🎉 Pagamento confirmado! Seu plano " + data.plan + " foi ativado.");
+      
+      // Recarrega a tela para mostrar os novos créditos
+      carregarDadosPlano();
+    }
+  }, 3000); // Checa a cada 3 segundos
 }
 async function loginComProvedor(provedor, event) {
   if(event) event.preventDefault();
