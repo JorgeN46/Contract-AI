@@ -3550,6 +3550,90 @@ async function concederAcessoVIP() {
     fb.textContent = 'Erro ao atualizar: ' + error.message;
   }
 }
+// ==========================================
+// 🎤 GRAVAÇÃO DE VOZ (SPEECH TO TEXT - MULTILÍNGUE)
+// ==========================================
+let recognition = null;
+let isRecording = false;
+
+function toggleGravacao() {
+  const btnMic = document.getElementById('btnMic');
+  const chatInput = document.querySelector('.chat-input');
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Seu navegador não suporta ditado por voz. Tente usar o Chrome no Android.");
+    return;
+  }
+
+  if (isRecording) {
+    recognition.stop();
+    return;
+  }
+
+  recognition = new SpeechRecognition();
+  
+  // 👇 AQUI ESTÁ A MÁGICA DOS IDIOMAS 👇
+  // 1. Tenta pegar o idioma que o usuário escolheu no seletor (se existir)
+  // 2. Se não tiver, usa o idioma do navegador do usuário
+  // 3. Se nada funcionar, usa Português como padrão.
+  var idiomaApp = localStorage.getItem('contractai_idioma') || navigator.language || 'pt-BR';
+  
+  // A API do Chrome exige o formato "pt-BR", "en-US", "es-ES" (com o traço)
+  if (idiomaApp === 'pt') idiomaApp = 'pt-BR';
+  if (idiomaApp === 'en') idiomaApp = 'en-US';
+  if (idiomaApp === 'es') idiomaApp = 'es-ES';
+
+  recognition.lang = idiomaApp; 
+  
+  recognition.continuous = false; 
+  recognition.interimResults = true; 
+
+  recognition.onstart = function() {
+    isRecording = true;
+    btnMic.style.background = 'rgba(239, 68, 68, 0.2)'; 
+    btnMic.style.color = '#ef4444';
+    
+    // Traduz o "Ouvindo..." dependendo do idioma
+    if (idiomaApp.includes('en')) chatInput.placeholder = "Listening...";
+    else if (idiomaApp.includes('es')) chatInput.placeholder = "Escuchando...";
+    else chatInput.placeholder = "Ouvindo...";
+    
+    recognition.textoAnterior = chatInput.value;
+  };
+
+  recognition.onresult = function(event) {
+    let textoTranscrito = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      textoTranscrito += event.results[i][0].transcript;
+    }
+    chatInput.value = recognition.textoAnterior + (recognition.textoAnterior ? ' ' : '') + textoTranscrito;
+    autoResize(chatInput);
+  };
+
+  recognition.onerror = function(event) {
+    console.error("Erro no microfone:", event.error);
+    pararGravacaoVisual();
+  };
+
+  recognition.onend = function() {
+    pararGravacaoVisual();
+  };
+
+  recognition.start();
+}
+
+function pararGravacaoVisual() {
+  isRecording = false;
+  const btnMic = document.getElementById('btnMic');
+  const chatInput = document.querySelector('.chat-input');
+  
+  btnMic.style.background = 'transparent';
+  btnMic.style.color = '#fff';
+  
+  // Volta o placeholder original
+  chatInput.placeholder = "Olá, como posso ajudar?";
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
