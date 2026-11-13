@@ -1188,6 +1188,15 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 <div class="chat-bar">
 <button class="chat-plus" title="Anexar" onclick="toggleAttachMenu(event)">+</button>
 <textarea class="chat-input" placeholder="Olá, como posso ajudar?" rows="1" oninput="autoResize(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();enviarMensagem();}"></textarea>
+  <!-- 👇 COLE O BOTÃO DO MICROFONE AQUI (Antes do botão de enviar) 👇 -->
+  <button id="btnMic" class="chat-plus" title="Ditar por voz" onclick="toggleGravacao()" style="background: transparent; border:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;">
+      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+      <line x1="12" y1="19" x2="12" y2="23"></line>
+      <line x1="8" y1="23" x2="16" y2="23"></line>
+    </svg>
+  </button>
 <button class="chat-send" title="Enviar" onclick="enviarMensagem()">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
 </button>
