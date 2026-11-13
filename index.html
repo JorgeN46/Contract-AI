@@ -2649,50 +2649,51 @@ function baixarPDF(id) {
   var clone = elemento.cloneNode(true);
   var botoes = clone.querySelector('.msg-actions');
   if(botoes) botoes.remove();
-  clone.innerHTML = clone.innerHTML.replace('<span style="color:#7db4ff;">▍</span>', '');
-
-  // Pega o título da conversa ou usa um padrão
-  var titulo = "Contract AI - Documento";
+  
+  // Pega o texto puro
+  var textoPuro = clone.innerHTML.replace('<span style="color:#7db4ff;">▍</span>', '');
 
   var win = window.open('', '_blank');
   win.document.write(`
     <html>
       <head>
-        <title>${titulo}</title>
+        <title>Análise Macrus</title>
         <style>
           @page { margin: 20mm; }
-          body { 
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; 
-            color: #333; 
-            line-height: 1.6; 
-            max-width: 800px; 
-            margin: 0 auto;
-          }
-          h1 { font-size: 24px; color: #111; border-bottom: 2px solid #4f8dff; padding-bottom: 10px; margin-bottom: 20px; }
-          h2 { font-size: 20px; color: #222; margin-top: 30px; }
-          h3 { font-size: 16px; color: #444; margin-top: 20px; }
-          p { margin-bottom: 12px; text-align: justify; }
-          ul, ol { margin-bottom: 20px; padding-left: 24px; }
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: 0 auto; }
+          
+          /* ESTILO DA CAPA DE AVISO */
+          .capa-aviso { border: 2px solid #ef4444; padding: 30px; border-radius: 8px; margin-bottom: 40px; text-align: center; background: #fef2f2; }
+          .capa-aviso h1 { color: #b91c1c; font-size: 22px; margin-bottom: 10px; }
+          .capa-aviso p { color: #7f1d1d; font-size: 14px; font-weight: 500; }
+          .logo { width: 40px; height: 40px; background: #4f8dff; color: #fff; border-radius: 8px; display: inline-block; line-height: 40px; font-weight: bold; font-size: 20px; margin-bottom: 20px; }
+          
+          /* ESTILO DO CONTEÚDO */
+          h2 { font-size: 18px; color: #111; margin-top: 24px; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
+          h3 { font-size: 16px; color: #222; margin-top: 18px; }
+          ul, ol { margin-bottom: 16px; padding-left: 24px; }
           li { margin-bottom: 8px; }
           strong { color: #000; }
-          table { width: 100%; border-collapse: collapse; margin: 24px 0; font-size: 14px; }
-          th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-          th { background-color: #f8f9fa; font-weight: bold; color: #111; }
-          blockquote { border-left: 4px solid #4f8dff; padding-left: 16px; color: #555; font-style: italic; margin: 20px 0; }
-          .footer { margin-top: 40px; font-size: 12px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+          blockquote { border-left: 4px solid #4f8dff; padding-left: 16px; color: #555; margin: 16px 0; font-style: italic; }
         </style>
       </head>
       <body>
-        ${clone.innerHTML}
-        <div class="footer">Gerado por Contract AI</div>
+        <div class="capa-aviso">
+          <div class="logo">M</div>
+          <h1>Documento Operacional Macrus</h1>
+          <p>Este relatório foi gerado por Inteligência Artificial e é de caráter representativo. Ele NÃO substitui a análise, revisão ou parecer de um profissional habilitado (Advogado, Contador, etc).</p>
+        </div>
+        
+        ${textoPuro}
+        
+        <div style="margin-top: 40px; font-size: 11px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 20px;">
+          Gerado por Macrus AI - ${new Date().toLocaleDateString('pt-BR')}
+        </div>
       </body>
     </html>
   `);
   win.document.close();
-  
-  setTimeout(function() {
-    win.print();
-  }, 1000);
+  setTimeout(function() { win.print(); }, 1000);
 }
 
 function baixarWord(id) {
@@ -2706,16 +2707,59 @@ function baixarWord(id) {
   // Remove o cursor de digitação
   clone.innerHTML = clone.innerHTML.replace('<span style="color:#7db4ff;">▍</span>', '');
 
-  var htmlContent = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family: Arial, sans-serif; color: #000;">' + clone.innerHTML + '</body></html>';
+  // Pega o conteúdo HTML da mensagem
+  var textoPuro = clone.innerHTML;
+
+  // Monta o HTML final com a Capa de Aviso e o CSS
+  var htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+          
+          /* ESTILO DA CAPA DE AVISO */
+          .capa-aviso { border: 2px solid #ef4444; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: center; background: #fef2f2; }
+          .capa-aviso h1 { color: #b91c1c; font-size: 18px; margin-bottom: 10px; font-family: Arial, sans-serif; }
+          .capa-aviso p { color: #7f1d1d; font-size: 12px; font-weight: bold; }
+          
+          /* ESTILO DO CONTEÚDO */
+          h2 { font-size: 16px; color: #111; margin-top: 20px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+          h3 { font-size: 14px; color: #222; margin-top: 15px; }
+          ul, ol { margin-bottom: 15px; padding-left: 20px; }
+          li { margin-bottom: 6px; }
+          strong { color: #000; }
+          blockquote { border-left: 3px solid #4f8dff; padding-left: 12px; color: #555; margin: 12px 0; font-style: italic; }
+          .footer { margin-top: 30px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 15px; }
+        </style>
+      </head>
+      <body>
+        <!-- CAPA DE AVISO LEGAL -->
+        <div class="capa-aviso">
+          <h1>Documento Operacional Macrus</h1>
+          <p>Este relatório foi gerado por Inteligência Artificial e é de caráter representativo. Ele NÃO substitui a análise, revisão ou parecer de um profissional habilitado (Advogado, Contador, etc).</p>
+        </div>
+        
+        <!-- CONTEÚDO DA IA -->
+        ${textoPuro}
+        
+        <!-- RODAPÉ -->
+        <div class="footer">
+          Gerado por Macrus AI - ${new Date().toLocaleDateString('pt-BR')}
+        </div>
+      </body>
+    </html>
+  `;
   
   try {
       var converted = htmlDocx.asBlob(htmlContent);
-      saveAs(converted, 'Contract_AI_Documento.docx');
+      saveAs(converted, 'Macrus_Analise.docx');
   } catch (e) {
       // Plano B: Se o html-docx falhar, baixa como arquivo .doc simples que abre no Word
       console.error("Erro no html-docx, usando fallback:", e);
       var blob = new Blob([htmlContent], {type: 'application/msword'});
-      saveAs(blob, 'Contract_AI_Documento.doc');
+      saveAs(blob, 'Macrus_Analise.doc');
   }
 }
 async function submitLogin(e) {
