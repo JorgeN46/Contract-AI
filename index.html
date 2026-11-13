@@ -3575,19 +3575,13 @@ function toggleGravacao() {
 
   recognition = new SpeechRecognition();
   
-  // 👇 AQUI ESTÁ A MÁGICA DOS IDIOMAS 👇
-  // 1. Tenta pegar o idioma que o usuário escolheu no seletor (se existir)
-  // 2. Se não tiver, usa o idioma do navegador do usuário
-  // 3. Se nada funcionar, usa Português como padrão.
+  // Pega o idioma escolhido no app, ou o idioma do celular, ou PT-BR como padrão
   var idiomaApp = localStorage.getItem('contractai_idioma') || navigator.language || 'pt-BR';
-  
-  // A API do Chrome exige o formato "pt-BR", "en-US", "es-ES" (com o traço)
   if (idiomaApp === 'pt') idiomaApp = 'pt-BR';
   if (idiomaApp === 'en') idiomaApp = 'en-US';
   if (idiomaApp === 'es') idiomaApp = 'es-ES';
 
   recognition.lang = idiomaApp; 
-  
   recognition.continuous = false; 
   recognition.interimResults = true; 
 
@@ -3596,7 +3590,6 @@ function toggleGravacao() {
     btnMic.style.background = 'rgba(239, 68, 68, 0.2)'; 
     btnMic.style.color = '#ef4444';
     
-    // Traduz o "Ouvindo..." dependendo do idioma
     if (idiomaApp.includes('en')) chatInput.placeholder = "Listening...";
     else if (idiomaApp.includes('es')) chatInput.placeholder = "Escuchando...";
     else chatInput.placeholder = "Ouvindo...";
@@ -3629,12 +3622,11 @@ function pararGravacaoVisual() {
   isRecording = false;
   const btnMic = document.getElementById('btnMic');
   const chatInput = document.querySelector('.chat-input');
-  
-  btnMic.style.background = 'transparent';
-  btnMic.style.color = '#fff';
-  
-  // Volta o placeholder original
-  chatInput.placeholder = "Olá, como posso ajudar?";
+  if(btnMic) {
+    btnMic.style.background = 'transparent';
+    btnMic.style.color = '#fff';
+  }
+  if(chatInput) chatInput.placeholder = "Olá, como posso ajudar?";
 }
 </script>
 <!-- Menu de Contexto do Histórico -->
