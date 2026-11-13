@@ -3733,6 +3733,7 @@ function mostrarClausulasNoDrawer(htmlContent) {
   abrirDrawer();
 }
 function abrirDrawer() {
+  alert("A função abrirDrawer foi chamada!"); // <-- Adicione esta linha
   document.getElementById('drawerClausulas').classList.add('open');
   document.getElementById('drawerOverlay').classList.add('open');
 }
