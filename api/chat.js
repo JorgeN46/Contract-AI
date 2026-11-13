@@ -101,10 +101,30 @@ module.exports = async function handler(req, res) {
   const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { message, fileText, systemPrompt, mode, history, userId, images, memory } = req.body;
+    // ==========================================
+    // 🔒 VALIDAÇÃO DO TOKEN (SEGURANÇA)
+    // ==========================================
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Acesso não autorizado. Faça login novamente.' });
+    }
 
-    // 1. Rate Limiting
-    const limitKey = userId || req.headers['x-forwarded-for'] || 'anonimo';
+    const token = authHeader.split(' ')[1];
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Sessão expirada ou inválida. Faça login novamente.' });
+    }
+
+    // O userId confiável agora vem do Supabase, não do navegador.
+    const userId = user.id; 
+
+    const { message, fileText, systemPrompt, mode, history, images, memory } = req.body;
+
+    // ==========================================
+    // 🛡️ RATE LIMITING
+    // ==========================================
+    const limitKey = userId; // Agora usamos o ID seguro para o cache
     const now = Date.now();
     const windowMs = 60000; 
     const maxRequests = 15; 
@@ -115,7 +135,9 @@ module.exports = async function handler(req, res) {
     timestamps.push(now);
     requestCache.set(limitKey, timestamps);
 
-    // 2. Verificação de Créditos (Arquivo lib/creditos.js)
+    // ==========================================
+    // 💳 VERIFICAÇÃO DE CRÉDITOS (lib/creditos.js)
+    // ==========================================
     const { profile, custoEstimado, error } = await verificarEDebitarCreditos(supabaseAdmin, userId, fileText, images);
     if (error) return res.status(403).json({ error });
 
@@ -126,7 +148,9 @@ module.exports = async function handler(req, res) {
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) return res.status(500).json({ error: 'Chave do Gemini não configurada.' });
 
-    // 3. Seleção de Prompts (Arquivo lib/prompts.js)
+    // ==========================================
+    // 🧠 SELEÇÃO DE PROMPTS (lib/prompts.js)
+    // ==========================================
     let basePrompt = "";
     let tierSelecionado = MODEL_TIERS.padrao;
 
@@ -142,7 +166,9 @@ module.exports = async function handler(req, res) {
       basePrompt = promptPadrao;
     }
 
-    // 4. Montagem do Conteúdo
+    // ==========================================
+    // 📝 MONTAGEM DO CONTEÚDO
+    // ==========================================
     let memoriaTexto = (memory && Array.isArray(memory) && memory.length > 0) ? "\n\nO que você já sabe sobre este usuário: " + memory.join(", ") + "." : "";
     let avisoPlano = (profile && profile.plan === 'free') ? "\n\nAVISO DO SISTEMA: O usuário está no plano gratuito. Se o documento for muito complexo, finalize a resposta com: '💡 Dica: Para análises mais profundas, faça upgrade para o Plano Pro.'" : "";
     const finalInstruction = (systemPrompt ? basePrompt + "\n\nPreferências do usuário: " + systemPrompt : basePrompt) + memoriaTexto + avisoPlano;
@@ -170,10 +196,11 @@ module.exports = async function handler(req, res) {
 
     contentsArray.push({ role: 'user', parts: userParts });
 
-    // 5. Chamada da IA e registro dos tokens
+    // ==========================================
+    // 🚀 CHAMADA DA IA E REGISTRO DE TOKENS
+    // ==========================================
     const tokensInfo = await chamarModeloIA(apiKey, tierSelecionado, contentsArray, finalInstruction, res);
     
-    // 6. Registra o uso real (Arquivo lib/creditos.js)
     if (tokensInfo) {
       await registrarUsoTokens(supabaseAdmin, userId, tokensInfo, custoEstimado, profile);
     }
