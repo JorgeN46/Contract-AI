@@ -2366,9 +2366,16 @@ async function chamarIA(mensagemUsuario){
     var promptPersonalizado = localStorage.getItem('contractai_prompt') || '';
     var modoAtual = localStorage.getItem('contractai_mode') || 'padrao';
     
+    // 👇 PEGA O TOKEN DE ACESSO ATUAL DO SUPABASE
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token || '';
+
     var resposta = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}` // <-- Envia o token para validação no backend
+      },
       body: JSON.stringify({
         message: mensagemUsuario,
         fileText: textoArquivoExtraido,
@@ -2385,12 +2392,15 @@ async function chamarIA(mensagemUsuario){
       if (resposta.status === 429) {
         throw new Error("Calma aí! Você está indo rápido demais. Aguarde um minuto para enviar mais mensagens.");
       }
+      if (resposta.status === 401) {
+        throw new Error("Sua sessão expirou. Por favor, faça login novamente.");
+      }
       let erroReal = await resposta.text();
       throw new Error(`Status ${resposta.status}: ${erroReal}`);
     }
 
     var textoAcumulado = "";
-    let dadosTokens = null; // Variável para guardar os tokens
+    let dadosTokens = null;
 
     const reader = resposta.body.getReader();
     const decoder = new TextDecoder();
@@ -2432,7 +2442,7 @@ async function chamarIA(mensagemUsuario){
     var contentBoxFinal = divTemp.querySelector('.msg-ai-content');
     contentBoxFinal.innerHTML = DOMPurify.sanitize(marked.parse(textoFinalLimpo.trim()));
     
-    // 👇 EXIBE OS TOKENS NO FINAL DA MENSAGEM
+    // Exibe os tokens no final da mensagem
     if (dadosTokens) {
         var tokenInfoDiv = document.createElement('div');
         tokenInfoDiv.style.cssText = 'margin-top: 12px; font-size: 11px; color: rgba(255,255,255,0.4); display: flex; gap: 12px; align-items: center; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);';
@@ -2450,7 +2460,7 @@ async function chamarIA(mensagemUsuario){
       });
     }
 
-    conversaAtual.push({ role: 'ai', content: textoFinalLimpo }); // Salva sem a tag de tokens
+    conversaAtual.push({ role: 'ai', content: textoFinalLimpo });
     textoArquivoExtraido = ""; 
     removerAnexo();
     
@@ -2462,7 +2472,7 @@ async function chamarIA(mensagemUsuario){
     btnCopiar.innerHTML = '📋 Copiar';
     btnCopiar.onclick = function(e){
       e.stopPropagation();
-      navigator.clipboard.writeText(textoFinalLimpo).then(function(){ // Copia o texto limpo
+      navigator.clipboard.writeText(textoFinalLimpo).then(function(){
         btnCopiar.innerHTML = '✓ Copiado';
         setTimeout(function(){ btnCopiar.innerHTML = '📋 Copiar'; }, 2000);
       });
@@ -2485,7 +2495,6 @@ async function chamarIA(mensagemUsuario){
         actions.appendChild(btnWord);
     }
 
-    // Adiciona os botões ANTES da linha de tokens (para não ficar embaixo do texto)
     var tokenInfoDiv = contentBoxFinal.querySelector('div[style*="border-top"]');
     if (tokenInfoDiv) {
         contentBoxFinal.insertBefore(actions, tokenInfoDiv);
@@ -2499,9 +2508,9 @@ async function chamarIA(mensagemUsuario){
   } catch(err) {
     var boxErro = divTemp.querySelector('.msg-ai-content');
     if(boxErro) {
-      boxErro.innerHTML = '❌ Erro de conexão: ' + err.message;
+      boxErro.innerHTML = '❌ Erro: ' + err.message;
     } else {
-      divTemp.innerHTML = '❌ Erro de conexão: ' + err.message;
+      divTemp.innerHTML = '❌ Erro: ' + err.message;
     }
   }
 }
