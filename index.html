@@ -3659,6 +3659,64 @@ function pararGravacaoVisual() {
   }
   if(chatInput) chatInput.placeholder = "Olá, como posso ajudar?";
 }
+function abrirDrawer() {
+  document.getElementById('drawerClausulas').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+}
+function fecharDrawer() {
+  document.getElementById('drawerClausulas').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+// Função para extrair só as cláusulas de uma mensagem (usada no botão da resposta da IA)
+function mostrarClausulasNoDrawer(htmlContent) {
+  // Pega todo o texto da mensagem e tenta separar apenas os blocos de reescrita
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlContent;
+  
+  // Pega os textos que estão depois de "✅ Texto Corrigido"
+  let textoFinal = "";
+  const elementos = tempDiv.querySelectorAll('p, li');
+  elementos.forEach(el => {
+    if (el.innerText.includes('✅') || el.innerText.includes('Texto Corrigido')) {
+       textoFinal += "<div style='background:rgba(79,209,197,0.1); border-left:3px solid #4fd1c5; padding:10px; margin-bottom:10px; border-radius:4px;'>" + el.innerHTML + "</div>";
+    }
+  });
+
+  if (textoFinal === "") textoFinal = "<p class='muted'>Nenhuma cláusula específica encontrada. Veja o texto completo na conversa.</p>";
+  
+  document.getElementById('drawerContent').innerHTML = textoFinal;
+  abrirDrawer();
+}
+function abrirDrawer() {
+  document.getElementById('drawerClausulas').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+}
+function fecharDrawer() {
+  document.getElementById('drawerClausulas').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+// Função para extrair só as cláusulas de uma mensagem (usada no botão da resposta da IA)
+function mostrarClausulasNoDrawer(htmlContent) {
+  // Pega todo o texto da mensagem e tenta separar apenas os blocos de reescrita
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlContent;
+  
+  // Pega os textos que estão depois de "✅ Texto Corrigido"
+  let textoFinal = "";
+  const elementos = tempDiv.querySelectorAll('p, li');
+  elementos.forEach(el => {
+    if (el.innerText.includes('✅') || el.innerText.includes('Texto Corrigido')) {
+       textoFinal += "<div style='background:rgba(79,209,197,0.1); border-left:3px solid #4fd1c5; padding:10px; margin-bottom:10px; border-radius:4px;'>" + el.innerHTML + "</div>";
+    }
+  });
+
+  if (textoFinal === "") textoFinal = "<p class='muted'>Nenhuma cláusula específica encontrada. Veja o texto completo na conversa.</p>";
+  
+  document.getElementById('drawerContent').innerHTML = textoFinal;
+  abrirDrawer();
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
