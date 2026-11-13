@@ -2368,7 +2368,6 @@ async function chamarIA(mensagemUsuario){
   divTemp.className = 'msg ai';
   divTemp.id = 'msg-streaming';
 
-  // Cria a estrutura com a caixa de texto (o avatar é gerado pelo CSS)
   divTemp.innerHTML = `
     <div class="msg-ai-content">
       <div class="typing-indicator"><span></span><span></span><span></span></div>
@@ -2377,20 +2376,27 @@ async function chamarIA(mensagemUsuario){
 
   area.appendChild(divTemp);
   window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+  // 👇 PEGA O BOTÃO DE ENVIAR PARA MUDAR A APARÊNCIA 👇
+  var btnSend = document.querySelector('.chat-send');
+  var svgEnviarOriginal = btnSend.innerHTML;
+  var corOriginal = btnSend.style.background;
   
   try {
     var promptPersonalizado = localStorage.getItem('contractai_prompt') || '';
     var modoAtual = localStorage.getItem('contractai_mode') || 'padrao';
     
-    // 👇 PEGA O TOKEN DE ACESSO ATUAL DO SUPABASE
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData?.session?.access_token || '';
+
+    // CRIA O CONTROLADOR PARA PERMITIR O CANCELAMENTO
+    controllerResposta = new AbortController();
 
     var resposta = await fetch('/api/chat', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}` // <-- Envia o token para validação no backend
+        'Authorization': `Bearer ${accessToken}`
       },
       body: JSON.stringify({
         message: mensagemUsuario,
@@ -2401,19 +2407,24 @@ async function chamarIA(mensagemUsuario){
         userId: localStorage.getItem('contractai_user_id'),
         images: imagensAnexadas,
         memory: JSON.parse(localStorage.getItem('contractai_memory') || '[]')
-      })
+      }),
+      signal: controllerResposta.signal // 👈 Passa o sinal de cancelamento para o fetch
     });
 
     if (!resposta.ok) {
-      if (resposta.status === 429) {
-        throw new Error("Calma aí! Você está indo rápido demais. Aguarde um minuto para enviar mais mensagens.");
-      }
-      if (resposta.status === 401) {
-        throw new Error("Sua sessão expirou. Por favor, faça login novamente.");
-      }
+      if (resposta.status === 429) throw new Error("Calma aí! Aguarde um minuto.");
+      if (resposta.status === 401) throw new Error("Sessão expirada. Faça login novamente.");
       let erroReal = await resposta.text();
       throw new Error(`Status ${resposta.status}: ${erroReal}`);
     }
+
+    // 👇 TRANSFORMA O BOTÃO DE ENVIAR EM "PARAR" (Quadrado Vermelho) 👇
+    btnSend.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" style="width:16px;height:16px;"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>';
+    btnSend.style.background = '#ef4444';
+    btnSend.onclick = function(e) { 
+      e.stopPropagation(); 
+      controllerResposta.abort(); // Cancela a resposta
+    };
 
     var textoAcumulado = "";
     let dadosTokens = null;
@@ -2422,32 +2433,42 @@ async function chamarIA(mensagemUsuario){
     const decoder = new TextDecoder();
 
     while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      
-      const chunk = decoder.decode(value);
-      textoAcumulado += chunk;
-      
-      var contentBox = divTemp.querySelector('.msg-ai-content');
-      
-      // Limpa a tag secreta de tokens da tela em tempo real
-      let textoLimpo = textoAcumulado;
-      const matchTokens = textoAcumulado.match(/<TOKENS_INFO>(.*?)<\/TOKENS_INFO>/s);
-      if (matchTokens) {
-          try { dadosTokens = JSON.parse(matchTokens[1]); } catch(e){}
-          textoLimpo = textoAcumulado.replace(matchTokens[0], '');
-      }
+      try {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value);
+        textoAcumulado += chunk;
+        
+        var contentBox = divTemp.querySelector('.msg-ai-content');
+        
+        let textoLimpo = textoAcumulado;
+        const matchTokens = textoAcumulado.match(/<TOKENS_INFO>(.*?)<\/TOKENS_INFO>/s);
+        if (matchTokens) {
+            try { dadosTokens = JSON.parse(matchTokens[1]); } catch(e){}
+            textoLimpo = textoAcumulado.replace(matchTokens[0], '');
+        }
 
-      contentBox.innerHTML = DOMPurify.sanitize(marked.parse(textoLimpo)) + '<span style="color:#7db4ff;">▍</span>';
-      
-      criarParticulas(divTemp); 
-      
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        contentBox.innerHTML = DOMPurify.sanitize(marked.parse(textoLimpo)) + '<span style="color:#7db4ff;">▍</span>';
+        criarParticulas(divTemp); 
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+      } catch (erroLeitura) {
+        if (erroLeitura.name === 'AbortError') {
+            textoAcumulado += "\n\n*(Geração interrompida pelo usuário)*";
+            break;
+        }
+        throw erroLeitura;
+      }
     }
+
+    // 👇 RESTAURA O BOTÃO DE ENVIAR AO NORMAL 👇
+    btnSend.innerHTML = svgEnviarOriginal;
+    btnSend.style.background = corOriginal;
+    btnSend.onclick = function() { enviarMensagem(); };
 
     divTemp.id = 'msg-ai-' + Date.now();
 
-    // Limpa a tag secreta da versão final
     let textoFinalLimpo = textoAcumulado;
     const matchTokensFinal = textoAcumulado.match(/<TOKENS_INFO>(.*?)<\/TOKENS_INFO>/s);
     if (matchTokensFinal) {
@@ -2458,14 +2479,10 @@ async function chamarIA(mensagemUsuario){
     var contentBoxFinal = divTemp.querySelector('.msg-ai-content');
     contentBoxFinal.innerHTML = DOMPurify.sanitize(marked.parse(textoFinalLimpo.trim()));
     
-    // Exibe os tokens no final da mensagem
     if (dadosTokens) {
         var tokenInfoDiv = document.createElement('div');
         tokenInfoDiv.style.cssText = 'margin-top: 12px; font-size: 11px; color: rgba(255,255,255,0.4); display: flex; gap: 12px; align-items: center; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);';
-        tokenInfoDiv.innerHTML = `
-            <span title="Tokens de entrada">📥 Entrada: ${dadosTokens.prompt}</span>
-            <span title="Tokens de saída">📤 Saída: ${dadosTokens.output}</span>
-        `;
+        tokenInfoDiv.innerHTML = `<span>📥 Entrada: ${dadosTokens.prompt}</span><span>📤 Saída: ${dadosTokens.output}</span>`;
         contentBoxFinal.appendChild(tokenInfoDiv);
     }
     
@@ -2495,21 +2512,28 @@ async function chamarIA(mensagemUsuario){
     };
     actions.appendChild(btnCopiar);
 
-    var pediuDownload = true;
-
-    if (pediuDownload) {
-        var btnPDF = document.createElement('button');
-        btnPDF.className = 'msg-action-btn';
-        btnPDF.innerHTML = '📄 Baixar PDF';
-        btnPDF.onclick = function(e){ e.stopPropagation(); baixarPDF(divTemp.id); };
-        actions.appendChild(btnPDF);
-
-        var btnWord = document.createElement('button');
-        btnWord.className = 'msg-action-btn';
-        btnWord.innerHTML = '📝 Baixar Word';
-        btnWord.onclick = function(e){ e.stopPropagation(); baixarWord(divTemp.id); };
-        actions.appendChild(btnWord);
+    if (modoAtual === 'leitura') {
+        var btnClausulas = document.createElement('button');
+        btnClausulas.className = 'msg-action-btn';
+        btnClausulas.innerHTML = '📑 Ver Cláusulas';
+        btnClausulas.style.background = 'rgba(79, 209, 197, 0.15)';
+        btnClausulas.style.borderColor = '#4fd1c5';
+        btnClausulas.style.color = '#4fd1c5';
+        btnClausulas.onclick = function(e) { e.stopPropagation(); mostrarClausulasNoDrawer(contentBoxFinal.innerHTML); };
+        actions.appendChild(btnClausulas);
     }
+
+    var btnPDF = document.createElement('button');
+    btnPDF.className = 'msg-action-btn';
+    btnPDF.innerHTML = '📄 Baixar PDF';
+    btnPDF.onclick = function(e){ e.stopPropagation(); baixarPDF(divTemp.id); };
+    actions.appendChild(btnPDF);
+
+    var btnWord = document.createElement('button');
+    btnWord.className = 'msg-action-btn';
+    btnWord.innerHTML = '📝 Baixar Word';
+    btnWord.onclick = function(e){ e.stopPropagation(); baixarWord(divTemp.id); };
+    actions.appendChild(btnWord);
 
     var tokenInfoDiv = contentBoxFinal.querySelector('div[style*="border-top"]');
     if (tokenInfoDiv) {
@@ -2522,6 +2546,11 @@ async function chamarIA(mensagemUsuario){
     extrairMemorias(); 
 
   } catch(err) {
+    // Restaura o botão em caso de erro
+    btnSend.innerHTML = svgEnviarOriginal;
+    btnSend.style.background = corOriginal;
+    btnSend.onclick = function() { enviarMensagem(); };
+
     var boxErro = divTemp.querySelector('.msg-ai-content');
     if(boxErro) {
       boxErro.innerHTML = '❌ Erro: ' + err.message;
