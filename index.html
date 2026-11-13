@@ -2108,6 +2108,8 @@ var conversaAtual = [];
 // Variável global de controle
 var isImageAttached = false;
 var imagensAnexadas = []; 
+// Variável para controlar o cancelamento da resposta da IA
+let controllerResposta = null;
 
 function aoSelecionarArquivo(input){
   if(!input.files || input.files.length === 0) return;
