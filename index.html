@@ -3822,6 +3822,27 @@ function mostrarClausulasNoDrawer(htmlContent) {
   document.getElementById('drawerContent').innerHTML = textoFinal;
   abrirDrawer();
 }
+async function conectarDrive() {
+  // 1. Pega o token do Google que o Supabase guardou no login
+  const { data, error } = await supabase.auth.getSession();
+  const providerToken = data?.session?.provider_token;
+
+  if (!providerToken) {
+    alert("Você precisa fazer login com o Google para acessar o Drive. Faça logout e entre novamente com o Google.");
+    return;
+  }
+
+  // 2. Chama a API do Google para listar os arquivos PDF
+  const resposta = await fetch('https://www.googleapis.com/drive/v3/files?q=mimeType="application/pdf"&fields=files(id,name)', {
+    headers: {
+      'Authorization': `Bearer ${providerToken}`
+    }
+  });
+
+  const arquivos = await resposta.json();
+  console.log("Arquivos encontrados:", arquivos.files);
+  // Aqui você pode criar uma tela para mostrar esses arquivos e o usuário escolher qual importar.
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
