@@ -3497,41 +3497,6 @@ function aplicarIdioma(idioma) {
   localStorage.setItem('contractai_idioma', idioma);
 }
 
-// 2. Função que troca os textos na tela
-function aplicarIdioma(idioma) {
-  const dic = traducoes[idioma] || traducoes.pt;
-
-  // Traduz a tela de Login
-  const h1Login = document.querySelector('#screen-login h1');
-  if (h1Login) h1Login.innerText = dic.bemVindo;
-
-  const subLogin = document.querySelector('#screen-login .sub');
-  if (subLogin) subLogin.innerText = dic.acesseConta;
-
-  const btnLogin = document.getElementById('btnLogin');
-  if (btnLogin) btnLogin.innerText = dic.btnEntrar;
-
-  // Traduz o Chat
-  const inputChat = document.querySelector('.chat-input');
-  if (inputChat) inputChat.placeholder = dic.chatPlaceholder;
-
-  // Traduz as Configurações
-  const tituloConfig = document.querySelector('#screen-settings h1');
-  if (tituloConfig) tituloConfig.innerText = dic.tituloConfig;
-
-  // Salva no navegador para lembrar a escolha
-  localStorage.setItem('contractai_idioma', idioma);
-
-  // 👇 AVISA A IA QUAL IDIOMA ELA DEVE USAR NAS RESPOSTAS 👇
-  if (idioma === 'en') {
-    localStorage.setItem('contractai_prompt_idioma', "IMPORTANT: Always respond in English.");
-  } else if (idioma === 'es') {
-    localStorage.setItem('contractai_prompt_idioma', "IMPORTANTE: Responde siempre en Español.");
-  } else {
-    localStorage.setItem('contractai_prompt_idioma', ""); // Padrão é Português
-  }
-}
-
 // 3. Função chamada quando o usuário muda o select
 function mudarIdioma(idioma) {
   aplicarIdioma(idioma);
@@ -3842,35 +3807,6 @@ function pararGravacaoVisual() {
     btnMic.style.color = '#fff';
   }
   if(chatInput) chatInput.placeholder = "Olá, como posso ajudar?";
-}
-function abrirDrawer() {
-  document.getElementById('drawerClausulas').classList.add('open');
-  document.getElementById('drawerOverlay').classList.add('open');
-}
-function fecharDrawer() {
-  document.getElementById('drawerClausulas').classList.remove('open');
-  document.getElementById('drawerOverlay').classList.remove('open');
-}
-
-// Função para extrair só as cláusulas de uma mensagem (usada no botão da resposta da IA)
-function mostrarClausulasNoDrawer(htmlContent) {
-  // Pega todo o texto da mensagem e tenta separar apenas os blocos de reescrita
-  const tempDiv = document.createElement('div');
-  tempDiv.innerHTML = htmlContent;
-  
-  // Pega os textos que estão depois de "✅ Texto Corrigido"
-  let textoFinal = "";
-  const elementos = tempDiv.querySelectorAll('p, li');
-  elementos.forEach(el => {
-    if (el.innerText.includes('✅') || el.innerText.includes('Texto Corrigido')) {
-       textoFinal += "<div style='background:rgba(79,209,197,0.1); border-left:3px solid #4fd1c5; padding:10px; margin-bottom:10px; border-radius:4px;'>" + el.innerHTML + "</div>";
-    }
-  });
-
-  if (textoFinal === "") textoFinal = "<p class='muted'>Nenhuma cláusula específica encontrada. Veja o texto completo na conversa.</p>";
-  
-  document.getElementById('drawerContent').innerHTML = textoFinal;
-  abrirDrawer();
 }
 function abrirDrawer() {
   document.getElementById('drawerClausulas').classList.add('open');
