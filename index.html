@@ -3351,72 +3351,151 @@ function iniciarMonitoramentoPagamento(userId) {
     }
   }, 3000); // Checa a cada 3 segundos
 }
-async function loginComProvedor(provedor, event) {
-  if(event) event.preventDefault();
-  
-  var btn = event.currentTarget;
-  var textoOriginal = btn.innerHTML;
-  btn.innerHTML = 'Redirecionando...';
-  btn.style.opacity = '0.7';
-
-  try {
-    // Configuração extra para forçar o seletor de contas
-    const opcoes = {
-      redirectTo: window.location.origin
-    };
-
-    // Força o Google a mostrar a tela de escolha de contas
-    if (provedor === 'google') {
-      opcoes.queryParams = {
-        prompt: 'select_account' // Parâmetro oficial do Google [citation:2][citation:12]
-      };
-    }
-
-    // Força a Microsoft a mostrar a tela de escolha de contas
-    if (provedor === 'azure') {
-      opcoes.queryParams = {
-        prompt: 'select_account' // Parâmetro oficial da Microsoft [citation:5]
-      };
-    }
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: provedor,
-      options: opcoes
-    });
-
-    if (error) throw error;
-
-  } catch (error) {
-    console.error("Erro no login social:", error.message);
-    alert("Erro ao tentar conectar: " + error.message);
-    btn.innerHTML = textoOriginal;
-    btn.style.opacity = '1';
-  }
-}
-// 1. Dicionário com os textos que queremos traduzir no site
+// ==========================================
+// 🌍 DICIONÁRIO DE TRADUÇÕES (EXPANDIDO)
+// ==========================================
 const traducoes = {
   pt: {
+    // Login
     bemVindo: "Bem-vindo de volta",
     acesseConta: "Acesse sua conta para continuar criando.",
     btnEntrar: "Entrar / Criar Conta",
+    redirecionando: "Redirecionando...",
+    // Chat e Sidebar
     chatPlaceholder: "Olá, como posso ajudar?",
-    tituloConfig: "Configurações"
+    novaConversa: "Nova Conversa",
+    historico: "Histórico",
+    // Configurações
+    tituloConfig: "Configurações",
+    labelSuporte: "Suporte",
+    labelPlanos: "Planos e Limites",
+    labelSair: "Sair da conta",
+    // Tela de Planos
+    planoAtual: "PLANO ATUAL",
+    gratuito: "Gratuito",
+    ativo: "Ativo",
+    creditosDisponiveis: "Créditos disponíveis",
+    facaUpgrade: "Faça Upgrade",
+    planoEssencial: "Plano Essencial",
+    planoProfissional: "Plano Profissional",
+    assinarPor: "Assinar por"
   },
   en: {
+    // Login
     bemVindo: "Welcome back",
     acesseConta: "Access your account to continue creating.",
     btnEntrar: "Login / Create Account",
+    redirecionando: "Redirecting...",
+    // Chat e Sidebar
     chatPlaceholder: "Hello, how can I help?",
-    tituloConfig: "Settings"
+    novaConversa: "New Chat",
+    historico: "History",
+    // Configurações
+    tituloConfig: "Settings",
+    labelSuporte: "Support",
+    labelPlanos: "Plans & Limits",
+    labelSair: "Log out",
+    // Tela de Planos
+    planoAtual: "CURRENT PLAN",
+    gratuito: "Free",
+    ativo: "Active",
+    creditosDisponiveis: "Available credits",
+    facaUpgrade: "Upgrade Now",
+    planoEssencial: "Essential Plan",
+    planoProfissional: "Professional Plan",
+    assinarPor: "Subscribe for"
   },
   es: {
+    // Login
     bemVindo: "Bienvenido de nuevo",
     acesseConta: "Accede a tu cuenta para seguir creando.",
     btnEntrar: "Entrar / Crear Cuenta",
+    redirecionando: "Redirigiendo...",
+    // Chat e Sidebar
     chatPlaceholder: "Hola, ¿cómo puedo ayudar?",
-    tituloConfig: "Ajustes"
+    novaConversa: "Nueva Conversación",
+    historico: "Historial",
+    // Configurações
+    tituloConfig: "Ajustes",
+    labelSuporte: "Soporte",
+    labelPlanos: "Planes y Límites",
+    labelSair: "Cerrar sesión",
+    // Tela de Planos
+    planoAtual: "PLAN ACTUAL",
+    gratuito: "Gratis",
+    ativo: "Activo",
+    creditosDisponiveis: "Créditos disponibles",
+    facaUpgrade: "Hacer Upgrade",
+    planoEssencial: "Plan Esencial",
+    planoProfissional: "Plan Profesional",
+    assinarPor: "Suscribirse por"
   }
 };
+
+// ==========================================
+// 🌍 FUNÇÃO QUE APLICA A TRADUÇÃO NA TELA
+// ==========================================
+function aplicarIdioma(idioma) {
+  const dic = traducoes[idioma] || traducoes.pt;
+
+  // --- TELA DE LOGIN ---
+  const h1Login = document.querySelector('#screen-login h1');
+  if (h1Login) h1Login.innerText = dic.bemVindo;
+  const subLogin = document.querySelector('#screen-login .sub');
+  if (subLogin) subLogin.innerText = dic.acesseConta;
+  const btnLogin = document.getElementById('btnLogin');
+  if (btnLogin) btnLogin.innerText = dic.btnEntrar;
+
+  // --- CHAT E SIDEBAR ---
+  const inputChat = document.querySelector('.chat-input');
+  if (inputChat) inputChat.placeholder = dic.chatPlaceholder;
+  
+  // Botão Nova Conversa da Sidebar
+  const btnNovaConversa = document.querySelector('.sidebar .btn-primary');
+  if (btnNovaConversa) {
+      // Mantém o ícone SVG e troca apenas o texto
+      btnNovaConversa.innerHTML = btnNovaConversa.innerHTML.replace(/Nova Conversa|New Chat|Nueva Conversación/g, dic.novaConversa);
+  }
+  
+  // Título do Histórico na Sidebar
+  const tituloHistorico = document.querySelector('.sidebar-date');
+  if (tituloHistorico) tituloHistorico.innerText = dic.historico;
+
+  // --- CONFIGURAÇÕES ---
+  const tituloConfig = document.querySelector('#screen-settings h1');
+  if (tituloConfig) tituloConfig.innerText = dic.tituloConfig;
+  
+  // Botões de Configurações (usando IDs ou seletores)
+  const elPlanos = document.querySelector('button[onclick*="settings-planos"] .settings-label');
+  if (elPlanos) elPlanos.innerText = dic.labelPlanos;
+  
+  const elSuporte = document.querySelector('button[onclick*="mailto"] .settings-label');
+  if (elSuporte) elSuporte.innerText = dic.labelSuporte;
+  
+  const elSair = document.querySelector('.btn-logout');
+  if (elSair) {
+      elSair.innerHTML = elSair.innerHTML.replace(/Sair da conta|Log out|Cerrar sesión/g, dic.labelSair);
+  }
+
+  // --- TELA DE PLANOS ---
+  const elPlanoAtual = document.querySelector('#screen-settings-planos .muted');
+  if (elPlanoAtual && elPlanoAtual.innerText.includes('PLANO')) elPlanoAtual.innerText = dic.planoAtual;
+  
+  const elGratuito = document.getElementById('planName');
+  if (elGratuito && elGratuito.innerText === 'Gratuito') elGratuito.innerText = dic.gratuito;
+  
+  const elAtivo = document.querySelector('#screen-settings-planos .card div[style*="rgba(79,141,255,0.2)"]');
+  if (elAtivo) elAtivo.innerText = dic.ativo;
+  
+  const elCreditos = document.querySelector('#screen-settings-planos span[style*="rgba(255,255,255,0.7)"]');
+  if (elCreditos) elCreditos.innerText = dic.creditosDisponiveis;
+
+  const elFacaUpgrade = document.querySelector('#screen-settings-planos h3');
+  if (elFacaUpgrade) elFacaUpgrade.innerText = dic.facaUpgrade;
+
+  // Salva a escolha no navegador
+  localStorage.setItem('contractai_idioma', idioma);
+}
 
 // 2. Função que troca os textos na tela
 function aplicarIdioma(idioma) {
