@@ -2639,6 +2639,14 @@ async function chamarIA(mensagemUsuario){
     } else {
         contentBoxFinal.appendChild(actions);
     }
+        var btnSheets = document.createElement('button');
+    btnSheets.className = 'msg-action-btn';
+    btnSheets.innerHTML = '📊 Exportar para Planilha';
+    btnSheets.onclick = function(e){ 
+        e.stopPropagation(); 
+        exportarParaSheets(textoFinalLimpo, btnSheets); 
+    };
+    actions.appendChild(btnSheets);
     
     salvarConversaAtual(); 
     extrairMemorias(); 
@@ -4043,7 +4051,7 @@ async function loginComProvedor(provedor, event) {
         access_type: 'offline'
       };
       // 👇 CORREÇÃO: O escopo agora fica fora do queryParams
-      opcoes.scopes = 'https://www.googleapis.com/auth/drive.readonly';
+     opcoes.scopes = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets';
     }
 
     // Força a Microsoft a mostrar a tela de escolha de contas
@@ -4065,6 +4073,76 @@ async function loginComProvedor(provedor, event) {
     alert("Erro ao tentar conectar: " + error.message);
     btn.innerHTML = textoOriginal;
     btn.style.opacity = '1';
+  }
+}
+// ==========================================
+// 📊 INTEGRAÇÃO COM GOOGLE SHEETS
+// ==========================================
+async function exportarParaSheets(textoAnalise, btnElement) {
+  const { data } = await supabase.auth.getSession();
+  const providerToken = data?.session?.provider_token;
+
+  if (!providerToken) {
+    alert("⚠️ Você precisa estar logado com o Google para exportar planilhas.");
+    return;
+  }
+
+  const textoOriginal = btnElement.innerHTML;
+  btnElement.innerHTML = '⏳ Criando planilha...';
+  btnElement.disabled = true;
+
+  try {
+    // 1. Cria uma planilha nova no Drive do usuário
+    const respostaCriar = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${providerToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        properties: {
+          title: `Análise Macrus - ${new Date().toLocaleDateString('pt-BR')}`
+        }
+      })
+    });
+
+    if (!respostaCriar.ok) throw new Error("Falha ao criar a planilha no Google.");
+    const planilha = await respostaCriar.json();
+    const spreadsheetId = planilha.spreadsheetId;
+
+    // 2. Prepara os dados para enviar (Dividindo o texto por parágrafos)
+    // A IA costuma usar emojis e tópicos, então quebramos o texto por linhas
+    const linhas = textoAnalise.split('\n').map(linha => [linha.trim()]);
+
+    // 3. Envia os dados para a primeira aba da planilha
+    const respostaEnviar = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A1:append?valueInputOption=USER_ENTERED`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${providerToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        values: linhas
+      })
+    });
+
+    if (!respostaEnviar.ok) throw new Error("Falha ao preencher a planilha.");
+
+    btnElement.innerHTML = '✅ Planilha Criada!';
+    
+    // Abre a planilha em uma nova aba
+    window.open(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`, '_blank');
+    
+    setTimeout(() => {
+        btnElement.innerHTML = textoOriginal;
+        btnElement.disabled = false;
+    }, 3000);
+
+  } catch (err) {
+    console.error(err);
+    alert("Erro ao exportar: " + err.message);
+    btnElement.innerHTML = textoOriginal;
+    btnElement.disabled = false;
   }
 }
 </script>
