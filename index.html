@@ -3135,10 +3135,14 @@ supabase.auth.onAuthStateChange(async function(event, session) {
 
   if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
     if (session && session.user) {
+      // Salva os dados do usuário
       localStorage.setItem('contractai_user_id', session.user.id);
       atualizarDadosUsuario(session.user.email);
       renderizarHistorico();
       verificarAdmin(session.user.id);
+      
+      // 👇 A MÁGICA ACONTECE AQUI: Força ir para o dashboard após o login
+      go('dashboard'); 
     }
   } else if (event === 'SIGNED_OUT') {
     localStorage.removeItem('contractai_user_id');
