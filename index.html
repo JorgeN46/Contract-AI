@@ -1416,13 +1416,68 @@ Sair da conta
 <!-- ============ TELA 7: PLUGINS ============ -->
 <div id="screen-settings-plugins" class="screen">
 <div class="wrap" style="min-height:100vh;padding:60px 24px 80px;max-width:560px">
-<button class="back-btn" onclick="go('settings')" title="Voltar">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-</button>
-<h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin:20px 0 24px">Plugins</h1>
-<div class="card" style="text-align:center;padding:40px 24px">
-<p class="muted" style="margin:0">Em breve você poderá conectar integrações: Google Drive, Dropbox, e-mail e mais.</p>
-</div>
+  <button class="back-btn" onclick="go('settings')" title="Voltar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:24px;height:24px"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+  </button>
+  
+  <h1 style="font-size:28px;font-weight:700;letter-spacing:-.02em;margin:20px 0 8px">Plugins</h1>
+  <p class="muted" style="margin-top:0;margin-bottom:24px">Conecte suas ferramentas de trabalho para acelerar ainda mais o Macrus.</p>
+
+  <div class="grid g2" style="grid-template-columns: 1fr; gap: 16px;">
+    
+    <!-- PLUGIN: GOOGLE DRIVE -->
+    <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding: 16px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:40px; height:40px; background:rgba(255,255,255,0.05); border-radius:10px; display:grid; place-items:center;">
+          <svg viewBox="0 0 24 24" style="width:24px;height:24px;"><path fill="#4285F4" d="M14.5 2L9.5 11H21L16 2H14.5ZM7.5 2L2 12L5 17L10.5 7L7.5 2ZM22 13H12L9 18H19L22 13Z"/></svg>
+        </div>
+        <div>
+          <h4 style="color:#fff; font-size:15px; margin:0;">Google Drive</h4>
+          <p class="muted" style="font-size:12px; margin:0;">Importar PDFs e Docs direto da nuvem.</p>
+        </div>
+      </div>
+      <button onclick="conectarDrive()" class="btn btn-primary" style="padding:8px 12px; font-size:12px;">Conectar</button>
+    </div>
+
+    <!-- PLUGIN: CANVA -->
+    <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding: 16px; opacity: 0.6;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:40px; height:40px; background:rgba(255,255,255,0.05); border-radius:10px; display:grid; place-items:center; color:#00C4CC; font-weight:bold; font-size:20px;">C</div>
+        <div>
+          <h4 style="color:#fff; font-size:15px; margin:0;">Canva</h4>
+          <p class="muted" style="font-size:12px; margin:0;">Gerar apresentações a partir de análises.</p>
+        </div>
+      </div>
+      <button class="btn btn-ghost" style="padding:8px 12px; font-size:12px;" disabled>Em breve</button>
+    </div>
+
+    <!-- PLUGIN: GOOGLE SHEETS -->
+    <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding: 16px; opacity: 0.6;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:40px; height:40px; background:rgba(255,255,255,0.05); border-radius:10px; display:grid; place-items:center;">
+          <svg viewBox="0 0 24 24" style="width:24px;height:24px;"><path fill="#0F9D58" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm0-4H7v-2h5v2zm5 4h-3v-2h3v2zm0-4h-3v-2h3v2z"/></svg>
+        </div>
+        <div>
+          <h4 style="color:#fff; font-size:15px; margin:0;">Google Sheets</h4>
+          <p class="muted" style="font-size:12px; margin:0;">Exportar dados extraídos para planilhas.</p>
+        </div>
+      </div>
+      <button class="btn btn-ghost" style="padding:8px 12px; font-size:12px;" disabled>Em breve</button>
+    </div>
+
+    <!-- PLUGIN: NOTION -->
+    <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding: 16px; opacity: 0.6;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:40px; height:40px; background:rgba(255,255,255,0.05); border-radius:10px; display:grid; place-items:center; color:#fff; font-weight:bold; font-size:20px;">N</div>
+        <div>
+          <h4 style="color:#fff; font-size:15px; margin:0;">Notion</h4>
+          <p class="muted" style="font-size:12px; margin:0;">Enviar resumos para suas páginas.</p>
+        </div>
+      </div>
+      <button class="btn btn-ghost" style="padding:8px 12px; font-size:12px;" disabled>Em breve</button>
+    </div>
+
+  </div>
 </div>
 </div><!-- /settings-plugins -->
 
