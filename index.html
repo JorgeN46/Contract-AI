@@ -3080,9 +3080,11 @@ async function carregarPersonalizacaoDoBanco(userId) {
   }
 }
 window.addEventListener('DOMContentLoaded', function(){
-    var idiomaSalvo = localStorage.getItem('contractai_idioma') || 'pt';
-  document.getElementById('seletorIdioma').value = idiomaSalvo;
+  var idiomaSalvo = localStorage.getItem('contractai_idioma') || 'pt';
+  var seletor = document.getElementById('seletorIdioma');
+  if (seletor) seletor.value = idiomaSalvo;
   aplicarIdioma(idiomaSalvo);
+
   // 1. Sincroniza o modo ativo (rápido)
   var modoSalvo = localStorage.getItem('contractai_mode') || 'padrao';
   document.querySelectorAll('.personalizacao-item').forEach(function(item) {
@@ -3095,29 +3097,39 @@ window.addEventListener('DOMContentLoaded', function(){
   });
   atualizarTelaInicial(modoSalvo);
 
-  // 2. Verifica no Supabase se o usuário já está logado
-  supabase.auth.getSession().then(function(res) {
-      if (res.data.session && res.data.session.user) {
-          // USUÁRIO ESTÁ LOGADO!
-          localStorage.setItem('contractai_user_id', res.data.session.user.id);
-          atualizarDadosUsuario(res.data.session.user.email);
-          carregarPersonalizacaoDoBanco(res.data.session.user.id); 
-          renderizarHistorico();
+  // 2. Mostra um feedback visual na tela de login (para não piscar a Landing)
+  go('login');
+  var feedback = document.getElementById('loginFeedback');
+  if (feedback) feedback.textContent = "Verificando sessão...";
 
-          verificarAdmin(res.data.session.user.id); 
+  // 3. Aguarda 1 segundo para o Supabase ler o Token do Google na URL
+  setTimeout(async () => {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (session && session.user) {
+        // USUÁRIO ESTÁ LOGADO! (E-mail ou Google)
+        localStorage.setItem('contractai_user_id', session.user.id);
+        atualizarDadosUsuario(session.user.email);
+        carregarPersonalizacaoDoBanco(session.user.id); 
+        renderizarHistorico();
+        verificarAdmin(session.user.id); 
         
-          // Abre direto no chat
-          go('dashboard'); 
-      } else {
-          // USUÁRIO NÃO ESTÁ LOGADO
-          localStorage.removeItem('contractai_user_id');
-          atualizarDadosUsuario(null);
-          
-          // Mostra a Landing Page para vender o produto
-          document.getElementById('screen-landing').style.display = 'block'; 
-      }
-  });
+        if (feedback) feedback.textContent = "";
+        go('dashboard'); 
+    } else {
+        // USUÁRIO NÃO ESTÁ LOGADO
+        localStorage.removeItem('contractai_user_id');
+        atualizarDadosUsuario(null);
+        
+        if (feedback) feedback.textContent = "";
+        
+        // Mostra a Landing Page para vender o produto
+        document.getElementById('screen-landing').style.display = 'block'; 
+        go('landing');
+    }
+  }, 1000); // 1 segundo de espera (tempo seguro para o OAuth do Google)
 });
+
 // Fica ouvindo as mudanças de login (renovação de token, logout, etc)
 supabase.auth.onAuthStateChange(async function(event, session) {
   
@@ -3135,13 +3147,12 @@ supabase.auth.onAuthStateChange(async function(event, session) {
 
   if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
     if (session && session.user) {
-      // Salva os dados do usuário
       localStorage.setItem('contractai_user_id', session.user.id);
       atualizarDadosUsuario(session.user.email);
       renderizarHistorico();
       verificarAdmin(session.user.id);
       
-      // 👇 A MÁGICA ACONTECE AQUI: Força ir para o dashboard após o login
+      // Força o redirecionamento para o dashboard
       go('dashboard'); 
     }
   } else if (event === 'SIGNED_OUT') {
