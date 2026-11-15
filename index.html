@@ -3858,6 +3858,54 @@ async function conectarDrive() {
   console.log("Arquivos encontrados:", arquivos.files);
   // Aqui você pode criar uma tela para mostrar esses arquivos e o usuário escolher qual importar.
 }
+async function loginComProvedor(provedor, event) {
+  if(event) event.preventDefault();
+  
+  var btn = event.currentTarget;
+  var textoOriginal = btn.innerHTML;
+  
+  // Pega o idioma atual do usuário para traduzir o botão
+  var idiomaAtual = localStorage.getItem('contractai_idioma') || 'pt';
+  var dic = traducoes[idiomaAtual] || traducoes.pt;
+  
+  btn.innerHTML = dic.redirecionando;
+  btn.style.opacity = '0.7';
+
+  try {
+    const opcoes = {
+      redirectTo: window.location.origin
+    };
+
+    // Força o Google a mostrar a tela de escolha de contas e pede acesso ao Drive
+    if (provedor === 'google') {
+      opcoes.queryParams = {
+        prompt: 'select_account',
+        access_type: 'offline',
+        scope: 'https://www.googleapis.com/auth/drive.readonly'
+      };
+    }
+
+    // Força a Microsoft a mostrar a tela de escolha de contas
+    if (provedor === 'azure') {
+      opcoes.queryParams = {
+        prompt: 'select_account'
+      };
+    }
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: provedor,
+      options: opcoes
+    });
+
+    if (error) throw error;
+
+  } catch (error) {
+    console.error("Erro no login social:", error.message);
+    alert("Erro ao tentar conectar: " + error.message);
+    btn.innerHTML = textoOriginal;
+    btn.style.opacity = '1';
+  }
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
