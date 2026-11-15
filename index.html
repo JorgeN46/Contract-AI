@@ -3207,8 +3207,11 @@ supabase.auth.onAuthStateChange(async function(event, session) {
       renderizarHistorico();
       verificarAdmin(session.user.id);
       
-      // Força o redirecionamento para o dashboard
-      go('dashboard'); 
+      // 👇 CORREÇÃO: Só vai pro dashboard se estiver no login ou na landing
+      var telaAtual = document.querySelector('.screen.active');
+      if (telaAtual && (telaAtual.id === 'screen-login' || telaAtual.id === 'screen-landing')) {
+          go('dashboard'); 
+      }
     }
   } else if (event === 'SIGNED_OUT') {
     localStorage.removeItem('contractai_user_id');
@@ -3934,7 +3937,6 @@ async function loginComProvedor(provedor, event) {
   var btn = event.currentTarget;
   var textoOriginal = btn.innerHTML;
   
-  // Pega o idioma atual do usuário para traduzir o botão
   var idiomaAtual = localStorage.getItem('contractai_idioma') || 'pt';
   var dic = traducoes[idiomaAtual] || traducoes.pt;
   
@@ -3946,13 +3948,14 @@ async function loginComProvedor(provedor, event) {
       redirectTo: window.location.origin
     };
 
-    // Força o Google a mostrar a tela de escolha de contas e pede acesso ao Drive
+    // Força o Google a mostrar a tela de escolha de contas
     if (provedor === 'google') {
       opcoes.queryParams = {
         prompt: 'select_account',
-        access_type: 'offline',
-        scope: 'https://www.googleapis.com/auth/drive.readonly'
+        access_type: 'offline'
       };
+      // 👇 CORREÇÃO: O escopo agora fica fora do queryParams
+      opcoes.scopes = 'https://www.googleapis.com/auth/drive.readonly';
     }
 
     // Força a Microsoft a mostrar a tela de escolha de contas
