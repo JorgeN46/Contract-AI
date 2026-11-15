@@ -800,6 +800,15 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+/* Botão de arquivo do Drive */
+.drive-file-btn {
+  display: flex; align-items: center; gap: 10px; padding: 12px; 
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); 
+  border-radius: 8px; color: #fff; cursor: pointer; text-align: left; width: 100%;
+  font-family: inherit; transition: 0.2s;
+}
+.drive-file-btn:hover { background: rgba(79,141,255,0.1); border-color: rgba(79,141,255,0.3); }
+.drive-file-btn:disabled { opacity: 0.5; cursor: wait; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
@@ -3910,26 +3919,105 @@ function mostrarClausulasNoDrawer(htmlContent) {
   document.getElementById('drawerContent').innerHTML = textoFinal;
   abrirDrawer();
 }
+// ==========================================
+// 📂 INTEGRAÇÃO COM O GOOGLE DRIVE
+// ==========================================
+
 async function conectarDrive() {
-  // 1. Pega o token do Google que o Supabase guardou no login
-  const { data, error } = await supabase.auth.getSession();
+  const { data } = await supabase.auth.getSession();
   const providerToken = data?.session?.provider_token;
 
   if (!providerToken) {
-    alert("Você precisa fazer login com o Google para acessar o Drive. Faça logout e entre novamente com o Google.");
+    alert("⚠️ Você precisa fazer login com o Google para acessar o Drive.\n\nSe você entrou com e-mail e senha, saia e entre novamente usando o botão 'Continuar com Google'.");
     return;
   }
 
-  // 2. Chama a API do Google para listar os arquivos PDF
-  const resposta = await fetch('https://www.googleapis.com/drive/v3/files?q=mimeType="application/pdf"&fields=files(id,name)', {
-    headers: {
-      'Authorization': `Bearer ${providerToken}`
-    }
-  });
+  // Abre o modal e mostra o "Carregando"
+  document.getElementById('driveModalOverlay').classList.add('open');
+  document.getElementById('driveModal').classList.add('open');
+  const lista = document.getElementById('driveFilesList');
+  lista.innerHTML = '<div style="text-align:center; color:#7db4ff; margin-top:20px;">Buscando arquivos no seu Drive...</div>';
 
-  const arquivos = await resposta.json();
-  console.log("Arquivos encontrados:", arquivos.files);
-  // Aqui você pode criar uma tela para mostrar esses arquivos e o usuário escolher qual importar.
+  try {
+    // Busca apenas PDFs (para evitar arquivos que o Macrus não consegue ler)
+    const resposta = await fetch('https://www.googleapis.com/drive/v3/files?q=mimeType="application/pdf"&fields=files(id,name,size)&orderBy=modifiedTime desc&pageSize=20', {
+      headers: { 'Authorization': `Bearer ${providerToken}` }
+    });
+
+    if (!resposta.ok) throw new Error("Erro ao buscar arquivos. O token do Google pode ter expirado. Faça login novamente.");
+    
+    const arquivos = await resposta.json();
+    lista.innerHTML = '';
+
+    if (!arquivos.files || arquivos.files.length === 0) {
+      lista.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.5); margin-top:20px;">Nenhum PDF encontrado no seu Drive.</div>';
+      return;
+    }
+
+    // Cria a lista de botões
+    arquivos.files.forEach(file => {
+      const btn = document.createElement('button');
+      btn.className = 'drive-file-btn';
+      btn.innerHTML = `<span style="font-size:18px;">📄</span> <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${file.name}</span>`;
+      btn.onclick = () => baixarArquivoDrive(file.id, file.name, providerToken, btn);
+      lista.appendChild(btn);
+    });
+
+  } catch (err) {
+    lista.innerHTML = `<div style="text-align:center; color:#fca5a5; margin-top:20px;">❌ Erro: ${err.message}</div>`;
+  }
+}
+
+function fecharDriveModal() {
+  document.getElementById('driveModalOverlay').classList.remove('open');
+  document.getElementById('driveModal').classList.remove('open');
+}
+
+async function baixarArquivoDrive(fileId, fileName, token, btnElement) {
+  btnElement.disabled = true;
+  const textoOriginal = btnElement.innerHTML;
+  btnElement.innerHTML = `<span style="font-size:18px;">⏳</span> <span style="flex:1;">Baixando e extraindo texto...</span>`;
+
+  try {
+    // Baixa o arquivo do Drive
+    const resposta = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!resposta.ok) throw new Error("Falha no download.");
+    
+    const arrayBuffer = await resposta.arrayBuffer();
+
+    // Usa o PDF.js para extrair o texto
+    const pdf = await pdfjsLib.getDocument(new Uint8Array(arrayBuffer)).promise;
+    let fullText = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map(s => s.str).join(' ');
+      fullText += `\n--- ${fileName} - Página ${i+1} ---\n${pageText.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim()}`;
+    }
+
+    // Configura o arquivo no chat (igual ao upload manual)
+    arquivoAnexado = fileName;
+    textoArquivoExtraido = fullText;
+    isImageAttached = false;
+
+    document.getElementById('attachName').textContent = arquivoAnexado + ' (Importado do Drive)';
+    document.getElementById('attachPreview').classList.add('active');
+    
+    fecharDriveModal();
+    
+    // Foca no input para o usuário digitar o que quer fazer com o arquivo
+    document.querySelector('.chat-input').focus();
+
+  } catch (err) {
+    console.error(err);
+    alert("Erro ao baixar ou ler o PDF do Drive: " + err.message);
+    btnElement.disabled = false;
+    btnElement.innerHTML = textoOriginal;
+  }
 }
 async function loginComProvedor(provedor, event) {
   if(event) event.preventDefault();
@@ -4019,5 +4107,19 @@ async function loginComProvedor(provedor, event) {
     <!-- Conteúdo vai aparecer aqui -->
   </div>
 </aside>
+<!-- Modal do Google Drive -->
+<div class="modal-overlay" id="driveModalOverlay" onclick="fecharDriveModal()"></div>
+<div class="modal-box" id="driveModal" style="max-width:480px; height:70vh;">
+  <div class="modal-header">
+    <h3 style="display:flex; align-items:center; gap:8px;">
+      <svg viewBox="0 0 24 24" style="width:24px;height:24px;"><path fill="#4285F4" d="M14.5 2L9.5 11H21L16 2H14.5ZM7.5 2L2 12L5 17L10.5 7L7.5 2ZM22 13H12L9 18H19L22 13Z"/></svg>
+      Arquivos no Google Drive
+    </h3>
+    <button class="modal-close" onclick="fecharDriveModal()">×</button>
+  </div>
+  <div class="modal-content" id="driveFilesList" style="padding:16px; display:flex; flex-direction:column; gap:8px;">
+    <!-- A lista vai aparecer aqui -->
+  </div>
+</div>
 </body>
 </html>
