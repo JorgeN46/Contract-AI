@@ -3969,48 +3969,96 @@ function mostrarClausulasNoDrawer(htmlContent) {
 // ==========================================
 
 async function conectarDrive() {
-  const { data } = await supabase.auth.getSession();
-  const providerToken = data?.session?.provider_token;
-
-  if (!providerToken) {
-    alert("⚠️ Você precisa fazer login com o Google para acessar o Drive.\n\nSe você entrou com e-mail e senha, saia e entre novamente usando o botão 'Continuar com Google'.");
-    return;
-  }
-
-  // Abre o modal e mostra o "Carregando"
+  // 1. Abre o modal com a mensagem de carregando
   document.getElementById('driveModalOverlay').classList.add('open');
   document.getElementById('driveModal').classList.add('open');
   const lista = document.getElementById('driveFilesList');
   lista.innerHTML = '<div style="text-align:center; color:#7db4ff; margin-top:20px;">Buscando arquivos no seu Drive...</div>';
 
   try {
-    // Busca apenas PDFs (para evitar arquivos que o Macrus não consegue ler)
-    const resposta = await fetch('https://www.googleapis.com/drive/v3/files?q=mimeType="application/pdf"&fields=files(id,name,size)&orderBy=modifiedTime desc&pageSize=20', {
-      headers: { 'Authorization': `Bearer ${providerToken}` }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+        throw new Error("Você precisa estar logado.");
+    }
+
+    // 2. Chama a Edge Function do Supabase (que é segura e não expira)
+    const resposta = await fetch(`${SUPABASE_URL}/functions/v1/drive-list-files`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${session.access_token}` }
     });
 
-    if (!resposta.ok) throw new Error("Erro ao buscar arquivos. O token do Google pode ter expirado. Faça login novamente.");
-    
     const arquivos = await resposta.json();
+
+    if (arquivos.error) {
+        throw new Error(arquivos.error);
+    }
+    
     lista.innerHTML = '';
 
-    if (!arquivos.files || arquivos.files.length === 0) {
+    if (!arquivos || arquivos.length === 0) {
       lista.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.5); margin-top:20px;">Nenhum PDF encontrado no seu Drive.</div>';
       return;
     }
 
-    // Cria a lista de botões
-    arquivos.files.forEach(file => {
+    // 3. Cria a lista de botões (igual você fez)
+    arquivos.forEach(file => {
       const btn = document.createElement('button');
       btn.className = 'drive-file-btn';
       btn.innerHTML = `<span style="font-size:18px;">📄</span> <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${file.name}</span>`;
-      btn.onclick = () => baixarArquivoDrive(file.id, file.name, providerToken, btn);
+      
+      // Quando clicar, chama a função de baixar
+      btn.onclick = () => selecionarArquivoDrive(file, btn);
+      
       lista.appendChild(btn);
     });
 
   } catch (err) {
     lista.innerHTML = `<div style="text-align:center; color:#fca5a5; margin-top:20px;">❌ Erro: ${err.message}</div>`;
   }
+}
+async function selecionarArquivoDrive(arquivo, botao) {
+    // Muda o texto do botão para dar feedback visual
+    botao.innerHTML = '<span style="font-size:18px;">⏳</span> <span>Baixando...</span>';
+    
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        // Baixa o arquivo real do Google Drive (usando a API de media)
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${arquivo.id}?alt=media`, {
+            headers: { 'Authorization': `Bearer ${session.provider_token}` }
+        });
+        
+        if (!res.ok) throw new Error("Não foi possível baixar o arquivo. Token expirado.");
+        
+        const blob = await res.blob();
+        
+        // Transforma o Blob em um arquivo do sistema (File Object) para o seu chat processar
+        const file = new File([blob], arquivo.name, { type: 'application/pdf' });
+        
+        // Fecha o modal
+        document.getElementById('driveModalOverlay').classList.remove('open');
+        document.getElementById('driveModal').classList.remove('open');
+        
+        // 🔥 AQUI ELE CHAMA A SUA FUNÇÃO DE ANEXO LOCAL (que já existe no seu código)
+        // Simulamos o que acontece quando o usuário escolhe um arquivo no PC
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        
+        const inputElement = document.getElementById('fileInput');
+        inputElement.files = dataTransfer.files;
+        
+        // Chama a função de leitura do seu sistema
+        aoSelecionarArquivo(inputElement);
+        
+        // Como já colocamos no input, só falta avisar que é do Drive para a interface
+        isDriveFile = true;
+        document.getElementById('attachName').innerText = "📁 [Drive] " + arquivo.name;
+        document.getElementById('attachPreview').classList.add('active');
+
+    } catch (err) {
+        alert("Erro ao baixar do Drive: " + err.message);
+        botao.innerHTML = `<span style="font-size:18px;">📄</span> <span>${arquivo.name}</span>`; // volta ao normal
+    }
 }
 
 function fecharDriveModal() {
@@ -4599,6 +4647,17 @@ async function exportarParaNotion(botao) {
   <div style="padding:16px; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:flex-end; gap:10px;">
     <button class="btn btn-ghost" onclick="fecharEditor()">Cancelar</button>
     <button class="btn btn-primary" onclick="confirmarDownload()">Confirmar e Baixar</button>
+  </div>
+</div>
+<!-- Modal do Google Drive -->
+<div id="driveModalOverlay" class="modal-overlay" onclick="this.classList.remove('open'); document.getElementById('driveModal').classList.remove('open');"></div>
+<div id="driveModal" class="modal-box" style="max-width: 500px;">
+  <div class="modal-header">
+    <h3>Arquivos no Google Drive</h3>
+    <button class="modal-close" onclick="document.getElementById('driveModalOverlay').classList.remove('open'); this.closest('.modal-box').classList.remove('open');">×</button>
+  </div>
+  <div class="modal-content" id="driveFilesList" style="max-height: 400px; overflow-y: auto; padding: 16px;">
+    <!-- A lista de arquivos vai aparecer aqui via JavaScript -->
   </div>
 </div>
 </body>
