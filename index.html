@@ -1480,8 +1480,8 @@ Sair da conta
       <button class="btn btn-ghost" style="padding:8px 12px; font-size:12px;" disabled>Em breve</button>
     </div>
 
-    <!-- PLUGIN: NOTION -->
-    <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding: 16px; opacity: 0.6;">
+       <!-- PLUGIN: NOTION -->
+    <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding: 16px;">
       <div style="display:flex; align-items:center; gap:12px;">
         <div style="width:40px; height:40px; background:rgba(255,255,255,0.05); border-radius:10px; display:grid; place-items:center; color:#fff; font-weight:bold; font-size:20px;">N</div>
         <div>
@@ -1489,7 +1489,8 @@ Sair da conta
           <p class="muted" style="font-size:12px; margin:0;">Enviar resumos para suas páginas.</p>
         </div>
       </div>
-      <button class="btn btn-ghost" style="padding:8px 12px; font-size:12px;" disabled>Em breve</button>
+      <!-- Botão ativado que chama a função de OAuth -->
+      <button onclick="conectarNotion()" class="btn btn-primary" style="padding:8px 12px; font-size:12px;">Conectar</button>
     </div>
 
   </div>
@@ -4301,6 +4302,27 @@ async function testarNotion() {
     alert(`✅ Conectado! Encontrei ${dados.results.length} páginas.`);
   } catch (err) {
     alert("Erro: " + err.message);
+  }
+}
+// ==========================================
+// ⬛ CONEXÃO COM O NOTION VIA OAUTH (SUPABASE)
+// ==========================================
+async function conectarNotion() {
+  try {
+    // O Supabase vai gerar a URL de autorização do Notion
+    // e redirecionar o usuário para lá
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'notion',
+      options: {
+        redirectTo: window.location.origin + '/?notion=connected' // Volta pro site
+      }
+    });
+
+    if (error) throw error;
+    
+  } catch (error) {
+    console.error("Erro ao conectar Notion:", error.message);
+    alert("Erro ao conectar com o Notion: " + error.message);
   }
 }
 </script>
