@@ -818,14 +818,8 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // 1. Criando a conexão única e exclusiva com o Supabase
-  const SUPABASE_URL = "https://uzmmoypdllnoawunmnxg.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_h167SfQxm19PCEKFCcseSw_mgGxI9th";
-  
-  // Usamos window.supabase para garantir que estamos chamando a biblioteca global
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // 2. Configuração do PDF (separado)
+  // 1. Configuração do PDF (separado)
   if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
@@ -4543,93 +4537,6 @@ async function abrirDrive() {
         if(botaoDrive) {
             botaoDrive.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #4285F4; width:16px; height:16px; margin-right:8px;"><path d="M14.5 2L9.5 11H21L16 2H14.5ZM7.5 2L2 12L5 17L10.5 7L7.5 2ZM22 13H12L9 18H19L22 13Z"/></svg> Google Drive`;
         }
-    }
-}
-async function exportarParaNotion(botao) {
-    // Pega o texto da mensagem da IA
-    const msgContainer = botao.closest('.msg-ai-content');
-    const textoIA = msgContainer.innerText.replace("📋 Copiar", "").replace("📄 Baixar PDF", "").replace("📝 Baixar Word", "").replace("📓 Salvar no Notion", "").trim();
-
-    // Pede o ID da página do Notion (onde o usuário quer salvar)
-    // No futuro, isso pode ser um dropdown com as páginas puxadas da API
-    const parentId = prompt("Para salvar no Notion, cole o ID da página onde deseja criar essa nota (ou deixe em branco para salvar na raiz):");
-    
-    if (parentId === null) return; // Usuário cancelou
-    if (parentId === "") return alert("Você precisa informar o ID de uma página do Notion.");
-
-    botao.innerText = "Salvando...";
-    botao.disabled = true;
-
-    try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/notion-save-page`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                title: "Análise Macrus - " + new Date().toLocaleDateString('pt-BR'),
-                content: textoIA,
-                parentId: parentId
-            })
-        });
-        
-        const data = await res.json();
-        
-        if (data.url) {
-            alert("✅ Salvo no Notion com sucesso!");
-            window.open(data.url, '_blank'); // Abre a página criada
-        } else {
-            throw new Error(data.error || "Erro desconhecido");
-        }
-    } catch (e) {
-        alert("❌ Erro ao salvar: " + e.message);
-    } finally {
-        botao.innerText = "📓 Salvar no Notion";
-        botao.disabled = false;
-    }
-}
-async function testarDriveDebug() {
-    console.log("=== INICIANDO DEBUG DO DRIVE ===");
-    try {
-        // 1. Verifica se o usuário está logado
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw new Error("Erro na sessão: " + sessionError.message);
-        if (!session) throw new Error("Nenhuma sessão ativa. O usuário não está logado.");
-        
-        console.log("✅ Sessão encontrada. Token JWT gerado.");
-
-        // 2. Define a URL do Supabase (substituí pela que aparece nos seus prints)
-        const supabaseUrl = "https://uzmmoypdllnoawunmnxg.supabase.co";
-        console.log("Chamando a Edge Function em:", supabaseUrl);
-
-        // 3. Chama a Edge Function
-        const res = await fetch(`${supabaseUrl}/functions/v1/drive-list-files`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${session.access_token}` }
-        });
-
-        console.log("Status HTTP retornado:", res.status);
-
-        // 4. Pega a resposta em texto bruto (antes de tentar virar JSON)
-        const textoBruto = await res.text();
-        console.log("Resposta bruta do servidor:", textoBruto);
-
-        if (!res.ok) {
-            throw new Error(`O servidor retornou erro ${res.status}. Resposta: ${textoBruto}`);
-        }
-
-        // 5. Tenta converter para JSON
-        const json = JSON.parse(textoBruto);
-        console.log("✅ SUCESSO! Arquivos encontrados:", json);
-        
-        alert(`✅ SUCESSO! O servidor respondeu. Encontrados ${json.length || 0} arquivos.\nVerifique o Console (F12) para ver a lista.`);
-
-    } catch (err) {
-        console.error("❌ ERRO NO DEBUG:", err);
-        alert("❌ ERRO DETALHADO:\n\n" + err.message + "\n\nAbra o Console (F12) para mais detalhes.");
     }
 }
 </script>
