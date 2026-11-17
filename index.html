@@ -1942,57 +1942,40 @@ async function abrirConversaAntiga(id) {
     });
 }
 async function salvarConversaAtual() {
-  if (conversaAtual.length === 0) return; 
-  if (conversaAtual.length <= lastSavedIndex) return; // Nada novo para salvar
+  if(conversaAtual.length === 0 || conversaAtual.length <= lastSavedIndex) return; 
   
   try {
-      // 👇 SEGURANÇA: Pega o usuário direto da sessão do Supabase
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session || !session.user) return; // Se não estiver logado, não salva
-      const userId = session.user.id;
+      if (!session || !session.user) return; // Segurança: não salva se não estiver logado
 
       var primeiraMsg = conversaAtual.find(m => m.role === 'user');
       var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
 
-      // Se for uma conversa nova, cria a "capa" da conversa
+      // Cria a conversa se não existir
       if (!idConversaAtual) {
-        let { data, error } = await supabase.from('conversations').insert([{ user_id: userId, title: titulo }]).select();
-        if (error) { 
-            console.error("Erro ao criar conversa:", error); 
-            return; 
-        }
+        let { data, error } = await supabase.from('conversations').insert([{ user_id: session.user.id, title: titulo }]).select();
+        if (error) { console.error("Erro ao criar conversa:", error); return; }
         idConversaAtual = data[0].id; 
       }
 
-      // Salva APENAS as mensagens novas (a partir do último índice salvo)
+      // Salva as novas mensagens
       var novas = conversaAtual.slice(lastSavedIndex);
-      if (novas.length > 0) {
-          // Faz um insert em lote (mais rápido que um por um)
-          const mensagensParaSalvar = novas.map(msg => ({
-              conversation_id: idConversaAtual, 
-              role: msg.role, 
-              content: msg.content 
-          }));
+      const mensagensParaSalvar = novas.map(msg => ({
+          conversation_id: idConversaAtual, 
+          role: msg.role, 
+          content: msg.content 
+      }));
 
-          const { error: msgError } = await supabase.from('messages').insert(mensagensParaSalvar);
-          if (msgError) {
-              console.error("Erro ao salvar mensagens:", msgError);
-              return;
-          }
-      }
+      const { error: msgError } = await supabase.from('messages').insert(mensagensParaSalvar);
+      if (msgError) { console.error("Erro ao salvar mensagens:", msgError); return; }
       
       lastSavedIndex = conversaAtual.length;
-      
-      // Atualiza a barra lateral na hora
-      if (typeof renderizarHistorico === 'function') {
-          renderizarHistorico(); 
-      }
+      if (typeof renderizarHistorico === 'function') renderizarHistorico();
       
   } catch (err) {
-      console.error("Erro inesperado ao salvar conversa:", err);
+      console.error("Erro inesperado ao salvar:", err);
   }
 }
-
 async function renderizarHistorico(){
   var container = document.getElementById('listaConversas');
   if(!container) return;
@@ -2158,14 +2141,15 @@ async function deletarConversa() {
     renderizarHistorico();
 }
 
-async function carregarConversa(id){
+async function carregarConversa(id) {
+  console.log("🔄 Iniciando carregamento da conversa:", id);
   var area = document.getElementById('chatMessages');
   var welcome = document.getElementById('dashWelcome');
   
   if(welcome) welcome.style.display = 'none';
   if(area) {
       area.classList.add('active');
-      area.innerHTML = '<div style="color:rgba(255,255,255,.5); text-align:center; padding: 20px;">Carregando conversa...</div>';
+      area.innerHTML = '<div style="color:rgba(255,255,255,.5); text-align:center; padding: 20px;">Carregando histórico...</div>';
   }
   
   idConversaAtual = id;
@@ -2182,74 +2166,43 @@ async function carregarConversa(id){
       if(area) area.innerHTML = '';
       conversaAtual = []; 
       
-      if (!msgs || msgs.length === 0) return;
+      // 1. Se a conversa existir mas não tiver mensagens
+      if (!msgs || msgs.length === 0) {
+          if(area) area.innerHTML = '<div style="color:rgba(255,255,255,.5); text-align:center; padding: 20px;">Esta conversa está vazia.</div>';
+          return;
+      }
 
+      // 2. Desenha as mensagens
       msgs.forEach(function(msg) {
         conversaAtual.push({ role: msg.role, content: msg.content });
         
+        var div = document.createElement('div');
         if(msg.role === 'user'){
-          var div = document.createElement('div');
           div.className = 'msg user';
           div.textContent = msg.content;
-          area.appendChild(div);
         } else {
-          var div = document.createElement('div');
           div.className = 'msg ai';
           div.innerHTML = DOMPurify.sanitize(marked.parse(msg.content));
           
           if (typeof renderMathInElement !== 'undefined') {
-            renderMathInElement(div, {
-              delimiters: [
-                {left: '$$', right: '$$', display: true},
-                {left: '$', right: '$', display: false},
-                {left: '\\(', right: '\\)', display: false},
-                {left: '\\[', right: '\\]', display: true}
-              ],
-              throwOnError : false
-            });
+            renderMathInElement(div, { delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], throwOnError: false });
           }
-
-          var actions = document.createElement('div');
-          actions.className = 'msg-actions';
-          
-          // Botão Copiar
-          var btnCopiar = document.createElement('button');
-          btnCopiar.className = 'msg-action-btn';
-          btnCopiar.innerHTML = '📋 Copiar';
-          btnCopiar.onclick = function(e){
-            e.stopPropagation();
-            var clone = div.cloneNode(true);
-            var btnClone = clone.querySelector('.msg-actions');
-            if(btnClone) btnClone.remove();
-            navigator.clipboard.writeText(clone.innerText.trim()).then(function(){
-              btnCopiar.innerHTML = '✓ Copiado';
-              setTimeout(function(){ btnCopiar.innerHTML = '📋 Copiar'; }, 2000);
-            });
-          };
-          actions.appendChild(btnCopiar);
-          
-          div.appendChild(actions);
-          area.appendChild(div);
         }
+        if(area) area.appendChild(div);
       });
       
       lastSavedIndex = conversaAtual.length;
       
-      // Rola para o final da conversa carregada
-      window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+      // Rola para o final
+      setTimeout(() => { window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'}); }, 100);
 
   } catch(err) {
-      console.error("Erro ao carregar conversa:", err);
-      if(area) area.innerHTML = '<div style="color:#fca5a5; text-align:center; padding: 20px;">Erro ao carregar o histórico.</div>';
+      console.error("❌ Erro ao carregar:", err);
+      if(area) area.innerHTML = '<div style="color:#fca5a5; text-align:center; padding: 20px;">Erro ao carregar o histórico. Verifique o console.</div>';
   }
 
-  // Fecha a barra lateral no celular
   var sidebar = document.getElementById('sidebar');
-  var overlay = document.getElementById('sidebarOverlay');
-  if(sidebar && sidebar.classList.contains('open')) {
-      sidebar.classList.remove('open');
-      overlay.classList.remove('open');
-  }
+  if(sidebar && sidebar.classList.contains('open')) toggleSidebar();
 }
 function toggleSidebar(){
 document.getElementById('sidebar').classList.toggle('open');
@@ -4607,31 +4560,62 @@ async function conectarDrive() {
         alert("Erro ao conectar Google: " + error.message);
     }
 }
-// Fica ouvindo o status de login do usuário
 supabase.auth.onAuthStateChange(async (event, session) => {
+    // 🛑 1. A VACINA: Se a URL tiver erro (ex: identity_already_exists), ignoramos o salvamento para não corromper o banco!
+    if (window.location.href.includes('error=')) {
+        console.log("⚠️ Erro de OAuth detectado. Ignorando salvamento para não misturar tokens.");
+        return;
+    }
+
     if (event === 'SIGNED_IN' && session) {
         const { user } = session;
         let updateData = {};
 
-        // Pega a lista de provedores (google, notion, email, etc)
         const providers = session.user.app_metadata.providers || [];
+        const token = session.provider_token;
 
-        // 1. Verifica se o Google está na lista
-        if (session.provider_token && providers.includes('google')) {
-            updateData.google_token = session.provider_token;
-            if (session.provider_refresh_token) {
-                updateData.google_refresh_token = session.provider_refresh_token;
+        if (token) {
+            // 🔮 MAPEAMENTO ESCALÁVEL: Para novas plataformas, basta adicionar aqui.
+            const platformMap = {
+                'google': { 
+                    tokenCol: 'google_token', 
+                    refreshCol: 'google_refresh_token', 
+                    prefix: 'ya29.' 
+                },
+                'notion': { 
+                    tokenCol: 'notion_token', 
+                    refreshCol: null, 
+                    prefix: '' // O Notion não usa o prefixo ya29
+                },
+                // 'azure': { tokenCol: 'microsoft_token', refreshCol: 'microsoft_refresh', prefix: '' } // Exemplo futuro
+            };
+
+            // 2. Valida qual é o token e garante que não estamos salvando o do Google no Notion
+            for (const [providerName, config] of Object.entries(platformMap)) {
+                if (providers.includes(providerName)) {
+                    let isTokenFromThisProvider = false;
+                    
+                    // Verifica a "identidade" do token
+                    if (providerName === 'google' && token.startsWith('ya29.')) {
+                        isTokenFromThisProvider = true;
+                    } else if (providerName === 'notion' && !token.startsWith('ya29.')) {
+                        isTokenFromThisProvider = true;
+                    } else if (providerName !== 'google' && providerName !== 'notion') {
+                        isTokenFromThisProvider = true; // Fallback para futuras plataformas
+                    }
+
+                    if (isTokenFromThisProvider) {
+                        updateData[config.tokenCol] = token;
+                        if (config.refreshCol && session.provider_refresh_token) {
+                            updateData[config.refreshCol] = session.provider_refresh_token;
+                        }
+                    }
+                }
             }
         }
 
-        // 2. Verifica se o Notion está na lista
-        if (session.provider_token && providers.includes('notion')) {
-            updateData.notion_token = session.provider_token;
-        }
-
-        // 3. Salva no banco
         if (Object.keys(updateData).length > 0) {
-            console.log("💾 Tentando salvar os seguintes tokens:", updateData);
+            console.log("💾 Salvando tokens corretos:", updateData);
             
             const { error } = await supabase
                 .from('profiles')
