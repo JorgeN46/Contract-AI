@@ -4487,34 +4487,43 @@ async function conectarDrive() {
 }
 // Fica ouvindo o status de login do usuário
 supabase.auth.onAuthStateChange(async (event, session) => {
-    // Se o usuário acabou de logar ou conectou uma conta
+    // Se o usuário logou ou acabou de conectar uma nova conta
     if (event === 'SIGNED_IN' && session) {
         const { user } = session;
         let updateData = {};
 
-        // 1. Verifica se é o Google (Drive ou Sheets)
-        if (session.provider_token && session.user.app_metadata.provider === 'google') {
+        // 👇 AQUI ESTÁ A CORREÇÃO: Pegamos a lista de TODOS os provedores conectados
+        const providers = session.user.app_metadata.providers || [];
+
+        // 1. Verifica se o Google está na lista de provedores
+        if (session.provider_token && providers.includes('google')) {
             updateData.google_token = session.provider_token;
-            // Salva o refresh token se o Google enviar (para renovar depois)
+            
+            // Salva o refresh token se o Google enviar
             if (session.provider_refresh_token) {
                 updateData.google_refresh_token = session.provider_refresh_token;
             }
         }
 
-        // 2. Verifica se é o Notion
-        if (session.provider_token && session.user.app_metadata.provider === 'notion') {
+        // 2. Verifica se o Notion está na lista de provedores
+        if (session.provider_token && providers.includes('notion')) {
             updateData.notion_token = session.provider_token;
         }
 
         // 3. Salva no banco de dados (tabela profiles)
         if (Object.keys(updateData).length > 0) {
+            console.log("💾 Tentando salvar os seguintes tokens:", updateData);
+            
             const { error } = await supabase
                 .from('profiles')
                 .update(updateData)
                 .eq('id', user.id);
                 
-            if (error) console.error("Erro ao salvar token:", error);
-            else console.log("Tokens salvos com sucesso no banco!");
+            if (error) {
+                console.error("❌ Erro ao salvar token no banco:", error);
+            } else {
+                console.log("✅ Tokens salvos com sucesso na tabela profiles!");
+            }
         }
     }
 });
