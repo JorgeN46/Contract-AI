@@ -814,6 +814,39 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 #editorContent p { margin-bottom: 12px; }
 #editorContent ul, #editorContent ol { padding-left: 20px; margin-bottom: 12px; }
 #editorContent strong { color: #fff; }
+/* Estilo Premium para Tabelas da IA */
+.msg.ai table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  font-size: 14px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.msg.ai th, .msg.ai td {
+  padding: 12px 16px;
+  border: 1px solid rgba(255,255,255,0.1);
+  text-align: left;
+}
+
+.msg.ai th {
+  background: rgba(79,141,255,0.15);
+  color: #fff;
+  font-weight: 600;
+}
+
+.msg.ai tr:nth-child(even) {
+  background: rgba(255,255,255,0.02);
+}
+
+/* Permite rolar a tabela para o lado no celular sem quebrar a tela */
+.msg.ai .table-responsive {
+  overflow-x: auto;
+  width: 100%;
+  margin-bottom: 16px;
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2223,8 +2256,6 @@ async function carregarConversa(id){
           throw error;
       }
 
-      console.log("📦 Mensagens retornadas do banco:", msgs);
-
       if (!msgs || msgs.length === 0) {
           if(area) area.innerHTML = '<div style="color:rgba(255,255,255,.5); text-align:center; padding: 20px;">Esta conversa está vazia no banco de dados.</div>';
           return;
@@ -2233,21 +2264,74 @@ async function carregarConversa(id){
       if(area) area.innerHTML = '';
       conversaAtual = []; 
       
-      msgs.forEach(function(msg) {
+      msgs.forEach(function(msg, index) {
         conversaAtual.push({ role: msg.role, content: msg.content });
+        
         var div = document.createElement('div');
+        
         if(msg.role === 'user'){
           div.className = 'msg user';
           div.textContent = msg.content;
         } else {
+          // Cria um ID único para a mensagem (necessário para o botão de PDF)
+          div.id = 'msg-ai-' + index;
           div.className = 'msg ai';
-          div.innerHTML = DOMPurify.sanitize(marked.parse(msg.content));
+          
+          // Converte o Markdown para HTML
+          let htmlParseado = marked.parse(msg.content);
+          let htmlSeguro = DOMPurify.sanitize(htmlParseado);
+          
+          // Deixa as tabelas responsivas (com rolagem no celular)
+          htmlSeguro = htmlSeguro.replace(/<table/g, '<div class="table-responsive"><table').replace(/<\/table>/g, '</table></div>');
+          
+          div.innerHTML = htmlSeguro;
+
+          // Renderiza fórmulas matemáticas (se houver)
+          if (typeof renderMathInElement !== 'undefined') {
+            renderMathInElement(div, {
+              delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], throwOnError: false
+            });
+          }
+
+          // 👇 RECRIANDO OS BOTÕES DE AÇÃO (Inclusive o de PDF) 👇
+          var actions = document.createElement('div');
+          actions.className = 'msg-actions';
+
+          // Botão Copiar
+          var btnCopiar = document.createElement('button');
+          btnCopiar.className = 'msg-action-btn';
+          btnCopiar.innerHTML = '📋 Copiar';
+          btnCopiar.onclick = function(e){
+            e.stopPropagation();
+            var clone = div.cloneNode(true);
+            var btnClone = clone.querySelector('.msg-actions');
+            if(btnClone) btnClone.remove();
+            navigator.clipboard.writeText(clone.innerText.trim()).then(function(){
+              btnCopiar.innerHTML = '✓ Copiado';
+              setTimeout(function(){ btnCopiar.innerHTML = '📋 Copiar'; }, 2000);
+            });
+          };
+          actions.appendChild(btnCopiar);
+
+          // Botão PDF
+          var btnPDF = document.createElement('button');
+          btnPDF.className = 'msg-action-btn';
+          btnPDF.innerHTML = '📄 Baixar PDF';
+          btnPDF.onclick = function(e){
+            e.stopPropagation();
+            baixarPDF(div.id); // Usa o ID único que criamos acima
+          };
+          actions.appendChild(btnPDF);
+
+          // Adiciona os botões dentro da mensagem da IA
+          div.appendChild(actions);
         }
+        
         if(area) area.appendChild(div);
       });
       
       lastSavedIndex = conversaAtual.length;
-      console.log("🎉 Conversa renderizada na tela com sucesso!");
+      console.log("🎉 Conversa renderizada com botões!");
 
   } catch(err) {
       console.error("❌ Erro fatal:", err);
@@ -2460,27 +2544,32 @@ adicionarMensagemIA('✅ Refinamento concluído.<br><br>Aqui está o que encontr
 }, 600);
 }
 function adicionarMensagemIA(html){
-var area = document.getElementById('chatMessages');
-var div = document.createElement('div');
-div.className = 'msg ai';
-div.id = 'msg-ai-' + Date.now() + '-' + Math.floor(Math.random() * 1000); // Cria um ID único
-div.innerHTML = DOMPurify.sanitize(marked.parse(html));
+function adicionarMensagemIA(texto) {
+  var area = document.getElementById('chatMessages');
+  if (!area) return;
 
+  var div = document.createElement('div');
+  // Gera um ID único para a mensagem (necessário para os botões de download)
+  div.id = 'msg-ai-' + Date.now(); 
+  div.className = 'msg ai';
+
+  // Converte Markdown e Sanitiza
+  let htmlParseado = marked.parse(texto);
+  let htmlSeguro = DOMPurify.sanitize(htmlParseado);
+
+  // Deixa as tabelas responsivas
+  htmlSeguro = htmlSeguro.replace(/<table/g, '<div class="table-responsive"><table').replace(/<\/table>/g, '</table></div>');
+  
+  div.innerHTML = htmlSeguro;
+
+  // Renderiza fórmulas matemáticas
   if (typeof renderMathInElement !== 'undefined') {
     renderMathInElement(div, {
-      delimiters: [
-        {left: '$$', right: '$$', display: true},
-        {left: '$', right: '$', display: false},
-        {left: '\\(', right: '\\)', display: false},
-        {left: '\\[', right: '\\]', display: true}
-      ],
-      throwOnError : false
+      delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], throwOnError: false
     });
   }
 
-var ehTemporaria = html.includes('Pensando') || html.includes('⏳') || html.includes('Lendo');
-if(!ehTemporaria){
-  conversaAtual.push({ role: 'ai', content: html });
+  // 👇 CRIAÇÃO DOS BOTÕES DE AÇÃO 👇
   var actions = document.createElement('div');
   actions.className = 'msg-actions';
 
@@ -2493,39 +2582,46 @@ if(!ehTemporaria){
     var clone = div.cloneNode(true);
     var btnClone = clone.querySelector('.msg-actions');
     if(btnClone) btnClone.remove();
-    var texto = clone.innerText.trim();
-    navigator.clipboard.writeText(texto).then(function(){
+    navigator.clipboard.writeText(clone.innerText.trim()).then(function(){
       btnCopiar.innerHTML = '✓ Copiado';
       setTimeout(function(){ btnCopiar.innerHTML = '📋 Copiar'; }, 2000);
     });
   };
+  actions.appendChild(btnCopiar);
 
-  // Botão Baixar PDF
+  // Botão PDF
   var btnPDF = document.createElement('button');
   btnPDF.className = 'msg-action-btn';
-  btnPDF.innerHTML = '📄 Baixar PDF';
-  btnPDF.onclick = function(e){
-    e.stopPropagation();
-    baixarPDF(div.id);
-  };
+  btnPDF.innerHTML = '📄 PDF';
+  btnPDF.onclick = function(e){ e.stopPropagation(); baixarPDF(div.id); };
+  actions.appendChild(btnPDF);
 
-  // Botão Baixar Word
+  // Botão Word
   var btnWord = document.createElement('button');
   btnWord.className = 'msg-action-btn';
-  btnWord.innerHTML = '📝 Baixar Word';
-  btnWord.onclick = function(e){
-    e.stopPropagation();
-    baixarWord(div.id);
-  };
-
-  actions.appendChild(btnCopiar);
-  actions.appendChild(btnPDF);
+  btnWord.innerHTML = '📝 Word';
+  btnWord.onclick = function(e){ e.stopPropagation(); baixarWord(div.id); };
   actions.appendChild(btnWord);
-  div.appendChild(actions);
-}
 
-area.appendChild(div);
-div.scrollIntoView({behavior:'smooth', block:'end'});
+  // Botão Planilha
+  var btnSheets = document.createElement('button');
+  btnSheets.className = 'msg-action-btn';
+  btnSheets.innerHTML = '📊 Planilha';
+  btnSheets.onclick = function(e){ e.stopPropagation(); exportarParaSheets(div.innerText, btnSheets); };
+  actions.appendChild(btnSheets);
+
+  // Botão Notion
+  var btnNotion = document.createElement('button');
+  btnNotion.className = 'msg-action-btn';
+  btnNotion.innerHTML = '📓 Notion';
+  btnNotion.onclick = function(e){ e.stopPropagation(); exportarParaNotion(div.id); };
+  actions.appendChild(btnNotion);
+
+  div.appendChild(actions);
+  area.appendChild(div);
+  
+  // Rola para o final
+  window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
 }
 function adicionarMensagemUsuario(texto){
   var area = document.getElementById('chatMessages');
@@ -2896,6 +2992,8 @@ function baixarPDF(id) {
     <html>
       <head>
         <title>Análise Macrus</title>
+        <!-- CSS do KaTeX para fórmulas matemáticas -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
         <style>
           @page { margin: 20mm; }
           body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; max-width: 800px; margin: 0 auto; }
@@ -2913,6 +3011,12 @@ function baixarPDF(id) {
           li { margin-bottom: 8px; }
           strong { color: #000; }
           blockquote { border-left: 4px solid #4f8dff; padding-left: 16px; color: #555; margin: 16px 0; font-style: italic; }
+          
+          /* 👇 ESTILO DAS TABELAS PARA O PDF 👇 */
+          table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; page-break-inside: avoid; }
+          th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+          th { background-color: #f0f4ff; color: #111; font-weight: bold; }
+          tr:nth-child(even) { background-color: #fafafa; }
         </style>
       </head>
       <body>
@@ -2945,10 +3049,16 @@ function baixarWord(id) {
   // Remove o cursor de digitação
   clone.innerHTML = clone.innerHTML.replace('<span style="color:#7db4ff;">▍</span>', '');
 
-  // Pega o conteúdo HTML da mensagem
+  // 👇 FORÇA AS BORDAS DAS TABELAS PARA O WORD ENTENDER 👇
+  var tabelas = clone.querySelectorAll('table');
+  tabelas.forEach(t => {
+      t.setAttribute('border', '1'); // O Word precisa desse atributo
+      t.style.borderCollapse = 'collapse';
+      t.style.width = '100%';
+  });
+
   var textoPuro = clone.innerHTML;
 
-  // Monta o HTML final com a Capa de Aviso e o CSS
   var htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -2969,6 +3079,12 @@ function baixarWord(id) {
           li { margin-bottom: 6px; }
           strong { color: #000; }
           blockquote { border-left: 3px solid #4f8dff; padding-left: 12px; color: #555; margin: 12px 0; font-style: italic; }
+          
+          /* 👇 ESTILO DAS TABELAS PARA O WORD 👇 */
+          table { border-collapse: collapse; width: 100%; margin-bottom: 20px; font-size: 12px; }
+          th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+          th { background-color: #f0f0f0; font-weight: bold; }
+          
           .footer { margin-top: 30px; font-size: 10px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 15px; }
         </style>
       </head>
