@@ -4018,13 +4018,15 @@ async function abrirModalDrive() {
         if (!session) throw new Error("Você precisa estar logado.");
 
         // Usando a variável global supabaseUrl (com 'u' minúsculo) do seu código
-        const resposta = await fetch(`${supabaseUrl}/functions/v1/drive-list-files`, {
+                const resposta = await fetch(`${supabaseUrl}/functions/v1/drive-list-files`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${session.access_token}` }
         });
 
         if (!resposta.ok) {
-            throw new Error(`Erro no servidor (${resposta.status}). Verifique se a função está publicada no Supabase.`);
+            // 👇 A MÁGICA ACONTECE AQUI: Lemos o JSON de erro antes de dar throw 👇
+            const erroData = await resposta.json();
+            throw new Error(erroData.error || `Erro no servidor (${resposta.status})`);
         }
 
         const arquivos = await resposta.json();
