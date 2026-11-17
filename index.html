@@ -4579,6 +4579,47 @@ async function exportarParaNotion(botao) {
         botao.disabled = false;
     }
 }
+async function testarDriveDebug() {
+    console.log("=== INICIANDO DEBUG DO DRIVE ===");
+    try {
+        // 1. Verifica se o usuário está logado
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw new Error("Erro na sessão: " + sessionError.message);
+        if (!session) throw new Error("Nenhuma sessão ativa. O usuário não está logado.");
+        
+        console.log("✅ Sessão encontrada. Token JWT gerado.");
+
+        // 2. Define a URL do Supabase (substituí pela que aparece nos seus prints)
+        const supabaseUrl = "https://uzmmoypdllnoawunmnxg.supabase.co";
+        console.log("Chamando a Edge Function em:", supabaseUrl);
+
+        // 3. Chama a Edge Function
+        const res = await fetch(`${supabaseUrl}/functions/v1/drive-list-files`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${session.access_token}` }
+        });
+
+        console.log("Status HTTP retornado:", res.status);
+
+        // 4. Pega a resposta em texto bruto (antes de tentar virar JSON)
+        const textoBruto = await res.text();
+        console.log("Resposta bruta do servidor:", textoBruto);
+
+        if (!res.ok) {
+            throw new Error(`O servidor retornou erro ${res.status}. Resposta: ${textoBruto}`);
+        }
+
+        // 5. Tenta converter para JSON
+        const json = JSON.parse(textoBruto);
+        console.log("✅ SUCESSO! Arquivos encontrados:", json);
+        
+        alert(`✅ SUCESSO! O servidor respondeu. Encontrados ${json.length || 0} arquivos.\nVerifique o Console (F12) para ver a lista.`);
+
+    } catch (err) {
+        console.error("❌ ERRO NO DEBUG:", err);
+        alert("❌ ERRO DETALHADO:\n\n" + err.message + "\n\nAbra o Console (F12) para mais detalhes.");
+    }
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
