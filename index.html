@@ -3970,90 +3970,132 @@ function mostrarClausulasNoDrawer(htmlContent) {
 // 📂 INTEGRAÇÃO COM O GOOGLE DRIVE
 // ==========================================
 
+// 1. Função que o botão "Conectar" da tela de Plugins chama
 async function conectarDrive() {
-   alert("🚨 ENTREI NA FUNÇÃO NOVA!"); 
-  document.getElementById('driveModalOverlay').classList.add('open');
-  document.getElementById('driveModal').classList.add('open');
-  const lista = document.getElementById('driveFilesList');
-  lista.innerHTML = '<div style="text-align:center; color:#7db4ff; margin-top:20px;">Buscando arquivos no seu Drive...</div>';
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        const options = {
+            scopes: 'https://www.googleapis.com/auth/drive.readonly',
+            queryParams: { access_type: 'offline', prompt: 'consent' },
+            redirectTo: window.location.origin + '/#settings-plugins'
+        };
 
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error("Você precisa estar logado.");
-
-    // 👇 OLHA AQUI: A URL ESTÁ ESCRITA DIRETO, SEM VARIÁVEIS 👇
-    const resposta = await fetch(`https://uzmmoypdllnoawunmnxg.supabase.co/functions/v1/drive-list-files`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${session.access_token}` }
-    });
-
-    const arquivos = await resposta.json();
-
-    if (arquivos.error) {
-        throw new Error(arquivos.error);
+        if (session) {
+            // Se já está logado no Macrus, apenas vincula a conta do Google
+            const { error } = await supabase.auth.linkIdentity({ provider: 'google', options });
+            if (error) throw error;
+        } else {
+            // Se não está logado, faz o login
+            const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options });
+            if (error) throw error;
+        }
+    } catch (error) {
+        alert("Erro ao conectar Google: " + error.message);
     }
-    
-    lista.innerHTML = '';
-
-    if (!arquivos || arquivos.length === 0) {
-      lista.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.5); margin-top:20px;">Nenhum PDF encontrado no seu Drive.</div>';
-      return;
-    }
-
-    arquivos.forEach(file => {
-      const btn = document.createElement('button');
-      btn.className = 'drive-file-btn';
-      btn.innerHTML = `<span style="font-size:18px;">📄</span> <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${file.name}</span>`;
-      btn.onclick = () => selecionarArquivoDrive(file, btn);
-      lista.appendChild(btn);
-    });
-
-  } catch (err) {
-    lista.innerHTML = `<div style="text-align:center; color:#fca5a5; margin-top:20px;">❌ Erro: ${err.message}</div>`;
-  }
 }
+
+// 2. Função chamada pelo botão do chat (+)
+function abrirDrive() {
+    // Fecha o menu de anexos (+)
+    const menu = document.getElementById('attachMenu');
+    if (menu) menu.classList.remove('open');
+    
+    // Abre a janela de arquivos do Drive
+    abrirModalDrive();
+}
+
+// 3. Função que lista os PDFs (agora renomeada e sem o alert de debug)
+async function abrirModalDrive() {
+    document.getElementById('driveModalOverlay').classList.add('open');
+    document.getElementById('driveModal').classList.add('open');
+    
+    const lista = document.getElementById('driveFilesList');
+    lista.innerHTML = '<div style="text-align:center; color:#7db4ff; margin-top:20px;">Buscando arquivos no seu Drive...</div>';
+
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error("Você precisa estar logado.");
+
+        // Usando a variável global supabaseUrl (com 'u' minúsculo) do seu código
+        const resposta = await fetch(`${supabaseUrl}/functions/v1/drive-list-files`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${session.access_token}` }
+        });
+
+        if (!resposta.ok) {
+            throw new Error(`Erro no servidor (${resposta.status}). Verifique se a função está publicada no Supabase.`);
+        }
+
+        const arquivos = await resposta.json();
+
+        if (arquivos.error) throw new Error(arquivos.error);
+        
+        lista.innerHTML = '';
+
+        if (!arquivos || arquivos.length === 0) {
+            lista.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.5); margin-top:20px;">Nenhum PDF encontrado no seu Drive.</div>';
+            return;
+        }
+
+        arquivos.forEach(file => {
+            const btn = document.createElement('button');
+            btn.className = 'drive-file-btn'; // Usa a classe CSS que você já criou
+            btn.innerHTML = `<span style="font-size:18px;">📄</span> <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${file.name}</span>`;
+            
+            // Ao clicar, chama a função de download
+            btn.onclick = () => selecionarArquivoDrive(file, btn);
+            lista.appendChild(btn);
+        });
+
+    } catch (err) {
+        lista.innerHTML = `<div style="text-align:center; color:#fca5a5; margin-top:20px;">❌ ${err.message}</div>`;
+    }
+}
+
+// 4. Função que baixa o PDF e joga no chat (com a lógica do token reserva)
 async function selecionarArquivoDrive(arquivo, botao) {
-    // Muda o texto do botão para dar feedback visual
     botao.innerHTML = '<span style="font-size:18px;">⏳</span> <span>Baixando...</span>';
     
     try {
         const { data: { session } } = await supabase.auth.getSession();
         
-        // Baixa o arquivo real do Google Drive (usando a API de media)
+        let token = session?.provider_token;
+        
+        // Se o token da sessão falhar, busca o token salvo na tabela 'profiles'
+        if (!token) {
+            const { data: profile } = await supabase.from('profiles').select('google_token').eq('id', session.user.id).single();
+            if (profile && profile.google_token) token = profile.google_token;
+        }
+
+        if (!token) throw new Error("Token do Google não encontrado. Faça login novamente.");
+        
+        // Faz o download do PDF do Google Drive
         const res = await fetch(`https://www.googleapis.com/drive/v3/files/${arquivo.id}?alt=media`, {
-            headers: { 'Authorization': `Bearer ${session.provider_token}` }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
         
         if (!res.ok) throw new Error("Não foi possível baixar o arquivo. Token expirado.");
         
         const blob = await res.blob();
-        
-        // Transforma o Blob em um arquivo do sistema (File Object) para o seu chat processar
         const file = new File([blob], arquivo.name, { type: 'application/pdf' });
         
         // Fecha o modal
         document.getElementById('driveModalOverlay').classList.remove('open');
         document.getElementById('driveModal').classList.remove('open');
         
-        // 🔥 AQUI ELE CHAMA A SUA FUNÇÃO DE ANEXO LOCAL (que já existe no seu código)
-        // Simulamos o que acontece quando o usuário escolhe um arquivo no PC
+        // Injeta o arquivo no input e chama a função de anexo do seu sistema
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
-        
         const inputElement = document.getElementById('fileInput');
         inputElement.files = dataTransfer.files;
         
-        // Chama a função de leitura do seu sistema
+        // Simula o upload local (como se o usuário tivesse escolhido do PC)
         aoSelecionarArquivo(inputElement);
         
-        // Como já colocamos no input, só falta avisar que é do Drive para a interface
-        isDriveFile = true;
-        document.getElementById('attachName').innerText = "📁 [Drive] " + arquivo.name;
-        document.getElementById('attachPreview').classList.add('active');
-
     } catch (err) {
         alert("Erro ao baixar do Drive: " + err.message);
-        botao.innerHTML = `<span style="font-size:18px;">📄</span> <span>${arquivo.name}</span>`; // volta ao normal
+        botao.innerHTML = `<span style="font-size:18px;">📄</span> <span>${arquivo.name}</span>`; 
     }
 }
 
@@ -4474,71 +4516,6 @@ supabase.auth.onAuthStateChange(async (event, session) => {
         }
     }
 });
-async function abrirDrive() {
-    // Fecha o menu de anexos (+) assim que clicar
-    document.getElementById('attachMenu').classList.remove('open');
-    
-    // Alerta rápido para o usuário saber que está carregando
-    const botaoDrive = event.target.closest('button');
-    if(botaoDrive) botaoDrive.innerHTML = 'Buscando...';
-
-    try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            alert("Você precisa estar logado para acessar o Drive.");
-            return;
-        }
-        
-        // Chama a Edge Function do Supabase que lista os PDFs
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/drive-list-files`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${session.access_token}` }
-        });
-        
-        const arquivos = await res.json();
-        
-        // Se a Edge Function retornar erro (ex: token expirado)
-        if (arquivos.error) throw new Error(arquivos.error);
-        
-        // Se não tiver nenhum PDF no Drive
-        if (arquivos.length === 0) {
-            return alert("Nenhum arquivo PDF encontrado no seu Google Drive.");
-        }
-
-        // Monta a lista de opções para o usuário escolher
-        let opcoes = arquivos.map((f, i) => `${i + 1} - ${f.name}`).join('\n');
-        let escolha = prompt(`Seus PDFs no Drive:\n\n${opcoes}\n\nDigite o NÚMERO do arquivo que deseja analisar:`);
-        
-        // Se o usuário escolheu algo
-        if (escolha) {
-            const index = parseInt(escolha) - 1;
-            if (index < 0 || index >= arquivos.length) {
-                return alert("Opção inválida.");
-            }
-            
-            const arquivoEscolhido = arquivos[index];
-            
-            // 🔥 CONFIGURA AS VARIÁVEIS GLOBAIS PARA O CHAT
-            arquivoAnexado = arquivoEscolhido.name;
-            isDriveFile = true; // Avisa o chat que é do Drive
-            isImageAttached = false;
-            textoArquivoExtraido = ""; // Deixa vazio, a IA vai ler da URL depois
-            imagensAnexadas = [];
-            
-            // Atualiza a caixinha de preview acima do chat
-            document.getElementById('attachName').innerText = "📁 [Drive] " + arquivoEscolhido.name;
-            document.getElementById('attachPreview').classList.add('active');
-        }
-
-    } catch (e) {
-        alert("Erro ao buscar arquivos: " + e.message);
-    } finally {
-        // Restaura o texto do botão no menu (+)
-        if(botaoDrive) {
-            botaoDrive.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #4285F4; width:16px; height:16px; margin-right:8px;"><path d="M14.5 2L9.5 11H21L16 2H14.5ZM7.5 2L2 12L5 17L10.5 7L7.5 2ZM22 13H12L9 18H19L22 13Z"/></svg> Google Drive`;
-        }
-    }
-}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
