@@ -815,14 +815,17 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 #editorContent ul, #editorContent ol { padding-left: 20px; margin-bottom: 12px; }
 #editorContent strong { color: #fff; }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // 1º: Declaramos as variáveis no escopo GLOBAL (fora de qualquer if)
+  // 1. Criando a conexão única e exclusiva com o Supabase
   const SUPABASE_URL = "https://uzmmoypdllnoawunmnxg.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_h167SfQxm19PCEKFCcseSw_mgGxI9th"; // Sua chave nova aqui
+  const SUPABASE_ANON_KEY = "sb_publishable_h167SfQxm19PCEKFCcseSw_mgGxI9th";
+  
+  // Usamos window.supabase para garantir que estamos chamando a biblioteca global
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // 2º: O if do PDF.js fica separado, apenas para configurar o worker dele
+  // 2. Configuração do PDF (separado)
   if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
@@ -835,7 +838,6 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html-docx-js/0.3.1/html-docx.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- KaTeX para renderizar fórmulas matemáticas -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
