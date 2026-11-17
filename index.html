@@ -2009,11 +2009,7 @@ async function abrirConversaAntiga(id) {
 async function salvarConversaAtual() {
   console.log("💾 Tentando salvar. Mensagens na tela:", conversaAtual.length, "| Já salvas:", lastSavedIndex);
   
-  if(conversaAtual.length === 0) return;
-  if(conversaAtual.length <= lastSavedIndex) {
-      console.log("Nenhuma mensagem nova para salvar.");
-      return; 
-  }
+  if(conversaAtual.length === 0 || conversaAtual.length <= lastSavedIndex) return; 
   
   try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -2022,21 +2018,16 @@ async function salvarConversaAtual() {
       var primeiraMsg = conversaAtual.find(m => m.role === 'user');
       var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
 
-      // Cria a conversa
       if (!idConversaAtual) {
-        console.log("Criando nova conversa no banco...");
+        console.log("📝 Criando nova conversa no banco...");
         let { data, error } = await supabase.from('conversations').insert([{ user_id: session.user.id, title: titulo }]).select();
-        if (error) { 
-            console.error("❌ Erro ao criar conversa:", error); 
-            return; 
-        }
+        if (error) { console.error("❌ Erro ao criar conversa:", error); return; }
         idConversaAtual = data[0].id; 
         console.log("✅ Conversa criada com ID:", idConversaAtual);
       }
 
-      // Salva as mensagens
       var novas = conversaAtual.slice(lastSavedIndex);
-      console.log("Salvando mensagens novas:", novas);
+      console.log("⬇️ Mensagens novas para salvar:", novas);
 
       const mensagensParaSalvar = novas.map(msg => ({
           conversation_id: idConversaAtual, 
@@ -2046,10 +2037,7 @@ async function salvarConversaAtual() {
 
       const { error: msgError } = await supabase.from('messages').insert(mensagensParaSalvar);
       
-      if (msgError) { 
-          console.error("❌ Erro ao salvar mensagens no banco:", msgError); 
-          return; 
-      }
+      if (msgError) { console.error("❌ Erro no Supabase ao salvar mensagem:", msgError); return; }
       
       lastSavedIndex = conversaAtual.length;
       console.log("✅ Mensagens salvas com sucesso!");
@@ -2057,7 +2045,7 @@ async function salvarConversaAtual() {
       if (typeof renderizarHistorico === 'function') renderizarHistorico();
       
   } catch (err) {
-      console.error("❌ Erro inesperado ao salvar:", err);
+      console.error("❌ Erro inesperado:", err);
   }
 }
 async function renderizarHistorico(){
@@ -2225,41 +2213,39 @@ async function deletarConversa() {
     renderizarHistorico();
 }
 
-async function carregarConversa(id) {
-  console.log("🔄 Iniciando carregamento da conversa:", id);
+async function carregarConversa(id){
+  console.log("🔄 Carregando conversa ID:", id);
   var area = document.getElementById('chatMessages');
   var welcome = document.getElementById('dashWelcome');
   
   if(welcome) welcome.style.display = 'none';
   if(area) {
       area.classList.add('active');
-      area.innerHTML = '<div style="color:rgba(255,255,255,.5); text-align:center; padding: 20px;">Carregando histórico...</div>';
+      area.innerHTML = '<div style="color:rgba(255,255,255,.5); text-align:center; padding: 20px;">Carregando...</div>';
   }
   
   idConversaAtual = id;
 
   try {
-      let { data: msgs, error } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('conversation_id', id)
-          .order('created_at', { ascending: true });
+      let { data: msgs, error } = await supabase.from('messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+          console.error("❌ Erro ao buscar mensagens:", error);
+          throw error;
+      }
+
+      console.log("📦 Mensagens retornadas do banco:", msgs);
+
+      if (!msgs || msgs.length === 0) {
+          if(area) area.innerHTML = '<div style="color:rgba(255,255,255,.5); text-align:center; padding: 20px;">Esta conversa está vazia no banco de dados.</div>';
+          return;
+      }
 
       if(area) area.innerHTML = '';
       conversaAtual = []; 
       
-      // 1. Se a conversa existir mas não tiver mensagens
-      if (!msgs || msgs.length === 0) {
-          if(area) area.innerHTML = '<div style="color:rgba(255,255,255,.5); text-align:center; padding: 20px;">Esta conversa está vazia.</div>';
-          return;
-      }
-
-      // 2. Desenha as mensagens
       msgs.forEach(function(msg) {
         conversaAtual.push({ role: msg.role, content: msg.content });
-        
         var div = document.createElement('div');
         if(msg.role === 'user'){
           div.className = 'msg user';
@@ -2267,26 +2253,16 @@ async function carregarConversa(id) {
         } else {
           div.className = 'msg ai';
           div.innerHTML = DOMPurify.sanitize(marked.parse(msg.content));
-          
-          if (typeof renderMathInElement !== 'undefined') {
-            renderMathInElement(div, { delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], throwOnError: false });
-          }
         }
         if(area) area.appendChild(div);
       });
       
       lastSavedIndex = conversaAtual.length;
-      
-      // Rola para o final
-      setTimeout(() => { window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'}); }, 100);
+      console.log("🎉 Conversa renderizada na tela com sucesso!");
 
   } catch(err) {
-      console.error("❌ Erro ao carregar:", err);
-      if(area) area.innerHTML = '<div style="color:#fca5a5; text-align:center; padding: 20px;">Erro ao carregar o histórico. Verifique o console.</div>';
+      console.error("❌ Erro fatal:", err);
   }
-
-  var sidebar = document.getElementById('sidebar');
-  if(sidebar && sidebar.classList.contains('open')) toggleSidebar();
 }
 function toggleSidebar(){
 document.getElementById('sidebar').classList.toggle('open');
