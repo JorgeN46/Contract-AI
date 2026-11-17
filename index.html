@@ -1792,13 +1792,78 @@ document.getElementById('modalBox').classList.remove('open');
 var supabaseUrl = 'https://uzmmoypdllnoawunmnxg.supabase.co';
 var supabaseKey = 'sb_publishable_h167SfQxm19PCEKFCcseSw_mgGxI9th';
 
-// Adicionamos as configurações de persistência e refresh automático
+// 1. Cria a conexão com o Supabase
 var supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true
   }
+});
+
+// 2. LIMPADOR DE URL (Remove erros feios da barra de endereço)
+if (window.location.href.includes('error=') || window.location.hash.includes('error=')) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    console.log("🧹 URL de erro do OAuth limpa com sucesso.");
+}
+
+// 3. MONITOR DE LOGIN E SALVAMENTO DE TOKENS (Google, Notion e futuros)
+supabase.auth.onAuthStateChange(async (event, session) => {
+    // Se a URL tiver erro, ignora o salvamento para não misturar tokens
+    if (window.location.href.includes('error=')) {
+        return;
+    }
+
+    if (event === 'SIGNED_IN' && session) {
+        const { user } = session;
+        let updateData = {};
+
+        const providers = session.user.app_metadata.providers || [];
+        const token = session.provider_token;
+
+        if (token) {
+            // Mapeamento escalável
+            const platformMap = {
+                'google': { tokenCol: 'google_token', refreshCol: 'google_refresh_token', prefix: 'ya29.' },
+                'notion': { tokenCol: 'notion_token', refreshCol: null, prefix: '' } 
+            };
+
+            for (const [providerName, config] of Object.entries(platformMap)) {
+                if (providers.includes(providerName)) {
+                    let isTokenFromThisProvider = false;
+                    
+                    // Valida o token para não salvar o do Google no Notion
+                    if (providerName === 'google' && token.startsWith('ya29.')) {
+                        isTokenFromThisProvider = true;
+                    } else if (providerName === 'notion' && !token.startsWith('ya29.')) {
+                        isTokenFromThisProvider = true;
+                    } else if (providerName !== 'google' && providerName !== 'notion') {
+                        isTokenFromThisProvider = true; 
+                    }
+
+                    if (isTokenFromThisProvider) {
+                        updateData[config.tokenCol] = token;
+                        if (config.refreshCol && session.provider_refresh_token) {
+                            updateData[config.refreshCol] = session.provider_refresh_token;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (Object.keys(updateData).length > 0) {
+            try {
+                const { error } = await supabase.from('profiles').update(updateData).eq('id', user.id);
+                if (error) {
+                    console.error("❌ Erro ao salvar token no banco:", error);
+                } else {
+                    console.log("✅ Tokens salvos com sucesso na tabela profiles!", updateData);
+                }
+            } catch (err) {
+                console.error("❌ Erro de conexão ao salvar token:", err);
+            }
+        }
+    }
 });
 function go(name){
   document.querySelectorAll('.screen').forEach(function(s){ 
@@ -1942,24 +2007,37 @@ async function abrirConversaAntiga(id) {
     });
 }
 async function salvarConversaAtual() {
-  if(conversaAtual.length === 0 || conversaAtual.length <= lastSavedIndex) return; 
+  console.log("💾 Tentando salvar. Mensagens na tela:", conversaAtual.length, "| Já salvas:", lastSavedIndex);
+  
+  if(conversaAtual.length === 0) return;
+  if(conversaAtual.length <= lastSavedIndex) {
+      console.log("Nenhuma mensagem nova para salvar.");
+      return; 
+  }
   
   try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session || !session.user) return; // Segurança: não salva se não estiver logado
+      if (!session || !session.user) return;
 
       var primeiraMsg = conversaAtual.find(m => m.role === 'user');
       var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
 
-      // Cria a conversa se não existir
+      // Cria a conversa
       if (!idConversaAtual) {
+        console.log("Criando nova conversa no banco...");
         let { data, error } = await supabase.from('conversations').insert([{ user_id: session.user.id, title: titulo }]).select();
-        if (error) { console.error("Erro ao criar conversa:", error); return; }
+        if (error) { 
+            console.error("❌ Erro ao criar conversa:", error); 
+            return; 
+        }
         idConversaAtual = data[0].id; 
+        console.log("✅ Conversa criada com ID:", idConversaAtual);
       }
 
-      // Salva as novas mensagens
+      // Salva as mensagens
       var novas = conversaAtual.slice(lastSavedIndex);
+      console.log("Salvando mensagens novas:", novas);
+
       const mensagensParaSalvar = novas.map(msg => ({
           conversation_id: idConversaAtual, 
           role: msg.role, 
@@ -1967,13 +2045,19 @@ async function salvarConversaAtual() {
       }));
 
       const { error: msgError } = await supabase.from('messages').insert(mensagensParaSalvar);
-      if (msgError) { console.error("Erro ao salvar mensagens:", msgError); return; }
+      
+      if (msgError) { 
+          console.error("❌ Erro ao salvar mensagens no banco:", msgError); 
+          return; 
+      }
       
       lastSavedIndex = conversaAtual.length;
+      console.log("✅ Mensagens salvas com sucesso!");
+      
       if (typeof renderizarHistorico === 'function') renderizarHistorico();
       
   } catch (err) {
-      console.error("Erro inesperado ao salvar:", err);
+      console.error("❌ Erro inesperado ao salvar:", err);
   }
 }
 async function renderizarHistorico(){
