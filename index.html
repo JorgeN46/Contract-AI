@@ -817,11 +817,14 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
+  // 1º: Declaramos as variáveis no escopo GLOBAL (fora de qualquer if)
+  const SUPABASE_URL = "https://uzmmoypdllnoawunmnxg.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_h167SfQxm19PCEKFCcseSw_mgGxI9th"; // Sua chave nova aqui
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // 2º: O if do PDF.js fica separado, apenas para configurar o worker dele
   if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    const SUPABASE_URL = "https://uzmmoypdllnoawunmnxg.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_h167SfQxm19PCEKFCcseSw_mgGxI9th"; // <-- Troque por sua chave real
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
