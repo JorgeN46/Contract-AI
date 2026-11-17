@@ -4461,57 +4461,6 @@ function confirmarDownload() {
   setTimeout(() => { divTemp.remove(); }, 1000);
   fecharEditor();
 }
-async function enviarParaNotion(texto, btnElement) {
-  // Pede o token na primeira vez e guarda no navegador
-  let notionToken = localStorage.getItem('notion_token');
-  let notionPageId = localStorage.getItem('notion_page_id');
-
-  if (!notionToken || !notionPageId) {
-    notionToken = prompt("Cole o seu Token de Integração do Notion (secret_...):");
-    if (!notionToken) return;
-    
-    notionPageId = prompt("Cole o ID da Página do Notion onde deseja salvar. (Você acha na URL da página, após o último '-')");
-    if (!notionPageId) return;
-
-    localStorage.setItem('notion_token', notionToken);
-    localStorage.setItem('notion_page_id', notionPageId);
-  }
-
-  const textoOriginal = btnElement.innerHTML;
-  btnElement.innerHTML = '⏳ Enviando...';
-  btnElement.disabled = true;
-
-  try {
-    // O Notion exige que a página seja quebrada em blocos (parágrafos)
-    const paragrafos = texto.split('\n').filter(p => p.trim() !== '').map(p => ({
-      object: "block",
-      type: "paragraph",
-      paragraph: {
-        rich_text: [{ type: "text", text: { content: p } }]
-      }
-    }));
-
-    const resposta = await fetch(`https://api.notion.com/v1/blocks/${notionPageId}/children`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${notionToken}`,
-        'Content-Type': 'application/json',
-        'Notion-Version': '2022-06-28'
-      },
-      body: JSON.stringify({ children: paragrafos })
-    });
-
-    if (!resposta.ok) throw new Error("Token ou ID da página inválidos.");
-
-    btnElement.innerHTML = '✅ Enviado!';
-    setTimeout(() => { btnElement.innerHTML = textoOriginal; btnElement.disabled = false; }, 3000);
-
-  } catch (error) {
-    alert("Erro ao enviar para o Notion: " + error.message);
-    btnElement.innerHTML = textoOriginal;
-    btnElement.disabled = false;
-  }
-}
 async function testarNotion() {
   const { data } = await supabase.auth.getSession();
   const notionToken = data?.session?.provider_token;
@@ -4575,16 +4524,25 @@ async function conectarNotion() {
     alert("Erro ao conectar com o Notion: " + error.message);
   }
 }
-async function exportarParaNotion(textoIA) {
-    // 🚨 ALERTA DE DEBUG: Se essa mensagem aparecer, o código novo está rodando!
-    alert("🚨 NOVO CÓDIGO DO NOTION ATIVADO! Vou pedir o ID da página, e não o token secret.");
+async function exportarParaNotion(botao) {
+    // 1. Pega o texto da resposta da IA (ignorando os botões)
+    const msgElement = botao.closest('.msg.ai');
+    let textoIA = msgElement ? msgElement.innerText : "";
     
-    const parentId = prompt("Cole o ID da página do Notion (aqueles 32 caracteres no final da URL):");
+    // Limpa o texto para não salvar o nome dos botões no Notion
+    textoIA = textoIA.replace("📋 Copiar", "").replace("📄 Editar e Baixar PDF", "").replace("📝 Editar e Baixar Word", "").replace("📊 Exportar para Planilha", "").replace("📓 Enviar p/ Notion", "").replace("Enviar p/ Notion", "").replace("✅ Enviado!", "").trim();
+
+    const parentId = prompt("Cole o ID da página do Notion (aqueles 32 caracteres no final da URL):\n\n⚠️ Lembre-se de ir no Notion, clicar em '...' > 'Conexões' e adicionar o app 'macrus' nessa página.");
     if (!parentId) return;
+
+    const textoOriginal = botao.innerHTML;
+    botao.innerHTML = '⏳ Enviando...';
+    botao.disabled = true;
 
     try {
         const { data: { session } } = await supabase.auth.getSession();
         
+        // Chama a função segura do Supabase (sem CORS)
         const res = await fetch(`https://uzmmoypdllnoawunmnxg.supabase.co/functions/v1/notion-save-page`, {
             method: 'POST',
             headers: { 
@@ -4601,15 +4559,21 @@ async function exportarParaNotion(textoIA) {
         const data = await res.json();
         
         if (res.ok && data.url) {
+            botao.innerHTML = '✅ Enviado!';
             alert("✅ Salvo no Notion com sucesso!");
-            window.open(data.url, '_blank');
+            window.open(data.url, '_blank'); // Abre a página criada
         } else {
-            alert("❌ Erro ao salvar no Notion:\n\n" + (data.error || "Erro desconhecido"));
-            console.error("Erro da API do Notion:", data);
+            throw new Error(data.error || "Erro desconhecido");
         }
         
     } catch (e) { 
-        alert("Erro de conexão: " + e.message); 
+        alert("❌ Erro ao salvar no Notion:\n\n" + e.message);
+        botao.innerHTML = textoOriginal;
+    } finally {
+        setTimeout(() => {
+            botao.innerHTML = textoOriginal;
+            botao.disabled = false;
+        }, 3000);
     }
 }
 async function conectarDrive() {
