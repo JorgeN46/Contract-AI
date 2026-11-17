@@ -2781,13 +2781,14 @@ async function chamarIA(mensagemUsuario){
     };
     actions.appendChild(btnSheets);
 
-    // 6. Botão Enviar para Notion
+      // 6. Botão Enviar para Notion
     var btnNotion = document.createElement('button');
     btnNotion.className = 'msg-action-btn';
     btnNotion.innerHTML = '⬛ Enviar p/ Notion';
     btnNotion.onclick = function(e){ 
         e.stopPropagation(); 
-        enviarParaNotion(textoFinalLimpo, btnNotion); 
+        // 👇 AQUI ESTÁ A CORREÇÃO: Chamando a função nova e passando apenas o botão 👇
+        exportarParaNotion(btnNotion); 
     };
     actions.appendChild(btnNotion);
     
@@ -4525,12 +4526,24 @@ async function conectarNotion() {
   }
 }
 async function exportarParaNotion(botao) {
-    // 1. Pega o texto da resposta da IA (ignorando os botões)
+    console.log("🚀 Botão do Notion clicado!");
+
+    // 1. Tenta achar a mensagem da IA
     const msgElement = botao.closest('.msg.ai');
-    let textoIA = msgElement ? msgElement.innerText : "";
-    
-    // Limpa o texto para não salvar o nome dos botões no Notion
-    textoIA = textoIA.replace("📋 Copiar", "").replace("📄 Editar e Baixar PDF", "").replace("📝 Editar e Baixar Word", "").replace("📊 Exportar para Planilha", "").replace("📓 Enviar p/ Notion", "").replace("Enviar p/ Notion", "").replace("✅ Enviado!", "").trim();
+    if (!msgElement) {
+        alert("Erro interno: Não foi possível encontrar o texto da mensagem.");
+        return;
+    }
+
+    // 2. Pega o texto e limpa os botões
+    let textoIA = msgElement.innerText;
+    textoIA = textoIA.replace(/📋 Copiar/g, "")
+                     .replace(/📄 Editar e Baixar PDF/g, "")
+                     .replace(/📝 Editar e Baixar Word/g, "")
+                     .replace(/📊 Exportar para Planilha/g, "")
+                     .replace(/📓 Enviar p\/ Notion/g, "")
+                     .replace(/✅ Enviado!/g, "")
+                     .trim();
 
     const parentId = prompt("Cole o ID da página do Notion (aqueles 32 caracteres no final da URL):\n\n⚠️ Lembre-se de ir no Notion, clicar em '...' > 'Conexões' e adicionar o app 'macrus' nessa página.");
     if (!parentId) return;
@@ -4540,9 +4553,14 @@ async function exportarParaNotion(botao) {
     botao.disabled = true;
 
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log("🔍 Buscando sessão do usuário...");
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        // Chama a função segura do Supabase (sem CORS)
+        if (sessionError || !session) {
+            throw new Error("Você precisa estar logado para usar o Notion.");
+        }
+        
+        console.log("📡 Chamando a Edge Function do Notion no Supabase...");
         const res = await fetch(`https://uzmmoypdllnoawunmnxg.supabase.co/functions/v1/notion-save-page`, {
             method: 'POST',
             headers: { 
@@ -4557,23 +4575,21 @@ async function exportarParaNotion(botao) {
         });
         
         const data = await res.json();
+        console.log("📥 Resposta do Supabase:", data);
         
         if (res.ok && data.url) {
             botao.innerHTML = '✅ Enviado!';
             alert("✅ Salvo no Notion com sucesso!");
-            window.open(data.url, '_blank'); // Abre a página criada
+            window.open(data.url, '_blank');
         } else {
-            throw new Error(data.error || "Erro desconhecido");
+            throw new Error(data.error || "Erro desconhecido ao salvar.");
         }
         
     } catch (e) { 
+        console.error("❌ Erro no fluxo do Notion:", e);
         alert("❌ Erro ao salvar no Notion:\n\n" + e.message);
         botao.innerHTML = textoOriginal;
-    } finally {
-        setTimeout(() => {
-            botao.innerHTML = textoOriginal;
-            botao.disabled = false;
-        }, 3000);
+        botao.disabled = false;
     }
 }
 async function conectarDrive() {
