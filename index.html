@@ -819,6 +819,9 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 <script>
   if (typeof pdfjsLib !== 'undefined') {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const SUPABASE_URL = "https://uzmmoypdllnoawunmnxg.supabase.co";const SUPABASE_URL = "https://uzmmoypdllnoawunmnxg.supabase.co";
+    const SUPABASE_ANON_KEY = "sua-chave-anon-aqui"; 
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -3969,7 +3972,6 @@ function mostrarClausulasNoDrawer(htmlContent) {
 // ==========================================
 
 async function conectarDrive() {
-  // 1. Abre o modal com a mensagem de carregando
   document.getElementById('driveModalOverlay').classList.add('open');
   document.getElementById('driveModal').classList.add('open');
   const lista = document.getElementById('driveFilesList');
@@ -3977,21 +3979,17 @@ async function conectarDrive() {
 
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-        throw new Error("Você precisa estar logado.");
-    }
+    if (!session) throw new Error("Você precisa estar logado.");
 
-    // 2. Chama a Edge Function do Supabase (que é segura e não expira)
-    const resposta = await fetch(`${SUPABASE_URL}/functions/v1/drive-list-files`, {
+    // 👇 AQUI ESTÁ A CORREÇÃO: Trocamos a variável pela sua URL real 👇
+    const res = await fetch(`https://uzmmoypdllnoawunmnxg.supabase.co/functions/v1/drive-list-files`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${session.access_token}` }
     });
 
-    const arquivos = await resposta.json();
+    const arquivos = await res.json();
 
-    if (arquivos.error) {
-        throw new Error(arquivos.error);
-    }
+    if (arquivos.error) throw new Error(arquivos.error);
     
     lista.innerHTML = '';
 
@@ -4000,15 +3998,11 @@ async function conectarDrive() {
       return;
     }
 
-    // 3. Cria a lista de botões (igual você fez)
     arquivos.forEach(file => {
       const btn = document.createElement('button');
       btn.className = 'drive-file-btn';
       btn.innerHTML = `<span style="font-size:18px;">📄</span> <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${file.name}</span>`;
-      
-      // Quando clicar, chama a função de baixar
       btn.onclick = () => selecionarArquivoDrive(file, btn);
-      
       lista.appendChild(btn);
     });
 
@@ -4370,16 +4364,29 @@ async function testarNotion() {
 // ==========================================
 async function conectarNotion() {
   try {
-    // O Supabase vai gerar a URL de autorização do Notion
-    // e redirecionar o usuário para lá
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'notion',
-      options: {
-        redirectTo: window.location.origin + '/?notion=connected' // Volta pro site
-      }
-    });
-
-    if (error) throw error;
+    // Verifica se o usuário já está logado no Macrus
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      // Se já estiver logado, usamos o linkIdentity para VINCULAR a conta
+      // (Lembrando que você precisa ter ativado "Manual Linking" no painel do Supabase)
+      const { error } = await supabase.auth.linkIdentity({
+        provider: 'notion',
+        options: {
+          redirectTo: window.location.origin + '/?notion=connected'
+        }
+      });
+      if (error) throw error;
+    } else {
+      // Se não estiver logado, faz o login normal com o Notion
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'notion',
+        options: {
+          redirectTo: window.location.origin + '/?notion=connected'
+        }
+      });
+      if (error) throw error;
+    }
     
   } catch (error) {
     console.error("Erro ao conectar Notion:", error.message);
@@ -4387,19 +4394,18 @@ async function conectarNotion() {
   }
 }
 async function exportarParaNotion(textoIA) {
-    // 1. Pede ao usuário o ID da página
     const parentId = prompt("Cole o ID da página do Notion onde deseja salvar a análise:");
-    if (!parentId) return; // Se o usuário cancelar, para aqui
+    if (!parentId) return;
 
     try {
         const { data: { session } } = await supabase.auth.getSession();
         
-        // 2. Chama a Edge Function do NOTION (e não a do Drive)
-        const res = await fetch(`https://uzmmoypdllnoawunmnxg.supabase.co/functions/v1/notion-save-page`, {
+        // Agora usamos a variável global SUPABASE_URL
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/notion-save-page`, {
             method: 'POST',
             headers: { 
                 'Authorization': `Bearer ${session.access_token}`,
-                'Content-Type': 'application/json' // Necessário para enviar o body corretamente
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 title: "Análise Macrus - " + new Date().toLocaleDateString('pt-BR'),
@@ -4410,10 +4416,9 @@ async function exportarParaNotion(textoIA) {
         
         const data = await res.json();
         
-        // 3. Trata a resposta
         if (res.ok && data.url) {
             alert("✅ Salvo no Notion com sucesso!");
-            window.open(data.url, '_blank'); // Abre a página criada
+            window.open(data.url, '_blank');
         } else {
             alert("❌ Erro ao salvar: " + (data.error || "Erro desconhecido"));
         }
