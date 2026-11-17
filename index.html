@@ -1884,29 +1884,77 @@ var lastSavedIndex = 0;
 function novoChat(){
   var area = document.getElementById('chatMessages');
   var welcome = document.getElementById('dashWelcome');
-  if(area){ area.classList.remove('active'); area.innerHTML = ''; }
-  if(welcome){ welcome.style.display = ''; }
+  
+  if(area){ 
+      area.classList.remove('active'); 
+      area.innerHTML = ''; 
+  }
+  if(welcome){ 
+      welcome.style.display = ''; 
+  }
+  
   var inp = document.querySelector('.chat-input');
   limparInput(); 
 
+  // Limpa os anexos e variáveis de controle
   textoArquivoExtraido = "";
   arquivoAnexado = null;
   removerAnexo(); 
+  
+  // 👇 O SEGREDO DO HISTÓRICO ESTÁ AQUI 👇
   conversaAtual = []; 
   idConversaAtual = null; 
   lastSavedIndex = 0;
+
+  // Fecha a barra lateral se ela estiver aberta (bom para celular)
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  if(sidebar && sidebar.classList.contains('open')) {
+      sidebar.classList.remove('open');
+      if (overlay) overlay.classList.remove('open');
+  }
 }
-async function salvarConversaAtual(){
-  if(conversaAtual.length === 0) return; 
-  if(conversaAtual.length <= lastSavedIndex) return; // Nada novo para salvar
+async function abrirConversaAntiga(id) {
+    conversaAtualId = id; // Define a conversa atual
+    
+    // Limpa a tela
+    document.getElementById('chatMessages').innerHTML = '';
+    document.getElementById('dashWelcome').style.display = 'none';
+    document.getElementById('chatMessages').classList.add('active');
+    
+    // Fecha a sidebar no celular
+    if(window.innerWidth < 768) toggleSidebar();
+
+    // Busca as mensagens no banco
+    const { data: mensagens } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', id)
+        .order('created_at', { ascending: true });
+
+    // Renderiza na tela
+    mensagens.forEach(msg => {
+        if (msg.role === 'user') {
+            adicionarMensagemUsuario(msg.content);
+        } else {
+            adicionarMensagemIA(msg.content); // Sua função que adiciona a bolha da IA
+        }
+    });
+}
+async function salvarConversaAtual() {
+  if (conversaAtual.length === 0) return; 
+  if (conversaAtual.length <= lastSavedIndex) return; // Nada novo para salvar
   
-  var userId = localStorage.getItem('contractai_user_id');
-  if(!userId) return;
-
-  var primeiraMsg = conversaAtual.find(m => m.role === 'user');
-  var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
-
   try {
+      // 👇 SEGURANÇA: Pega o usuário direto da sessão do Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user) return; // Se não estiver logado, não salva
+      const userId = session.user.id;
+
+      var primeiraMsg = conversaAtual.find(m => m.role === 'user');
+      var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
+
+      // Se for uma conversa nova, cria a "capa" da conversa
       if (!idConversaAtual) {
         let { data, error } = await supabase.from('conversations').insert([{ user_id: userId, title: titulo }]).select();
         if (error) { 
@@ -1918,16 +1966,27 @@ async function salvarConversaAtual(){
 
       // Salva APENAS as mensagens novas (a partir do último índice salvo)
       var novas = conversaAtual.slice(lastSavedIndex);
-      for (let msg of novas) {
-          await supabase.from('messages').insert([{ 
+      if (novas.length > 0) {
+          // Faz um insert em lote (mais rápido que um por um)
+          const mensagensParaSalvar = novas.map(msg => ({
               conversation_id: idConversaAtual, 
               role: msg.role, 
               content: msg.content 
-          }]);
+          }));
+
+          const { error: msgError } = await supabase.from('messages').insert(mensagensParaSalvar);
+          if (msgError) {
+              console.error("Erro ao salvar mensagens:", msgError);
+              return;
+          }
       }
+      
       lastSavedIndex = conversaAtual.length;
       
-      renderizarHistorico();
+      // Atualiza a barra lateral na hora
+      if (typeof renderizarHistorico === 'function') {
+          renderizarHistorico(); 
+      }
       
   } catch (err) {
       console.error("Erro inesperado ao salvar conversa:", err);
@@ -2104,66 +2163,90 @@ async function carregarConversa(id){
   var welcome = document.getElementById('dashWelcome');
   
   if(welcome) welcome.style.display = 'none';
-  area.classList.add('active');
-  area.innerHTML = '<div style="color:rgba(255,255,255,.5); text-align:center;">Carregando conversa...</div>';
+  if(area) {
+      area.classList.add('active');
+      area.innerHTML = '<div style="color:rgba(255,255,255,.5); text-align:center; padding: 20px;">Carregando conversa...</div>';
+  }
   
   idConversaAtual = id;
 
-  let { data: msgs, error } = await supabase.from('messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true });
-  
-  area.innerHTML = '';
-  if (error || !msgs) return;
-
-  conversaAtual = []; 
-  
-  msgs.forEach(function(msg) {
-    conversaAtual.push({ role: msg.role, content: msg.content });
-    if(msg.role === 'user'){
-      var div = document.createElement('div');
-      div.className = 'msg user';
-      div.textContent = msg.content;
-      area.appendChild(div);
-    } else {
-      var div = document.createElement('div');
-      div.className = 'msg ai';
-      div.innerHTML = DOMPurify.sanitize(marked.parse(msg.content));
+  try {
+      let { data: msgs, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', id)
+          .order('created_at', { ascending: true });
       
-      if (typeof renderMathInElement !== 'undefined') {
-        renderMathInElement(div, {
-          delimiters: [
-            {left: '$$', right: '$$', display: true},
-            {left: '$', right: '$', display: false},
-            {left: '\\(', right: '\\)', display: false},
-            {left: '\\[', right: '\\]', display: true}
-          ],
-          throwOnError : false
-        });
-      }
+      if (error) throw error;
 
-      var actions = document.createElement('div');
-      actions.className = 'msg-actions';
-      var btnCopiar = document.createElement('button');
-      btnCopiar.className = 'msg-action-btn';
-      btnCopiar.innerHTML = '📋 Copiar';
-      btnCopiar.onclick = function(e){
-        e.stopPropagation();
-        var clone = div.cloneNode(true);
-        var btnClone = clone.querySelector('.msg-actions');
-        if(btnClone) btnClone.remove();
-        navigator.clipboard.writeText(clone.innerText.trim()).then(function(){
-          btnCopiar.innerHTML = '✓ Copiado';
-          setTimeout(function(){ btnCopiar.innerHTML = '📋 Copiar'; }, 2000);
-        });
-      };
-      actions.appendChild(btnCopiar);
-      div.appendChild(actions);
-      area.appendChild(div);
-    }
-  });
-  lastSavedIndex = conversaAtual.length;
+      if(area) area.innerHTML = '';
+      conversaAtual = []; 
+      
+      if (!msgs || msgs.length === 0) return;
+
+      msgs.forEach(function(msg) {
+        conversaAtual.push({ role: msg.role, content: msg.content });
+        
+        if(msg.role === 'user'){
+          var div = document.createElement('div');
+          div.className = 'msg user';
+          div.textContent = msg.content;
+          area.appendChild(div);
+        } else {
+          var div = document.createElement('div');
+          div.className = 'msg ai';
+          div.innerHTML = DOMPurify.sanitize(marked.parse(msg.content));
+          
+          if (typeof renderMathInElement !== 'undefined') {
+            renderMathInElement(div, {
+              delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '\\[', right: '\\]', display: true}
+              ],
+              throwOnError : false
+            });
+          }
+
+          var actions = document.createElement('div');
+          actions.className = 'msg-actions';
+          
+          // Botão Copiar
+          var btnCopiar = document.createElement('button');
+          btnCopiar.className = 'msg-action-btn';
+          btnCopiar.innerHTML = '📋 Copiar';
+          btnCopiar.onclick = function(e){
+            e.stopPropagation();
+            var clone = div.cloneNode(true);
+            var btnClone = clone.querySelector('.msg-actions');
+            if(btnClone) btnClone.remove();
+            navigator.clipboard.writeText(clone.innerText.trim()).then(function(){
+              btnCopiar.innerHTML = '✓ Copiado';
+              setTimeout(function(){ btnCopiar.innerHTML = '📋 Copiar'; }, 2000);
+            });
+          };
+          actions.appendChild(btnCopiar);
+          
+          div.appendChild(actions);
+          area.appendChild(div);
+        }
+      });
+      
+      lastSavedIndex = conversaAtual.length;
+      
+      // Rola para o final da conversa carregada
+      window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+
+  } catch(err) {
+      console.error("Erro ao carregar conversa:", err);
+      if(area) area.innerHTML = '<div style="color:#fca5a5; text-align:center; padding: 20px;">Erro ao carregar o histórico.</div>';
+  }
+
+  // Fecha a barra lateral no celular
   var sidebar = document.getElementById('sidebar');
   var overlay = document.getElementById('sidebarOverlay');
-  if(sidebar.classList.contains('open')) {
+  if(sidebar && sidebar.classList.contains('open')) {
       sidebar.classList.remove('open');
       overlay.classList.remove('open');
   }
