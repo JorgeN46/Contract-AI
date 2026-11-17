@@ -4473,44 +4473,63 @@ async function exportarParaNotion(textoIA) {
     }
 }
 async function conectarDrive() {
-    const { error } = await supabase.auth.linkIdentity({
-        provider: 'google',
-        options: { 
-            scopes: 'https://www.googleapis.com/auth/drive.readonly',
-            queryParams: {
-                access_type: 'offline',
-                prompt: 'consent'
-            }
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        const options = {
+            // Adicionado o escopo do Sheets aqui para funcionar!
+            scopes: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets',
+            queryParams: { access_type: 'offline', prompt: 'consent' },
+            redirectTo: window.location.origin + '/#settings-plugins'
+        };
+
+        let result;
+        if (session) {
+            // Tenta vincular a conta do Google
+            result = await supabase.auth.linkIdentity({ provider: 'google', options });
+        } else {
+            // Se por algum motivo não tiver sessão, faz o login normal
+            result = await supabase.auth.signInWithOAuth({ provider: 'google', options });
         }
-    });
-    if (error) alert(error.message);
+
+        if (result.error) {
+            // 🛡️ A MÁGICA ACONTECE AQUI: Tratamento do erro de conta já vinculada
+            const msg = result.error.message.toLowerCase();
+            if (msg.includes('already linked') || msg.includes('identity_already_exists')) {
+                alert("✅ Sua conta do Google já está conectada! Você já pode usar o Drive e o Sheets.");
+                // Limpa a URL caso tenha sujado
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+            }
+            throw result.error;
+        }
+    } catch (error) {
+        alert("Erro ao conectar Google: " + error.message);
+    }
 }
 // Fica ouvindo o status de login do usuário
 supabase.auth.onAuthStateChange(async (event, session) => {
-    // Se o usuário logou ou acabou de conectar uma nova conta
     if (event === 'SIGNED_IN' && session) {
         const { user } = session;
         let updateData = {};
 
-        // 👇 AQUI ESTÁ A CORREÇÃO: Pegamos a lista de TODOS os provedores conectados
+        // Pega a lista de provedores (google, notion, email, etc)
         const providers = session.user.app_metadata.providers || [];
 
-        // 1. Verifica se o Google está na lista de provedores
+        // 1. Verifica se o Google está na lista
         if (session.provider_token && providers.includes('google')) {
             updateData.google_token = session.provider_token;
-            
-            // Salva o refresh token se o Google enviar
             if (session.provider_refresh_token) {
                 updateData.google_refresh_token = session.provider_refresh_token;
             }
         }
 
-        // 2. Verifica se o Notion está na lista de provedores
+        // 2. Verifica se o Notion está na lista
         if (session.provider_token && providers.includes('notion')) {
             updateData.notion_token = session.provider_token;
         }
 
-        // 3. Salva no banco de dados (tabela profiles)
+        // 3. Salva no banco
         if (Object.keys(updateData).length > 0) {
             console.log("💾 Tentando salvar os seguintes tokens:", updateData);
             
