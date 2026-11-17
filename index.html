@@ -4204,11 +4204,22 @@ async function loginComProvedor(provedor, event) {
 // 📊 INTEGRAÇÃO COM GOOGLE SHEETS
 // ==========================================
 async function exportarParaSheets(textoAnalise, btnElement) {
-  const { data } = await supabase.auth.getSession();
-  const providerToken = data?.session?.provider_token;
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    alert("⚠️ Você precisa estar logado para exportar planilhas.");
+    return;
+  }
 
-  if (!providerToken) {
-    alert("⚠️ Você precisa estar logado com o Google para exportar planilhas.");
+  // 1. Tenta pegar o token da sessão, se não tiver, busca do banco de dados
+  let token = session.provider_token;
+  if (!token) {
+    const { data: profile } = await supabase.from('profiles').select('google_token').eq('id', session.user.id).single();
+    if (profile) token = profile.google_token;
+  }
+
+  if (!token) {
+    alert("⚠️ Você precisa conectar sua conta do Google para exportar planilhas.");
     return;
   }
 
@@ -4217,11 +4228,11 @@ async function exportarParaSheets(textoAnalise, btnElement) {
   btnElement.disabled = true;
 
   try {
-    // 1. Cria uma planilha nova no Drive do usuário
+    // 2. Cria a planilha nova no Google Drive
     const respostaCriar = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${providerToken}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -4231,19 +4242,21 @@ async function exportarParaSheets(textoAnalise, btnElement) {
       })
     });
 
-    if (!respostaCriar.ok) throw new Error("Falha ao criar a planilha no Google.");
+    if (!respostaCriar.ok) {
+        const erroGoogle = await respostaCriar.json();
+        throw new Error(erroGoogle.error?.message || "Falha ao criar a planilha no Google.");
+    }
     const planilha = await respostaCriar.json();
     const spreadsheetId = planilha.spreadsheetId;
 
-    // 2. Prepara os dados para enviar (Dividindo o texto por parágrafos)
-    // A IA costuma usar emojis e tópicos, então quebramos o texto por linhas
+    // 3. Prepara os dados
     const linhas = textoAnalise.split('\n').map(linha => [linha.trim()]);
 
-    // 3. Envia os dados para a primeira aba da planilha
-    const respostaEnviar = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet1!A1:append?valueInputOption=USER_ENTERED`, {
+    // 4. Envia os dados (Atenção: Removemos o "Sheet1!" para ele usar a primeira aba automaticamente)
+    const respostaEnviar = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${providerToken}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -4251,11 +4264,14 @@ async function exportarParaSheets(textoAnalise, btnElement) {
       })
     });
 
-    if (!respostaEnviar.ok) throw new Error("Falha ao preencher a planilha.");
+    if (!respostaEnviar.ok) {
+        const erroGoogle = await respostaEnviar.json();
+        throw new Error(erroGoogle.error?.message || "Falha ao preencher a planilha.");
+    }
 
     btnElement.innerHTML = '✅ Planilha Criada!';
     
-    // Abre a planilha em uma nova aba
+    // Abre a planilha nova em uma outra aba
     window.open(`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`, '_blank');
     
     setTimeout(() => {
@@ -4264,7 +4280,7 @@ async function exportarParaSheets(textoAnalise, btnElement) {
     }, 3000);
 
   } catch (err) {
-    console.error(err);
+    console.error("Erro detalhado do Sheets:", err);
     alert("Erro ao exportar: " + err.message);
     btnElement.innerHTML = textoOriginal;
     btnElement.disabled = false;
@@ -4440,7 +4456,8 @@ async function conectarNotion() {
   }
 }
 async function exportarParaNotion(textoIA) {
-    const parentId = prompt("Cole o ID da página do Notion onde deseja salvar a análise:");
+    // Pede APENAS o ID da página (aqueles 32 caracteres no final da URL do Notion)
+    const parentId = prompt("Cole o ID da página do Notion onde deseja salvar:\n\n(Dica: Abra a página no Notion, olhe a URL e copie os 32 caracteres no final)");
     if (!parentId) return;
 
     try {
@@ -4455,7 +4472,7 @@ async function exportarParaNotion(textoIA) {
             body: JSON.stringify({
                 title: "Análise Macrus - " + new Date().toLocaleDateString('pt-BR'),
                 content: textoIA,
-                parentId: parentId
+                parentId: parentId.trim()
             })
         });
         
