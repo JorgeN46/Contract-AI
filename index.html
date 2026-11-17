@@ -4492,8 +4492,10 @@ async function conectarNotion() {
   }
 }
 async function exportarParaNotion(textoIA) {
-    // Pede APENAS o ID da página (aqueles 32 caracteres no final da URL do Notion)
-    const parentId = prompt("Cole o ID da página do Notion onde deseja salvar:\n\n(Dica: Abra a página no Notion, olhe a URL e copie os 32 caracteres no final)");
+    // 🚨 ALERTA DE DEBUG: Se essa mensagem aparecer, o código novo está rodando!
+    alert("🚨 NOVO CÓDIGO DO NOTION ATIVADO! Vou pedir o ID da página, e não o token secret.");
+    
+    const parentId = prompt("Cole o ID da página do Notion (aqueles 32 caracteres no final da URL):");
     if (!parentId) return;
 
     try {
@@ -4518,7 +4520,8 @@ async function exportarParaNotion(textoIA) {
             alert("✅ Salvo no Notion com sucesso!");
             window.open(data.url, '_blank');
         } else {
-            alert("❌ Erro ao salvar: " + (data.error || "Erro desconhecido"));
+            alert("❌ Erro ao salvar no Notion:\n\n" + (data.error || "Erro desconhecido"));
+            console.error("Erro da API do Notion:", data);
         }
         
     } catch (e) { 
