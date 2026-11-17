@@ -830,6 +830,7 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <!-- Bibliotecas para gerar PDF e Word -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html-docx-js/0.3.1/html-docx.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <!-- KaTeX para renderizar fórmulas matemáticas -->
@@ -1473,19 +1474,7 @@ Sair da conta
       <!-- O Sheets usa o mesmo token do Drive, então o botão só precisa de um aviso -->
       <button onclick="alert('O Google Sheets já está pronto! Basta usar o botão de Exportar nas respostas da IA.')" class="btn btn-ghost" style="padding:8px 12px; font-size:12px;">Ativo</button>
     </div>
-
-    <!-- PLUGIN: CANVA -->
-    <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding: 16px; opacity: 0.6;">
-      <div style="display:flex; align-items:center; gap:12px;">
-        <div style="width:40px; height:40px; background:rgba(255,255,255,0.05); border-radius:10px; display:grid; place-items:center; color:#00C4CC; font-weight:bold; font-size:20px;">C</div>
-        <div>
-          <h4 style="color:#fff; font-size:15px; margin:0;">Canva</h4>
-          <p class="muted" style="font-size:12px; margin:0;">Gerar apresentações a partir de análises.</p>
-        </div>
-      </div>
-      <button class="btn btn-ghost" style="padding:8px 12px; font-size:12px;" disabled>Em breve</button>
-    </div>
-
+    
        <!-- PLUGIN: NOTION -->
     <div class="card" style="display:flex; align-items:center; justify-content:space-between; padding: 16px;">
       <div style="display:flex; align-items:center; gap:12px;">
@@ -2767,6 +2756,15 @@ async function chamarIA(mensagemUsuario){
         exportarParaNotion(btnNotion); 
     };
     actions.appendChild(btnNotion);
+        // 7. Botão Gerar Apresentação (Canva)
+    var btnCanva = document.createElement('button');
+    btnCanva.className = 'msg-action-btn';
+    btnCanva.innerHTML = '📊 Gerar Apresentação';
+    btnCanva.onclick = function(e){ 
+        e.stopPropagation(); 
+        gerarApresentacao(textoFinalLimpo, btnCanva); 
+    };
+    actions.appendChild(btnCanva);
     
     // ==========================================
     // INSERE OS BOTÕES NA TELA
@@ -4673,6 +4671,67 @@ supabase.auth.onAuthStateChange(async (event, session) => {
         }
     }
 });
+async function gerarApresentacao(textoIA, botao) {
+    // Se você passou o 'this' (botão) em vez do texto, precisamos pegar o texto:
+    if (typeof textoIA !== 'string' && textoIA.target) {
+        const msgElement = textoIA.target.closest('.msg.ai');
+        textoIA = msgElement.innerText.replace(/📋 Copiar/g, "").replace(/📥.*?PDF/g, "").replace(/📝.*?Word/g, "").replace(/📊.*?Planilha/g, "").replace(/⬛.*?Notion/g, "").replace(/📊.*?Apresentação/g, "").trim();
+        botao = textoIA.target;
+    }
+
+    const textoOriginal = botao.innerHTML;
+    botao.innerHTML = '⏳ Montando Slides...';
+    botao.disabled = true;
+
+    try {
+        // Cria uma nova apresentação
+        let pptx = new PptxGenJS();
+
+        // Slide 1: Capa
+        let slideCapa = pptx.addSlide();
+        slideCapa.background = { color: "070b14" }; // Fundo escuro do Macrus
+        slideCapa.addText("Análise Macrus", { x: 1, y: 2, w: 8, h: 1, fontSize: 44, bold: true, color: "4f8dff", align: "center", fontFace: "Arial" });
+        slideCapa.addText("Gerado por Inteligência Artificial", { x: 1, y: 3, w: 8, h: 1, fontSize: 18, color: "ffffff", align: "center", fontFace: "Arial" });
+
+        // Dividir o texto em blocos (por parágrafos ou títulos markdown ##)
+        // Vamos usar uma lógica simples: cada bloco grande vira um slide
+        let blocos = textoIA.split(/\n\n|## /).filter(b => b.trim().length > 20);
+
+        // Se o texto for muito curto, coloca tudo em um slide só
+        if (blocos.length === 0) blocos = [textoIA];
+
+        // Cria os slides de conteúdo
+        blocos.forEach((bloco, index) => {
+            if (index > 5) return; // Limita a 5 slides de conteúdo para não ficar gigante
+            
+            let slide = pptx.addSlide();
+            slide.background = { color: "ffffff" };
+            
+            // Título do Slide
+            slide.addText(`Tópico ${index + 1}`, { x: 0.5, y: 0.5, w: 9, h: 0.8, fontSize: 24, bold: true, color: "070b14" });
+            
+            // Conteúdo do Slide (Remove os asteriscos do Markdown para ficar limpo)
+            let textoLimpo = bloco.replace(/\*\*/g, '').replace(/\*/g, '');
+            slide.addText(textoLimpo, { x: 0.5, y: 1.5, w: 9, h: 4, fontSize: 16, color: "333333", bullet: true, valign: "top" });
+        });
+
+        // Salva o arquivo no computador do usuário
+        await pptx.writeFile({ fileName: `Macrus_Apresentacao_${new Date().getTime()}.pptx` });
+
+        botao.innerHTML = '✅ Baixado!';
+        alert("✅ Apresentação gerada com sucesso!\n\nPara abrir no Canva, basta ir em 'Uploads' e enviar este arquivo.");
+        
+    } catch (error) {
+        console.error("Erro ao gerar PPTX:", error);
+        alert("❌ Erro ao gerar a apresentação: " + error.message);
+        botao.innerHTML = textoOriginal;
+    } finally {
+        setTimeout(() => {
+            botao.innerHTML = textoOriginal;
+            botao.disabled = false;
+        }, 3000);
+    }
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
