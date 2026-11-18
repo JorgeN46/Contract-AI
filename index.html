@@ -351,14 +351,23 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 .msg.ai ul, .msg.ai ol { margin-bottom: 16px; padding-left: 20px; }
 .msg.ai li { margin-bottom: 6px; }
 
-/* Botões de ação (Escondidos no PC, visíveis no celular) */
+/* Container dos botões */
 .msg-actions { 
   display: flex; 
   gap: 8px; 
   margin-top: 12px; 
   flex-wrap: wrap; 
-  opacity: 0; /* Fica invisível no PC por padrão */
-  transition: opacity 0.2s ease;
+  opacity: 1 !important; /* Sempre visível */
+}
+
+/* Esconde os botões extras por padrão */
+.btn-extra {
+  display: none !important;
+}
+
+/* Quando o container tiver a classe .expanded, mostra os botões extras */
+.msg-actions.expanded .btn-extra {
+  display: inline-flex !important;
 }
 .msg.ai:hover .msg-actions { 
   opacity: 1; /* Aparece ao passar o mouse */
@@ -2310,31 +2319,31 @@ async function carregarConversa(id){
           div.className = 'msg user';
           div.textContent = msg.content;
         } else {
-          // Cria um ID único para a mensagem (necessário para o botão de PDF)
-          div.id = 'msg-ai-' + index;
+          // Cria um ID único para a mensagem (necessário para os botões de download)
+          div.id = 'msg-ai-hist-' + index;
           div.className = 'msg ai';
           
-          // Converte o Markdown para HTML
+          // Converte o Markdown para HTML e Sanitiza
           let htmlParseado = marked.parse(msg.content);
           let htmlSeguro = DOMPurify.sanitize(htmlParseado);
           
-          // Deixa as tabelas responsivas (com rolagem no celular)
+          // Deixa as tabelas responsivas
           htmlSeguro = htmlSeguro.replace(/<table/g, '<div class="table-responsive"><table').replace(/<\/table>/g, '</table></div>');
           
           div.innerHTML = htmlSeguro;
 
-          // Renderiza fórmulas matemáticas (se houver)
+          // Renderiza fórmulas matemáticas
           if (typeof renderMathInElement !== 'undefined') {
             renderMathInElement(div, {
               delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], throwOnError: false
             });
           }
 
-          // 👇 RECRIANDO OS BOTÕES DE AÇÃO (Inclusive o de PDF) 👇
+          // 👇 RECRIANDO OS BOTÕES DE AÇÃO (COM O OLHO E OS EXTRAS) 👇
           var actions = document.createElement('div');
           actions.className = 'msg-actions';
 
-          // Botão Copiar
+          // 1. Botão Copiar (Sempre visível)
           var btnCopiar = document.createElement('button');
           btnCopiar.className = 'msg-action-btn';
           btnCopiar.innerHTML = '📋 Copiar';
@@ -2350,17 +2359,52 @@ async function carregarConversa(id){
           };
           actions.appendChild(btnCopiar);
 
-          // Botão PDF
-          var btnPDF = document.createElement('button');
-          btnPDF.className = 'msg-action-btn';
-          btnPDF.innerHTML = '📄 Baixar PDF';
-          btnPDF.onclick = function(e){
-            e.stopPropagation();
-            baixarPDF(div.id); // Usa o ID único que criamos acima
+          // 2. Botão Olho (Toggle)
+          var btnToggle = document.createElement('button');
+          btnToggle.className = 'msg-action-btn';
+          btnToggle.innerHTML = '👁️ Mais opções';
+          btnToggle.onclick = function(e) {
+              e.stopPropagation();
+              actions.classList.toggle('expanded');
+              if (actions.classList.contains('expanded')) {
+                  btnToggle.innerHTML = '🙈 Ocultar';
+              } else {
+                  btnToggle.innerHTML = '👁️ Mais opções';
+              }
           };
+          actions.appendChild(btnToggle);
+
+          // 3. Botões Extras (Escondidos por padrão via CSS)
+          var btnPDF = document.createElement('button');
+          btnPDF.className = 'msg-action-btn btn-extra';
+          btnPDF.innerHTML = '📄 Editar e Baixar PDF';
+          btnPDF.onclick = function(e){ e.stopPropagation(); baixarPDF(div.id); };
           actions.appendChild(btnPDF);
 
-          // Adiciona os botões dentro da mensagem da IA
+          var btnWord = document.createElement('button');
+          btnWord.className = 'msg-action-btn btn-extra';
+          btnWord.innerHTML = '📝 Editar e Baixar Word';
+          btnWord.onclick = function(e){ e.stopPropagation(); baixarWord(div.id); };
+          actions.appendChild(btnWord);
+
+          var btnSheets = document.createElement('button');
+          btnSheets.className = 'msg-action-btn btn-extra';
+          btnSheets.innerHTML = '📊 Exportar para Planilha';
+          btnSheets.onclick = function(e){ e.stopPropagation(); exportarParaSheets(div.innerText, btnSheets); };
+          actions.appendChild(btnSheets);
+
+          var btnNotion = document.createElement('button');
+          btnNotion.className = 'msg-action-btn btn-extra';
+          btnNotion.innerHTML = '📓 Enviar p/ Notion';
+          btnNotion.onclick = function(e){ e.stopPropagation(); exportarParaNotion(div.id); };
+          actions.appendChild(btnNotion);
+
+          var btnCanva = document.createElement('button');
+          btnCanva.className = 'msg-action-btn btn-extra';
+          btnCanva.innerHTML = '📽️ Gerar Apresentação';
+          btnCanva.onclick = function(e){ e.stopPropagation(); gerarApresentacao(div.innerText, btnCanva); };
+          actions.appendChild(btnCanva);
+
           div.appendChild(actions);
         }
         
@@ -2368,7 +2412,7 @@ async function carregarConversa(id){
       });
       
       lastSavedIndex = conversaAtual.length;
-      console.log("🎉 Conversa renderizada com botões!");
+      console.log("🎉 Conversa renderizada com botões organizados!");
 
   } catch(err) {
       console.error("❌ Erro fatal:", err);
@@ -2585,31 +2629,24 @@ function adicionarMensagemIA(texto) {
   if (!area) return;
 
   var div = document.createElement('div');
-  // Gera um ID único para a mensagem (necessário para os botões de download)
   div.id = 'msg-ai-' + Date.now(); 
   div.className = 'msg ai';
 
-  // Converte Markdown e Sanitiza
   let htmlParseado = marked.parse(texto);
   let htmlSeguro = DOMPurify.sanitize(htmlParseado);
-
-  // Deixa as tabelas responsivas
   htmlSeguro = htmlSeguro.replace(/<table/g, '<div class="table-responsive"><table').replace(/<\/table>/g, '</table></div>');
-  
   div.innerHTML = htmlSeguro;
 
-  // Renderiza fórmulas matemáticas
   if (typeof renderMathInElement !== 'undefined') {
     renderMathInElement(div, {
       delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], throwOnError: false
     });
   }
 
-  // 👇 CRIAÇÃO DOS BOTÕES DE AÇÃO 👇
   var actions = document.createElement('div');
   actions.className = 'msg-actions';
 
-  // Botão Copiar
+  // 1. Botão Copiar (Sempre visível)
   var btnCopiar = document.createElement('button');
   btnCopiar.className = 'msg-action-btn';
   btnCopiar.innerHTML = '📋 Copiar';
@@ -2625,38 +2662,55 @@ function adicionarMensagemIA(texto) {
   };
   actions.appendChild(btnCopiar);
 
-  // Botão PDF
+  // 2. Botão Olho (Toggle)
+  var btnToggle = document.createElement('button');
+  btnToggle.className = 'msg-action-btn';
+  btnToggle.innerHTML = '👁️ Mais opções';
+  btnToggle.onclick = function(e) {
+      e.stopPropagation();
+      actions.classList.toggle('expanded');
+      if (actions.classList.contains('expanded')) {
+          btnToggle.innerHTML = '🙈 Ocultar';
+      } else {
+          btnToggle.innerHTML = '👁️ Mais opções';
+      }
+  };
+  actions.appendChild(btnToggle);
+
+  // 3. Botões Extras (Com a classe btn-extra)
   var btnPDF = document.createElement('button');
-  btnPDF.className = 'msg-action-btn';
-  btnPDF.innerHTML = '📄 PDF';
+  btnPDF.className = 'msg-action-btn btn-extra';
+  btnPDF.innerHTML = '📄 Editar e Baixar PDF';
   btnPDF.onclick = function(e){ e.stopPropagation(); baixarPDF(div.id); };
   actions.appendChild(btnPDF);
 
-  // Botão Word
   var btnWord = document.createElement('button');
-  btnWord.className = 'msg-action-btn';
-  btnWord.innerHTML = '📝 Word';
+  btnWord.className = 'msg-action-btn btn-extra';
+  btnWord.innerHTML = '📝 Editar e Baixar Word';
   btnWord.onclick = function(e){ e.stopPropagation(); baixarWord(div.id); };
   actions.appendChild(btnWord);
 
-  // Botão Planilha
   var btnSheets = document.createElement('button');
-  btnSheets.className = 'msg-action-btn';
-  btnSheets.innerHTML = '📊 Planilha';
+  btnSheets.className = 'msg-action-btn btn-extra';
+  btnSheets.innerHTML = '📊 Exportar para Planilha';
   btnSheets.onclick = function(e){ e.stopPropagation(); exportarParaSheets(div.innerText, btnSheets); };
   actions.appendChild(btnSheets);
 
-  // Botão Notion
   var btnNotion = document.createElement('button');
-  btnNotion.className = 'msg-action-btn';
-  btnNotion.innerHTML = '📓 Notion';
+  btnNotion.className = 'msg-action-btn btn-extra';
+  btnNotion.innerHTML = '📓 Enviar p/ Notion';
   btnNotion.onclick = function(e){ e.stopPropagation(); exportarParaNotion(div.id); };
   actions.appendChild(btnNotion);
+
+  var btnCanva = document.createElement('button');
+  btnCanva.className = 'msg-action-btn btn-extra';
+  btnCanva.innerHTML = '📽️ Gerar Apresentação';
+  btnCanva.onclick = function(e){ e.stopPropagation(); gerarApresentacao(div.innerText, btnCanva); };
+  actions.appendChild(btnCanva);
 
   div.appendChild(actions);
   area.appendChild(div);
   
-  // Rola para o final
   window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
 }
 function adicionarMensagemUsuario(texto){
