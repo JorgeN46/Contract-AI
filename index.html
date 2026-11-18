@@ -2034,86 +2034,45 @@ async function abrirConversaAntiga(id) {
     });
 }
 async function salvarConversaAtual() {
-  console.log("=== 🕵️‍♂️ INICIANDO TENTATIVA DE SALVAR HISTÓRICO ===");
-  
-  if(!conversaAtual || conversaAtual.length === 0) {
-      console.warn("⚠️ Cancelado: A conversa atual está vazia (nenhuma mensagem na tela).");
-      return;
-  }
-  
-  if(conversaAtual.length <= lastSavedIndex) {
-      console.warn("⚠️ Cancelado: Nenhuma mensagem nova para salvar. (Tamanho atual:", conversaAtual.length, "| Último salvo:", lastSavedIndex, ")");
-      return; 
-  }
+  if(conversaAtual.length === 0 || conversaAtual.length <= lastSavedIndex) return; 
   
   try {
-      // 1. Verifica a Sessão
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-          console.error("❌ ERRO DE SESSÃO:", sessionError);
-          alert("Erro de sessão: " + sessionError.message);
-          return;
-      }
-      
-      if (!session || !session.user) {
-          console.error("❌ ERRO: Usuário não está logado na sessão do Supabase.");
-          alert("Você precisa estar logado para salvar o histórico.");
-          return;
-      }
-      
-      console.log("✅ Usuário logado. ID:", session.user.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user) return;
 
       var primeiraMsg = conversaAtual.find(m => m.role === 'user');
       var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
 
-      // 2. Tenta criar a Conversa (se for nova)
+      // 1. Cria a conversa (se não existir)
       if (!idConversaAtual) {
-        console.log("📝 Tentando criar nova conversa no banco...");
-        
-        let { data, error } = await supabase.from('conversations').insert([{ 
-            user_id: session.user.id, 
-            title: titulo 
-        }]).select();
-        
-        if (error) { 
-            console.error("❌ ERRO AO CRIAR CONVERSA:", error); 
-            alert("Erro ao criar conversa: " + error.message);
-            return; 
-        }
-        
+        let { data, error } = await supabase.from('conversations').insert([{ user_id: session.user.id, title: titulo }]).select();
+        if (error) { console.error("Erro ao criar conversa:", error); return; }
         idConversaAtual = data[0].id; 
-        console.log("✅ Conversa criada com sucesso! ID:", idConversaAtual);
-      } else {
-        console.log("♻️ Usando conversa existente. ID:", idConversaAtual);
       }
 
-      // 3. Tenta salvar as mensagens novas
+      // 2. Salva as mensagens (AGORA COM O USER_ID)
       var novas = conversaAtual.slice(lastSavedIndex);
-      console.log(`📦 Preparando ${novas.length} mensagens novas para salvar...`);
-
       const mensagensParaSalvar = novas.map(msg => ({
           conversation_id: idConversaAtual, 
           role: msg.role, 
-          content: msg.content 
+          content: msg.content,
+          user_id: session.user.id // 👈 AQUI ESTÁ A CORREÇÃO
       }));
 
-      let { error: msgError } = await supabase.from('messages').insert(mensagensParaSalvar);
+      const { error: msgError } = await supabase.from('messages').insert(mensagensParaSalvar);
       
       if (msgError) { 
-          console.error("❌ ERRO AO SALVAR MENSAGENS:", msgError); 
-          alert("Erro ao salvar mensagens: " + msgError.message);
+          console.error("❌ Erro ao salvar mensagens:", msgError); 
           return; 
       }
       
       lastSavedIndex = conversaAtual.length;
-      console.log("✅ HISTÓRICO SALVO COM SUCESSO! Total salvo:", lastSavedIndex);
+      console.log("✅ Mensagens salvas com sucesso!");
       
       if (typeof renderizarHistorico === 'function') renderizarHistorico();
       
   } catch (err) {
-      console.error("❌ ERRO FATAL INESPERADO:", err);
-      alert("Erro inesperado ao salvar: " + err.message);
+      console.error("❌ Erro inesperado:", err);
   }
 }
 async function renderizarHistorico(){
