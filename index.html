@@ -856,6 +856,65 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   width: 100%;
   margin-bottom: 16px;
 }
+.chat-bar {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center; /* Mudado de flex-end para center para alinhar o seletor */
+  gap: 8px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.1);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  padding: 8px;
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,.6);
+  z-index: 40;
+  overflow: hidden; /* 👈 ISSO REMOVE A LINHA EXTRA EMBAIXO */
+  box-sizing: border-box;
+}
+
+/* Impede que o textarea quebre o layout */
+.chat-input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: #fff;
+  font-size: 15px;
+  padding: 10px 8px;
+  font-family: inherit;
+  resize: none;
+  max-height: 120px;
+  min-height: 40px;
+  line-height: 1.5;
+  overflow-y: auto;
+}
+
+/* Estilo do Seletor no Celular e PC */
+#dev-model-selector {
+  background: rgba(255,255,255,.05);
+  color: #f59e0b;
+  border: 1px solid rgba(245,158,11,.3);
+  border-radius: 8px;
+  padding: 0 4px;
+  font-size: 12px;
+  height: 40px;
+  max-width: 100px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none; /* Remove estilo padrão do iPhone */
+  appearance: none;
+  text-align: center;
+}
+
+#dev-model-selector option, #dev-model-selector optgroup {
+  background: #0b1220; /* Cor do fundo do menu no celular */
+  color: #fff;
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
