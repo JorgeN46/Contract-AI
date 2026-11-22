@@ -952,62 +952,95 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   // 4. MONITOR DE LOGIN E SALVAMENTO DE TOKENS
   // ==========================================
   supabase.auth.onAuthStateChange(async (event, session) => {
-      // Se a URL tiver erro, ignora o salvamento para não misturar tokens
-      if (window.location.href.includes('error=')) {
-          return;
-      }
+    // Se a URL tiver erro, ignora o salvamento para não misturar tokens
+    if (window.location.href.includes('error=')) {
+        return;
+    }
 
-      if (event === 'SIGNED_IN' && session) {
-          const { user } = session;
-          let updateData = {};
+    // ==========================================
+    // 👇 CONTROLE DE VISIBILIDADE DO SELETOR (DEV MODE) 👇
+    // ==========================================
+    const devSelector = document.getElementById('dev-model-selector');
+    
+    if (session && session.user) {
+        try {
+            // Busca o perfil do usuário no Supabase para ver se é admin
+            // Certifique-se de que a coluna se chama 'role' ou 'is_admin'
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role, is_admin') // Ajuste se sua coluna tiver outro nome
+                .eq('id', session.user.id)
+                .single();
 
-          const providers = session.user.app_metadata.providers || [];
-          const token = session.provider_token;
+            if (devSelector) {
+                // Se for admin, mostra o seletor. Se não, esconde.
+                if (profile && (profile.role === 'admin' || profile.is_admin === true)) {
+                    devSelector.style.display = 'block';
+                } else {
+                    devSelector.style.display = 'none';
+                }
+            }
+        } catch (err) {
+            console.error("Erro ao verificar permissão de admin:", err);
+            if (devSelector) devSelector.style.display = 'none'; // Esconde por segurança se der erro
+        }
+    } else {
+        // Se não tiver sessão, esconde
+        if (devSelector) devSelector.style.display = 'none';
+    }
+    // ==========================================
 
-          if (token) {
-              // Mapeamento escalável para o futuro (Canva, Microsoft, etc.)
-              const platformMap = {
-                  'google': { tokenCol: 'google_token', refreshCol: 'google_refresh_token', prefix: 'ya29.' },
-                  'notion': { tokenCol: 'notion_token', refreshCol: null, prefix: '' } 
-              };
+    if (event === 'SIGNED_IN' && session) {
+        const { user } = session;
+        let updateData = {};
 
-              for (const [providerName, config] of Object.entries(platformMap)) {
-                  if (providers.includes(providerName)) {
-                      let isTokenFromThisProvider = false;
-                      
-                      // Valida o token para não salvar o do Google no Notion
-                      if (providerName === 'google' && token.startsWith('ya29.')) {
-                          isTokenFromThisProvider = true;
-                      } else if (providerName === 'notion' && !token.startsWith('ya29.')) {
-                          isTokenFromThisProvider = true;
-                      } else if (providerName !== 'google' && providerName !== 'notion') {
-                          isTokenFromThisProvider = true; 
-                      }
+        const providers = session.user.app_metadata.providers || [];
+        const token = session.provider_token;
 
-                      if (isTokenFromThisProvider) {
-                          updateData[config.tokenCol] = token;
-                          if (config.refreshCol && session.provider_refresh_token) {
-                              updateData[config.refreshCol] = session.provider_refresh_token;
-                          }
-                      }
-                  }
-              }
-          }
+        if (token) {
+            // Mapeamento escalável para o futuro (Canva, Microsoft, etc.)
+            const platformMap = {
+                'google': { tokenCol: 'google_token', refreshCol: 'google_refresh_token', prefix: 'ya29.' },
+                'notion': { tokenCol: 'notion_token', refreshCol: null, prefix: '' } 
+            };
 
-          if (Object.keys(updateData).length > 0) {
-              try {
-                  const { error } = await supabase.from('profiles').update(updateData).eq('id', user.id);
-                  if (error) {
-                      console.error("❌ Erro ao salvar token no banco:", error);
-                  } else {
-                      console.log("✅ Tokens salvos com sucesso na tabela profiles!", updateData);
-                  }
-              } catch (err) {
-                  console.error("❌ Erro de conexão ao salvar token:", err);
-              }
-          }
-      }
-  });
+            for (const [providerName, config] of Object.entries(platformMap)) {
+                if (providers.includes(providerName)) {
+                    let isTokenFromThisProvider = false;
+                    
+                    // Valida o token para não salvar o do Google no Notion
+                    if (providerName === 'google' && token.startsWith('ya29.')) {
+                        isTokenFromThisProvider = true;
+                    } else if (providerName === 'notion' && !token.startsWith('ya29.')) {
+                        isTokenFromThisProvider = true;
+                    } else if (providerName !== 'google' && providerName !== 'notion') {
+                        isTokenFromThisProvider = true; 
+                    }
+
+                    if (isTokenFromThisProvider) {
+                        updateData[config.tokenCol] = token;
+                        if (config.refreshCol && session.provider_refresh_token) {
+                            updateData[config.refreshCol] = session.provider_refresh_token;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (Object.keys(updateData).length > 0) {
+            try {
+                const { error } = await supabase.from('profiles').update(updateData).eq('id', user.id);
+                if (error) {
+                    console.error("❌ Erro ao salvar token no banco:", error);
+                } else {
+                    console.log("✅ Tokens salvos com sucesso na tabela profiles!", updateData);
+                }
+            } catch (err) {
+                console.error("❌ Erro de conexão ao salvar token:", err);
+            }
+        }
+    }
+});
 </script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
