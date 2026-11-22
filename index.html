@@ -1362,25 +1362,13 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 </button>
 
 <div class="chat-bar">
-<button class="chat-plus" title="Anexar" onclick="toggleAttachMenu(event)">+</button>
-<textarea class="chat-input" placeholder="Olá, como posso ajudar?" rows="1" oninput="autoResize(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();enviarMensagem();}"></textarea>
-      <!-- 👇 COLE O BOTÃO DO MICROFONE AQUI (Antes do botão de enviar) 👇 -->
-  <button id="btnMic" class="chat-plus" title="Ditar por voz" onclick="toggleGravacao()" style="background: transparent; border:none;">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;">
-      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-      <line x1="12" y1="19" x2="12" y2="23"></line>
-      <line x1="8" y1="23" x2="16" y2="23"></line>
-    </svg>
-  </button>
+<div class="chat-bar">
+    <button class="chat-plus" title="Anexar" onclick="toggleAttachMenu(event)">+</button>
 
-<button class="chat-send" title="Enviar" onclick="enviarMensagem()">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-</button>
-  <!-- Seletor Dev Mode -->
-    <select id="dev-model-selector" style="display:none; background:transparent; color:#f59e0b; border:1px solid rgba(245,158,11,0.3); border-radius:8px; padding:0 8px; font-size:12px; cursor:pointer; outline:none; max-width:120px;">
-        <option value="" style="color:#000;">🤖 Auto</option>
-        <optgroup label="Google" style="color:#000;">
+    <!-- 👇 SELETOR DE MODELO (DEV MODE) 👇 -->
+    <select id="dev-model-selector" style="display:none; background:transparent; color:#f59e0b; border:1px solid rgba(245,158,11,0.3); border-radius:8px; padding:0 8px; font-size:12px; cursor:pointer; outline:none; max-width:130px; height:40px; flex-shrink:0;">
+        <option value="" style="color:#000;">🤖 Auto (Router)</option>
+        <optgroup label="Google Direto" style="color:#000;">
             <option value="gemini-3.8-flash" style="color:#000;">Gemini 3.8 Flash</option>
             <option value="gemini-3.8-pro" style="color:#000;">Gemini 3.8 Pro</option>
         </optgroup>
@@ -1388,11 +1376,24 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
             <option value="openai/gpt-4o-mini" style="color:#000;">GPT-4o mini</option>
             <option value="anthropic/claude-3.5-haiku" style="color:#000;">Claude 3.5 Haiku</option>
             <option value="deepseek/deepseek-chat" style="color:#000;">DeepSeek Chat</option>
-            <option value="meta-llama/llama-3.3-70b-instruct:free" style="color:#000;">Llama 3.3 70B</option>
+            <option value="meta-llama/llama-3.3-70b-instruct:free" style="color:#000;">Llama 3.3 70B (Free)</option>
         </optgroup>
     </select>
 
-    <textarea class="chat-input" placeholder="Olá, como posso ajudar?" ...></textarea>
+    <textarea class="chat-input" placeholder="Olá, como posso ajudar?" rows="1" oninput="autoResize(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();enviarMensagem();}"></textarea>
+    
+    <button id="btnMic" class="chat-plus" title="Ditar por voz" onclick="toggleGravacao()" style="background: transparent; border:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+    </button>
+    
+    <button class="chat-send" title="Enviar" onclick="enviarMensagem()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
 </div>
 
 <div class="attach-menu" id="attachMenu">
