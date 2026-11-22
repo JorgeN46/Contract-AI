@@ -5039,6 +5039,50 @@ async function gerarApresentacao(textoIA, botao) {
         }, 3000);
     }
 }
+async function verificarAcessoDevMode(userId) {
+    const devSelector = document.getElementById('dev-model-selector');
+    if (!devSelector) {
+        console.error("❌ ERRO: O elemento 'dev-model-selector' não existe no HTML!");
+        return;
+    }
+
+    try {
+        console.log("🔍 Buscando perfil do usuário no Supabase...");
+        // Buscamos o perfil sem especificar as colunas, para trazer tudo
+        const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*') 
+            .eq('id', userId)
+            .single();
+
+        if (error) {
+            console.error("❌ Erro ao buscar perfil:", error);
+            devSelector.style.display = 'none';
+            return;
+        }
+
+        console.log("👤 Perfil retornado do banco:", profile);
+
+        // Verifica se é admin de várias formas diferentes para garantir
+        const isAdmin = 
+            profile.role === 'admin' || 
+            profile.is_admin === true || 
+            profile.tipo_usuario === 'admin';
+
+        if (isAdmin) {
+            console.log("✅ Acesso concedido! Mostrando seletor de modelos.");
+            devSelector.style.display = 'block'; // Ou 'flex' dependendo do CSS
+            devSelector.style.color = '#f59e0b';
+        } else {
+            console.log("⛔ Acesso negado. Você não é admin na tabela profiles.");
+            devSelector.style.display = 'none';
+        }
+
+    } catch (err) {
+        console.error("❌ Erro inesperado na verificação:", err);
+        devSelector.style.display = 'none';
+    }
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
