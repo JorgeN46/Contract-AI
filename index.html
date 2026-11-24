@@ -950,6 +950,12 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 .model-card.active .model-check {
     display: block !important;
 }
+/* Estilos do Modal de Modelos */
+.modal-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.4); margin: 16px 0 8px 8px; font-weight: 600; }
+.model-card { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; }
+.model-card:hover { background: rgba(255,255,255,0.06); }
+.model-card.active { border-color: rgba(79,141,255,0.5); background: rgba(79,141,255,0.1); }
+.model-card.active .model-check { display: block !important; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1488,11 +1494,17 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
 </button>
 
+
 <div class="chat-bar">
     <button class="chat-plus" title="Anexar" onclick="toggleAttachMenu(event)">+</button>
-
-    <!-- 👇 BOTÃO DO SELETOR DE MODELO (DEV MODE) 👇 -->
-    <button id="btn-model-selector" onclick="abrirModalModelos()" style="display:none; width:40px; height:40px; border-radius:12px; border:1px solid rgba(245,158,11,0.3); background:rgba(255,255,255,0.04); color:#f59e0b; cursor:pointer; flex-shrink:0; place-items:center; transition: 0.2s;">
+    
+    <!-- BOTÃO DO DEV MODE / SELETOR DE MODELOS -->
+    <button
+        id="btn-model-selector"
+        onclick="abrirModalModelos()"
+        style="display:none; width:40px; height:40px; border-radius:12px; border:1px solid rgba(245,158,11,0.3); background:rgba(255,255,255,0.04); color:#f59e0b; cursor:pointer; flex-shrink:0; place-items:center; transition:0.2s;"
+        title="Selecionar modelo de IA"
+    >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;">
             <path d="M12 2a3 3 0 0 0-3 3v2a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3v2a3 3 0 0 0 6 0v-2a3 3 0 0 0 3-3V10a3 3 0 0 0-3-3V5a3 3 0 0 0-3-3z"></path>
             <path d="M12 7v10"></path>
@@ -1500,10 +1512,22 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
         </svg>
     </button>
 
-    <textarea class="chat-input" placeholder="Olá, como posso ajudar?" rows="1" oninput="autoResize(this)" onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();enviarMensagem();}"></textarea>
+    <textarea
+        class="chat-input"
+        placeholder="Olá, como posso ajudar?"
+        rows="1"
+        oninput="autoResize(this)"
+        onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();enviarMensagem();}"
+    ></textarea>
     
-    <button id="btnMic" class="chat-plus" title="Ditar por voz" onclick="toggleGravacao()" style="background: transparent; border:none;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;">
+    <button
+        id="btnMic"
+        class="chat-plus"
+        title="Ditar por voz"
+        onclick="toggleGravacao()"
+        style="background:transparent; border:none;"
+    >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:20px;height:20px;">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
             <line x1="12" y1="19" x2="12" y2="23"></line>
@@ -1511,10 +1535,18 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
         </svg>
     </button>
     
-    <button class="chat-send" title="Enviar" onclick="enviarMensagem()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    <button
+        class="chat-send"
+        title="Enviar"
+        onclick="enviarMensagem()"
+    >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 2L11 13"></path>
+            <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+        </svg>
     </button>
 </div>
+  
 
 <div class="attach-menu" id="attachMenu">
 <button class="attach-item" onclick="pickFile()">
@@ -5181,7 +5213,45 @@ supabase.auth.onAuthStateChange(async (event, session) => {
             if (btnSelector) btnSelector.style.display = 'none';
         }
     }
+  // Dentro do onAuthStateChange:
+const btnSelector = document.getElementById('btn-model-selector');
+if (session && session.user) {
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+    if (profile && (profile.role === 'admin' || profile.is_admin === true)) {
+        if (btnSelector) btnSelector.style.display = 'grid';
+    } else {
+        if (btnSelector) btnSelector.style.display = 'none';
+    }
+  }
 });
+window.forcedModel = "";
+
+function abrirModalModelos() {
+    document.getElementById('modelSelectorOverlay').classList.add('open');
+    document.getElementById('modelSelectorModal').classList.add('open');
+}
+function fecharModalModelos() {
+    document.getElementById('modelSelectorOverlay').classList.remove('open');
+    document.getElementById('modelSelectorModal').classList.remove('open');
+}
+function selecionarModelo(modeloId) {
+    window.forcedModel = modeloId;
+    document.querySelectorAll('.model-card').forEach(card => {
+        card.classList.remove('active');
+        const check = card.querySelector('.model-check');
+        if (check) check.style.display = 'none';
+    });
+    const idMap = { '': 'model-card-auto', 'gemini-3.8-flash': 'model-card-gemini-flash', 'gemini-3.8-pro': 'model-card-gemini-pro', 'openai/gpt-4o-mini': 'model-card-gpt4o', 'anthropic/claude-3.5-sonnet': 'model-card-claude', 'deepseek/deepseek-chat': 'model-card-deepseek', 'meta-llama/llama-3.3-70b-instruct:free': 'model-card-llama' };
+    const selectedCard = document.getElementById(idMap[modeloId]);
+    if (selectedCard) {
+        selectedCard.classList.add('active');
+        selectedCard.querySelector('.model-check').style.display = 'block';
+    }
+    const btn = document.getElementById('btn-model-selector');
+    if (modeloId === '') { btn.style.color = '#f59e0b'; btn.style.borderColor = 'rgba(245,158,11,0.3)'; }
+    else { btn.style.color = '#4f8dff'; btn.style.borderColor = 'rgba(79,141,255,0.5)'; }
+    fecharModalModelos();
+  }
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
@@ -5273,69 +5343,38 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     
     <div class="modal-content" style="padding: 12px 16px; background: #070b14; max-height: 70vh; overflow-y: auto;">
         
-        <!-- OPÇÃO AUTOMÁTICA -->
+<!-- Modal de Modelos (Dev Mode) -->
+<div id="modelSelectorOverlay" class="modal-overlay" onclick="fecharModalModelos()"></div>
+<div id="modelSelectorModal" class="modal-box" style="max-width: 500px; padding: 0; overflow: hidden;">
+    <div class="modal-header" style="padding: 16px 20px;"><h3 style="font-size: 16px;">Escolher Modelo de IA</h3><button class="modal-close" onclick="fecharModalModelos()">×</button></div>
+    <div class="modal-content" style="padding: 12px 16px; background: #070b14; max-height: 70vh; overflow-y: auto;">
+        <!-- Automático -->
         <div class="model-card active" id="model-card-auto" onclick="selecionarModelo('')">
-            <div style="flex:1;">
-                <div style="font-weight: 600; font-size: 14px; color: #fff;">🤖 Automático (Recomendado)</div>
-                <div style="font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px;">O Router escolhe o melhor modelo para o seu custo.</div>
-            </div>
+            <div style="flex:1;"><div style="font-weight: 600; font-size: 14px; color: #fff;">🤖 Automático (Recomendado)</div><div style="font-size: 12px; color: rgba(255,255,255,.5);">O Router escolhe o melhor modelo para o seu custo.</div></div>
             <div class="model-check" style="color: #4f8dff; font-weight: bold;">✓</div>
         </div>
-
-        <!-- GOOGLE DIRETO -->
+        <!-- Modelos Google -->
         <div class="modal-section-title">Google Direto</div>
-        
         <div class="model-card" id="model-card-gemini-flash" onclick="selecionarModelo('gemini-3.8-flash')">
-            <div style="flex:1;">
-                <div style="font-weight: 600; font-size: 14px; color: #fff;">Gemini 3.8 Flash <span style="color:#4fd1c5; font-size:10px; background:rgba(79,209,197,0.1); padding:2px 6px; border-radius:4px; margin-left:6px;">Custo Baixo</span></div>
-                <div style="font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px;">Rápido e econômico. Ideal para conversas do dia a dia.</div>
-            </div>
-            <div class="model-check" style="display:none; color: #4f8dff; font-weight: bold;">✓</div>
+            <div style="flex:1;"><div style="font-weight: 600; font-size: 14px; color: #fff;">Gemini 3.8 Flash <span style="color:#4fd1c5; font-size:10px; background:rgba(79,209,197,0.1); padding:2px 6px;">Custo Baixo</span></div><div style="font-size: 12px; color: rgba(255,255,255,.5);">Rápido e econômico. Ideal para conversas.</div></div><div class="model-check" style="display:none; color: #4f8dff;">✓</div>
         </div>
-
         <div class="model-card" id="model-card-gemini-pro" onclick="selecionarModelo('gemini-3.8-pro')">
-            <div style="flex:1;">
-                <div style="font-weight: 600; font-size: 14px; color: #fff;">Gemini 3.8 Pro <span style="color:#fca5a5; font-size:10px; background:rgba(252,165,165,0.1); padding:2px 6px; border-radius:4px; margin-left:6px;">Custo Alto</span></div>
-                <div style="font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px;">Análise profunda. Ideal para contratos longos e complexos.</div>
-            </div>
-            <div class="model-check" style="display:none; color: #4f8dff; font-weight: bold;">✓</div>
+            <div style="flex:1;"><div style="font-weight: 600; font-size: 14px; color: #fff;">Gemini 3.8 Pro <span style="color:#fca5a5; font-size:10px; background:rgba(252,165,165,0.1); padding:2px 6px;">Custo Alto</span></div><div style="font-size: 12px; color: rgba(255,255,255,.5);">Análise profunda. Ideal para contratos longos.</div></div><div class="model-check" style="display:none; color: #4f8dff;">✓</div>
         </div>
-
-        <!-- OPENROUTER -->
+        <!-- Modelos OpenRouter -->
         <div class="modal-section-title">OpenRouter</div>
-
         <div class="model-card" id="model-card-gpt4o" onclick="selecionarModelo('openai/gpt-4o-mini')">
-            <div style="flex:1;">
-                <div style="font-weight: 600; font-size: 14px; color: #fff;">GPT-4o mini <span style="color:#4fd1c5; font-size:10px; background:rgba(79,209,197,0.1); padding:2px 6px; border-radius:4px; margin-left:6px;">Custo Baixo</span></div>
-                <div style="font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px;">Excelente para resumos, e-mails e tarefas gerais.</div>
-            </div>
-            <div class="model-check" style="display:none; color: #4f8dff; font-weight: bold;">✓</div>
+            <div style="flex:1;"><div style="font-weight: 600; font-size: 14px; color: #fff;">GPT-4o mini <span style="color:#4fd1c5; font-size:10px; background:rgba(79,209,197,0.1); padding:2px 6px;">Custo Baixo</span></div><div style="font-size: 12px; color: rgba(255,255,255,.5);">Excelente para resumos e e-mails.</div></div><div class="model-check" style="display:none; color: #4f8dff;">✓</div>
         </div>
-
-        <div class="model-card" id="model-card-claude" onclick="selecionarModelo('anthropic/claude-3.5-haiku')">
-            <div style="flex:1;">
-                <div style="font-weight: 600; font-size: 14px; color: #fff;">Claude 3.5 Haiku <span style="color:#f59e0b; font-size:10px; background:rgba(245,158,11,0.1); padding:2px 6px; border-radius:4px; margin-left:6px;">Custo Médio</span></div>
-                <div style="font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px;">Forte em leitura de documentos e imagens. Muito inteligente.</div>
-            </div>
-            <div class="model-check" style="display:none; color: #4f8dff; font-weight: bold;">✓</div>
+        <div class="model-card" id="model-card-claude" onclick="selecionarModelo('anthropic/claude-3.5-sonnet')">
+            <div style="flex:1;"><div style="font-weight: 600; font-size: 14px; color: #fff;">Claude 3.5 Sonnet <span style="color:#f59e0b; font-size:10px; background:rgba(245,158,11,0.1); padding:2px 6px;">Custo Médio</span></div><div style="font-size: 12px; color: rgba(255,255,255,.5);">Forte em leitura de documentos. Muito inteligente.</div></div><div class="model-check" style="display:none; color: #4f8dff;">✓</div>
         </div>
-
         <div class="model-card" id="model-card-deepseek" onclick="selecionarModelo('deepseek/deepseek-chat')">
-            <div style="flex:1;">
-                <div style="font-weight: 600; font-size: 14px; color: #fff;">DeepSeek Chat <span style="color:#4fd1c5; font-size:10px; background:rgba(79,209,197,0.1); padding:2px 6px; border-radius:4px; margin-left:6px;">Custo Baixo</span></div>
-                <div style="font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px;">Melhor custo-benefício para textos longos e análises.</div>
-            </div>
-            <div class="model-check" style="display:none; color: #4f8dff; font-weight: bold;">✓</div>
+            <div style="flex:1;"><div style="font-weight: 600; font-size: 14px; color: #fff;">DeepSeek Chat <span style="color:#4fd1c5; font-size:10px; background:rgba(79,209,197,0.1); padding:2px 6px;">Custo Baixo</span></div><div style="font-size: 12px; color: rgba(255,255,255,.5);">Melhor custo-benefício para textos longos.</div></div><div class="model-check" style="display:none; color: #4f8dff;">✓</div>
         </div>
-
         <div class="model-card" id="model-card-llama" onclick="selecionarModelo('meta-llama/llama-3.3-70b-instruct:free')">
-            <div style="flex:1;">
-                <div style="font-weight: 600; font-size: 14px; color: #fff;">Llama 3.3 70B <span style="color:#10b981; font-size:10px; background:rgba(16,185,129,0.1); padding:2px 6px; border-radius:4px; margin-left:6px;">Grátis</span></div>
-                <div style="font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px;">Modelo gratuito. Bom para testes, mas com limite de uso.</div>
-            </div>
-            <div class="model-check" style="display:none; color: #4f8dff; font-weight: bold;">✓</div>
+            <div style="flex:1;"><div style="font-weight: 600; font-size: 14px; color: #fff;">Llama 3.3 70B <span style="color:#10b981; font-size:10px; background:rgba(16,185,129,0.1); padding:2px 6px;">Grátis</span></div><div style="font-size: 12px; color: rgba(255,255,255,.5);">Modelo gratuito. Bom para testes.</div></div><div class="model-check" style="display:none; color: #4f8dff;">✓</div>
         </div>
-
     </div>
 </div>
 </body>
