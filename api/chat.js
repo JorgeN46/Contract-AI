@@ -1,190 +1,12 @@
-// ==========================================
-// 📦 IMPORTAÇÕES E DEPENDÊNCIAS
-// ==========================================
+// api/chat.js
+
 const { createClient } = require('@supabase/supabase-js');
 const { promptAnalise, promptRefinamento, promptPadrao, promptMemoria } = require('./lib/prompts');
 const { verificarEDebitarCreditos, registrarUsoTokens } = require('./lib/creditos');
+const { decidirModelo, chamarModeloIA } = require('./lib/ai-engine'); // 👈 Importa o cérebro
 
 const requestCache = new Map();
 
-// ==========================================
-// 🗺️ CONFIGURAÇÃO DE MODELOS POR PLANO
-// ==========================================
-const MODEL_MATRIX = {
-  free: {
-    padrao: 'gemini-3.8-flash',
-    leitura: 'meta-llama/llama-3.3-70b-instruct:free', // OpenRouter Free Real
-    refinamento: 'meta-llama/llama-3.3-70b-instruct:free',
-    premium: 'gemini-3.8-flash' // Free não tem premium, cai no padrão
-  },
-  essencial: {
-    padrao: 'gemini-3.8-flash',
-    leitura: 'deepseek/deepseek-chat', // OpenRouter Real
-    refinamento: 'openai/gpt-4o-mini', // OpenRouter Real
-    premium: 'gemini-3.8-pro' 
-  },
-  profissional: {
-    padrao: 'gemini-3.8-flash',
-    leitura: 'anthropic/claude-3.5-sonnet', // OpenRouter Real
-    refinamento: 'anthropic/claude-3.5-sonnet',
-    premium: 'anthropic/claude-3-opus' // OpenRouter Real
-  }
-};
-
-// Modelos disponíveis para o Modo Desenvolvedor (Dev Mode)
-const ALLOWED_DEV_MODELS = [
-  'gemini-3.8-flash',
-  'gemini-3.8-pro',
-  'deepseek/deepseek-chat',
-  'openai/gpt-4o-mini',
-  'anthropic/claude-3.5-sonnet',
-  'anthropic/claude-3-opus',
-  'meta-llama/llama-3.3-70b-instruct:free'
-];
-
-// ==========================================
-// 🧠 MOTOR DE ROTEAMENTO
-// ==========================================
-function decidirModelo(planoUsuario, modoSelecionado) {
-  const plano = planoUsuario || 'free';
-  const mapaDoPlano = MODEL_MATRIX[plano] || MODEL_MATRIX.free;
-
-  const modosValidos = ['padrao', 'leitura', 'refinamento', 'premium', 'memoria'];
-  const modo = modosValidos.includes(modoSelecionado) ? modoSelecionado : 'padrao';
-
-  // Memória utiliza o modelo padrão com seu prompt específico.
-  if (modo === 'memoria') {
-    return mapaDoPlano.padrao;
-  }
-
-  // Respeita sempre o modo selecionado pelo usuário.
-  return mapaDoPlano[modo] || mapaDoPlano.padrao;
-}
-
-// ==========================================
-// 🔌 CONEXÃO COM AS IAs (Google vs OpenRouter)
-// ==========================================
-async function chamarModeloIA(modelo, messages, systemInstruction, res, isForced = false) {
-  const isGoogleDirect = !modelo.includes('/');
-  
-  const url = isGoogleDirect 
-    ? `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:streamGenerateContent?alt=sse&key=${process.env.GOOGLE_API_KEY}`
-    : 'https://openrouter.ai/api/v1/chat/completions';
-
-  const headers = isGoogleDirect
-    ? { 'Content-Type': 'application/json' }
-    : {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://macrus.app',
-        'X-Title': 'Macrus'
-      };
-
-  let body;
-
-  if (isGoogleDirect) {
-    let contentsArray = [];
-    messages.forEach(msg => {
-      if (msg.role === 'system') return; 
-      
-      let parts = [];
-      if (typeof msg.content === 'string') {
-        parts.push({ text: msg.content });
-      } else if (Array.isArray(msg.content)) {
-        msg.content.forEach(c => {
-          if (c.type === 'text') parts.push({ text: c.text });
-          if (c.type === 'image_url') {
-            const match = c.image_url.url.match(/^data:(image\/[a-zA-Z]*);base64,(.*)$/);
-            if (match) parts.push({ inlineData: { mimeType: match[1], data: match[2] } });
-          }
-        });
-      }
-      contentsArray.push({ role: msg.role === 'assistant' ? 'model' : 'user', parts });
-    });
-
-    body = JSON.stringify({
-      systemInstruction: { parts: [{ text: systemInstruction }] },
-      contents: contentsArray,
-      generationConfig: { temperature: 0.5 }
-    });
-  } else {
-    body = JSON.stringify({
-      model: modelo,
-      messages: [{ role: 'system', content: systemInstruction }, ...messages],
-      stream: true,
-      temperature: 0.5,
-      stream_options: { include_usage: true }
-    });
-  }
-
-  const response = await fetch(url, { method: 'POST', headers, body });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error(`[Erro API] Modelo: ${modelo}`, errorData);
-    throw new Error(JSON.stringify(errorData));
-  }
-
-  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-  res.setHeader('Transfer-Encoding', 'chunked');
-  res.write(`<MODEL_USED>${modelo}</MODEL_USED>`);
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let tokensInfo = null;
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
-
-    for (const line of lines) {
-      if (line.startsWith('data: ')) {
-        const dataStr = line.replace('data: ', '').trim();
-        if (dataStr === '[DONE]') continue;
-
-        try {
-          const data = JSON.parse(dataStr);
-          
-          if (isGoogleDirect) {
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) res.write(text);
-            if (data.usageMetadata) {
-              tokensInfo = {
-                prompt: data.usageMetadata.promptTokenCount || 0,
-                output: data.usageMetadata.candidatesTokenCount || 0
-              };
-            }
-          } else {
-            const text = data.choices?.[0]?.delta?.content;
-            if (text) res.write(text);
-            if (data.usage) {
-              tokensInfo = {
-                prompt: data.usage.prompt_tokens || 0,
-                output: data.usage.completion_tokens || 0
-              };
-            }
-          }
-        } catch (e) {}
-      }
-    }
-  }
-
-  if (tokensInfo) {
-    res.write(`\n\n<TOKENS_INFO>${JSON.stringify(tokensInfo)}</TOKENS_INFO>`);
-  }
-
-  res.end();
-  return tokensInfo;
-}
-
-// ==========================================
-// 🎯 HANDLER PRINCIPAL (API ENDPOINT)
-// ==========================================
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -195,7 +17,7 @@ module.exports = async function handler(req, res) {
   const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
   try {
-    // 1. Validação de Autenticação
+    // 1. Autenticação
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ error: 'Acesso não autorizado.' });
 
@@ -206,7 +28,7 @@ module.exports = async function handler(req, res) {
     const userId = user.id;
     const { message, fileText, systemPrompt, mode, history, images, memory, developerModel } = req.body;
 
-    // 2. Validação Antecipada (Evita debitar créditos à toa)
+    // 2. Validação Antecipada
     const mensagemValida = typeof message === 'string' && message.trim().length > 0;
     const arquivoValido = typeof fileText === 'string' && fileText.trim().length > 0;
     const imagensValidas = Array.isArray(images) && images.length > 0;
@@ -224,7 +46,7 @@ module.exports = async function handler(req, res) {
     timestamps.push(now);
     requestCache.set(limitKey, timestamps);
 
-    // 4. Verificação de Créditos (Apenas se a requisição for válida)
+    // 4. Verificação de Créditos
     const { profile, custoEstimado, error } = await verificarEDebitarCreditos(supabaseAdmin, userId, fileText, images);
     if (error) return res.status(403).json({ error });
 
@@ -237,22 +59,11 @@ module.exports = async function handler(req, res) {
     else if (mode === 'premium') basePrompt = promptAnalise; 
     else { basePrompt = promptPadrao; modoParaRoteamento = 'padrao'; }
 
-    // 6. Roteamento de Modelo (Dev Mode vs Automático)
+    // 6. Roteamento de Modelo (Chama o ai-engine)
     const planoUsuario = profile?.plan || 'free';
-    let modeloEscolhido;
-    let isForced = false;
-
-    // Validação de segurança para o Dev Mode (verifica se o modelo está na lista permitida)
     const isAdmin = profile?.role === 'admin' || profile?.is_admin === true;
-
-    if (isAdmin && developerModel && ALLOWED_DEV_MODELS.includes(developerModel)) {
-        modeloEscolhido = developerModel;
-        isForced = true;
-        console.log(`[DEV MODE] Admin forçou o modelo: ${modeloEscolhido}`);
-    } else {
-        modeloEscolhido = decidirModelo(planoUsuario, modoParaRoteamento);
-        console.log(`[Router] Plano: ${planoUsuario} | Modo: ${modoParaRoteamento} | Modelo: ${modeloEscolhido}`);
-    }
+    
+    const { modelo: modeloEscolhido, isForced } = decidirModelo(planoUsuario, modoParaRoteamento, developerModel, isAdmin);
 
     // 7. Montagem do Conteúdo
     let memoriaTexto = (memory && Array.isArray(memory) && memory.length > 0) ? "\n\nO que você já sabe sobre este usuário: " + memory.join(", ") + "." : "";
@@ -269,22 +80,19 @@ module.exports = async function handler(req, res) {
 
     let promptFinal = message || "Por favor, analise o conteúdo enviado.";
     if (fileText && fileText.trim().length > 0) {
-      // Limite de 800.000 caracteres (Aproximadamente 200 páginas)
       promptFinal = "O usuário enviou o(s) seguinte(s) documento(s):\n\n" + fileText.substring(0, 800000) + "\n\nInstrução do usuário: " + (message || "Analise e compare os documentos.");
     }
 
     let userContent = [{ type: 'text', text: promptFinal }];
     if (images && images.length > 0) {
-      images.forEach(imgUrl => {
-        userContent.push({ type: 'image_url', image_url: { url: imgUrl } });
-      });
+      images.forEach(imgUrl => userContent.push({ type: 'image_url', image_url: { url: imgUrl } }));
     }
 
     messages.push({ role: 'user', content: userContent });
 
-    // 8. Chamada e Registro de Uso
+    // 8. Chamada da IA (Chama o ai-engine) e Registro
     try {
-        const tokensInfo = await chamarModeloIA(modeloEscolhido, messages, finalInstruction, res, isForced);
+        const tokensInfo = await chamarModeloIA(modeloEscolhido, messages, finalInstruction, res);
         if (tokensInfo) {
           await registrarUsoTokens(supabaseAdmin, userId, tokensInfo, custoEstimado, profile);
         }
