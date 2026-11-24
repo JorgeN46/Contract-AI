@@ -1801,7 +1801,7 @@ Sair da conta
   <div class="card" style="margin-bottom: 24px; border-color: rgba(79,141,255,0.3); background: linear-gradient(180deg, rgba(79,141,255,0.08) 0%, rgba(255,255,255,0.03) 100%);">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
       <div>
-        <p class="muted" style="font-size:12px; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Plano Atual</p>
+        <p class="muted" style="font-size:12px; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">Seu Plano Atual</p>
         <h2 id="planName" style="font-size:22px; font-weight:700; color:#fff; text-transform:capitalize;">Gratuito</h2>
       </div>
       <div style="background:rgba(79,141,255,0.2); color:#7db4ff; font-size:12px; font-weight:700; padding:6px 12px; border-radius:20px;">Ativo</div>
@@ -1810,49 +1810,68 @@ Sair da conta
     <!-- Barra de Créditos -->
     <div>
       <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;">
-        <span style="color:rgba(255,255,255,0.7);">Créditos disponíveis</span>
-        <span id="creditsText" style="color:#fff; font-weight:600;">0 / 50</span>
+        <span style="color:rgba(255,255,255,0.7);">Saldo de Créditos</span>
+        <!-- O JavaScript vai atualizar esse texto com o saldo real do banco -->
+        <span id="creditsText" style="color:#fff; font-weight:600;">0 / 500</span>
       </div>
       <div style="width:100%; height:8px; background:rgba(255,255,255,0.1); border-radius:99px; overflow:hidden;">
         <div id="creditsBar" style="height:100%; width:0%; background:linear-gradient(90deg, #4f8dff, #4fd1c5); border-radius:99px; transition: width 0.5s ease;"></div>
       </div>
     </div>
     
-    <p class="muted" style="font-size:12px; margin-top:16px; text-align:center;">Consumo médio: Texto = 1 crédito | Análise de arquivo = 5 a 20 créditos.</p>
+    <!-- Explicação amigável sobre o consumo -->
+    <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px; font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 16px; line-height: 1.5;">
+      <strong style="color:#fff;">Como funciona o consumo?</strong><br>
+      • 1 crédito equivale a 1.000 tokens processados.<br>
+      • Um contrato de 50 páginas consome ~35 créditos.<br>
+      • Usar modelos Premium (Claude/GPT) consome mais créditos.<br>
+      • Envio de imagens tem custo fixo de 5 créditos.
+    </div>
   </div>
 
   <!-- Opções de Upgrade -->
-  <h3 style="font-size:18px; margin-bottom:16px;">Faça Upgrade</h3>
+  <h3 style="font-size:18px; margin-bottom:16px;">Faça Upgrade e acelere sua produtividade</h3>
   
   <!-- Plano Essencial -->
   <div class="card" style="margin-bottom: 16px; display:flex; flex-direction:column;">
-    <h4 style="color:#fff; font-size:16px; margin-bottom:4px;">Plano Essencial</h4>
-    <p class="muted" style="font-size:13px; margin:0 0 12px 0;">150 créditos/mês. Ideal para autônomos.</p>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <h4 style="color:#fff; font-size:18px; margin-bottom:4px;">Plano Essencial</h4>
+        <span style="color:#4fd1c5; font-size:12px; background:rgba(79,209,197,0.1); padding:4px 8px; border-radius:6px; border:1px solid rgba(79,209,197,0.3);">Recomendado</span>
+    </div>
+    <p style="color:#7db4ff; font-size:14px; font-weight:600; margin:0 0 12px 0;">8.000 créditos/mês</p>
     
-    <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px; font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 16px;">
-      <strong>Consumo estimado por operação:</strong><br>
-      • Conversa simples: 1 crédito<br>
-      • Análise de contrato padrão (até ~75 pág.): ~5 créditos<br>
-      • Contrato extenso (100+ páginas): ~10 créditos
+    <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px; font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 16px;">
+      <strong style="color:#fff;">Ideal para advogados e autônomos:</strong><br>
+      • Analise até <b>200 contratos de 50 páginas</b> por mês no modelo padrão.<br>
+      • Resumos ilimitados, criação de e-mails e refinamento de textos.<br>
+      • Acesso aos modelos DeepSeek e GPT-4o mini para análises pesadas.
     </div>
     
-    <button class="btn btn-primary" style="width:100%; padding:12px; font-size:14px;" onclick="window.open('https://buy.stripe.com/test_fZucN6e43gCM07W3ytbAs04', '_blank')">Assinar por R$ 59,90/mês</button>
+    <!-- Link do Stripe Mantido -->
+    <button class="btn btn-primary" style="width:100%; padding:14px; font-size:15px; font-weight:600;" onclick="window.open('https://buy.stripe.com/test_fZucN6e43gCM07W3ytbAs04', '_blank')">Assinar Essencial por R$ 59,90/mês</button>
   </div>
 
   <!-- Plano Profissional -->
   <div class="card" style="margin-bottom: 16px; display:flex; flex-direction:column;">
-    <h4 style="color:#fff; font-size:16px; margin-bottom:4px;">Plano Profissional</h4>
-    <p class="muted" style="font-size:13px; margin:0 0 12px 0;">400 créditos/mês. Para escritórios e uso intenso.</p>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <h4 style="color:#fff; font-size:18px; margin-bottom:4px;">Plano Profissional</h4>
+        <span style="color:#f59e0b; font-size:12px; background:rgba(245,158,11,0.1); padding:4px 8px; border-radius:6px; border:1px solid rgba(245,158,11,0.3);">Máximo Poder</span>
+    </div>
+    <p style="color:#7db4ff; font-size:14px; font-weight:600; margin:0 0 12px 0;">20.000 créditos/mês</p>
     
-    <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px; font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 16px;">
-      <strong>Consumo estimado por operação:</strong><br>
-      • Conversa simples: 1 crédito<br>
-      • Análise de contrato padrão: ~5 créditos<br>
-      • Contrato extenso (200+ páginas): ~20 créditos
+    <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px; font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 16px;">
+      <strong style="color:#fff;">Para escritórios e uso intenso:</strong><br>
+      • Analise até <b>500 contratos de 50 páginas</b> por mês.<br>
+      • Acesso exclusivo ao <b>Claude 3.5 Sonnet</b> para análises jurídicas profundas.<br>
+      • Leitura de laudos escaneados e imagens sem limites.<br>
+      • Prioridade máxima nos servidores.
     </div>
     
-    <button class="btn btn-ghost" style="width:100%; padding:12px; font-size:14px; border-color: #4fd1c5; color: #4fd1c5;" onclick="window.open('https://buy.stripe.com/test_cNi9AU0dd4U4aMA4CxbAs03', '_blank')">Assinar por R$ 119,90/mês</button>
+    <!-- Link do Stripe Mantido -->
+    <button class="btn btn-ghost" style="width:100%; padding:14px; font-size:15px; font-weight:600; border-color: #4fd1c5; color: #4fd1c5;" onclick="window.open('https://buy.stripe.com/test_cNi9AU0dd4U4aMA4CxbAs03', '_blank')">Assinar Profissional por R$ 119,90/mês</button>
   </div>
+
+  <p class="muted" style="text-align:center; font-size:12px; margin-top:24px;">Pagamento processado com segurança via Stripe.<br>Você pode cancelar a qualquer momento.</p>
 
 </div>
 </div><!-- /settings-planos -->
@@ -2156,21 +2175,44 @@ function novoChat(){
   }
   
   var inp = document.querySelector('.chat-input');
-  limparInput(); 
+  if (typeof limparInput === 'function') limparInput(); 
 
   // Limpa os anexos e variáveis de controle
   textoArquivoExtraido = "";
   arquivoAnexado = null;
-  removerAnexo(); 
+  if (typeof removerAnexo === 'function') removerAnexo(); 
   
   // 👇 O SEGREDO DO HISTÓRICO ESTÁ AQUI 👇
   conversaAtual = []; 
   idConversaAtual = null; 
   lastSavedIndex = 0;
 
-  // 👇 RESETA O SELETOR DE MODELO PARA O MODO AUTOMÁTICO 👇
-  var devSelector = document.getElementById('dev-model-selector');
-  if(devSelector) devSelector.value = "";
+  // ==========================================
+  // 👇 RESETA O SELETOR DE MODELO (DEV MODE) PARA O MODO AUTOMÁTICO 👇
+  // ==========================================
+  window.forcedModel = "";
+
+  // Reseta os cartões do modal visualmente
+  document.querySelectorAll('.model-card').forEach(card => {
+      card.classList.remove('active');
+      const check = card.querySelector('.model-check');
+      if (check) check.style.display = 'none';
+  });
+  
+  const cardAuto = document.getElementById('model-card-auto');
+  if (cardAuto) {
+      cardAuto.classList.add('active');
+      const checkAuto = cardAuto.querySelector('.model-check');
+      if (checkAuto) checkAuto.style.display = 'block';
+  }
+
+  // Reseta a cor do botão de modelos na barra de chat para Laranja (Automático)
+  const btnSelector = document.getElementById('btn-model-selector');
+  if (btnSelector) {
+      btnSelector.style.color = '#f59e0b';
+      btnSelector.style.borderColor = 'rgba(245,158,11,0.3)';
+  }
+  // ==========================================
 
   // Fecha a barra lateral se ela estiver aberta (bom para celular)
   var sidebar = document.getElementById('sidebar');
@@ -2179,7 +2221,7 @@ function novoChat(){
       sidebar.classList.remove('open');
       if (overlay) overlay.classList.remove('open');
   }
-}
+  }
 async function abrirConversaAntiga(id) {
     conversaAtualId = id; // Define a conversa atual
     
@@ -2907,28 +2949,28 @@ async function chamarIA(mensagemUsuario){
 
     controllerResposta = new AbortController();
 
-    // 👇 PEGA O MODELO FORÇADO (DEV MODE) DO NOSSO NOVO MODAL 👇
-var developerModel = window.forcedModel || null;
+    // 👇 PEGA O MODELO FORÇADO (DEV MODE) DO MODAL 👇
+    var developerModel = window.forcedModel || null;
 
-var resposta = await fetch('/api/chat', {
-  method: 'POST',
-  headers: { 
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${accessToken}`
-  },
-  body: JSON.stringify({
-    message: mensagemUsuario,
-    fileText: textoArquivoExtraido,
-    systemPrompt: promptPersonalizado,
-    mode: modoAtual,
-    history: conversaAtual.slice(-10),
-    userId: localStorage.getItem('contractai_user_id'),
-    images: imagensAnexadas,
-    memory: JSON.parse(localStorage.getItem('contractai_memory') || '[]'),
-    developerModel: developerModel // <-- Envia para o backend
-  }),
-  signal: controllerResposta.signal
-});
+    var resposta = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
+        message: mensagemUsuario,
+        fileText: textoArquivoExtraido,
+        systemPrompt: promptPersonalizado,
+        mode: modoAtual,
+        history: conversaAtual.slice(-10),
+        userId: localStorage.getItem('contractai_user_id'),
+        images: imagensAnexadas,
+        memory: JSON.parse(localStorage.getItem('contractai_memory') || '[]'),
+        developerModel: developerModel 
+      }),
+      signal: controllerResposta.signal
+    });
 
     if (!resposta.ok) {
       if (resposta.status === 429) throw new Error("Calma aí! Aguarde um minuto.");
@@ -2946,7 +2988,7 @@ var resposta = await fetch('/api/chat', {
 
     var textoAcumulado = "";
     let dadosTokens = null;
-    let modeloUsadoReal = "Automático"; // Padrão
+    let modeloUsadoReal = "Automático";
 
     const reader = resposta.body.getReader();
     const decoder = new TextDecoder();
@@ -2960,24 +3002,23 @@ var resposta = await fetch('/api/chat', {
         textoAcumulado += chunk;
         
         var contentBox = divTemp.querySelector('.msg-ai-content');
-        
         let textoLimpo = textoAcumulado;
         
-        // Limpa os tokens do texto
+        // 1. Limpa os tokens do texto
         const matchTokens = textoAcumulado.match(/<TOKENS_INFO>(.*?)<\/TOKENS_INFO>/s);
         if (matchTokens) {
             try { dadosTokens = JSON.parse(matchTokens[1]); } catch(e){}
             textoLimpo = textoLimpo.replace(matchTokens[0], '');
         }
 
-        // 👇 EXTRAI O NOME DO MODELO USADO 👇
+        // 2. Extrai o nome do modelo usado
         const matchModelo = textoLimpo.match(/<MODEL_USED>(.*?)<\/MODEL_USED>/);
         if (matchModelo) {
             modeloUsadoReal = matchModelo[1];
             textoLimpo = textoLimpo.replace(matchModelo[0], '');
         }
 
-        // 👇 VERIFICA SE DEU ERRO NO DEV MODE 👇
+        // 3. Verifica erro no Dev Mode
         const matchErroDev = textoLimpo.match(/<ERROR_DEV_MODE>(.*?)<\/ERROR_DEV_MODE>/s);
         if (matchErroDev) {
             throw new Error(matchErroDev[1]);
@@ -3040,11 +3081,12 @@ var resposta = await fetch('/api/chat', {
     removerAnexo();
     
     // ==========================================
-    // CRIAÇÃO DOS BOTÕES DE AÇÃO
+    // CRIAÇÃO DOS BOTÕES DE AÇÃO (COM O OLHO E OS EXTRAS)
     // ==========================================
     var actions = document.createElement('div');
     actions.className = 'msg-actions';
-    // 1. Botão Copiar
+
+    // 1. Botão Copiar (Sempre visível)
     var btnCopiar = document.createElement('button');
     btnCopiar.className = 'msg-action-btn';
     btnCopiar.innerHTML = '📋 Copiar';
@@ -3057,10 +3099,56 @@ var resposta = await fetch('/api/chat', {
     };
     actions.appendChild(btnCopiar);
 
-    // 2. Botão Ver Cláusulas (Apenas no Modo Análise)
+    // 2. Botão Olho (Toggle)
+    var btnToggle = document.createElement('button');
+    btnToggle.className = 'msg-action-btn';
+    btnToggle.innerHTML = '👁️ Mais opções';
+    btnToggle.onclick = function(e) {
+        e.stopPropagation();
+        actions.classList.toggle('expanded');
+        if (actions.classList.contains('expanded')) {
+            btnToggle.innerHTML = '🙈 Ocultar';
+        } else {
+            btnToggle.innerHTML = '👁️ Mais opções';
+        }
+    };
+    actions.appendChild(btnToggle);
+
+    // 3. Botões Extras (Escondidos por padrão via CSS)
+    var btnPDF = document.createElement('button');
+    btnPDF.className = 'msg-action-btn btn-extra';
+    btnPDF.innerHTML = '📄 Editar e Baixar PDF';
+    btnPDF.onclick = function(e){ e.stopPropagation(); abrirEditor(divTemp.id, 'pdf'); };
+    actions.appendChild(btnPDF);
+
+    var btnWord = document.createElement('button');
+    btnWord.className = 'msg-action-btn btn-extra';
+    btnWord.innerHTML = '📝 Editar e Baixar Word';
+    btnWord.onclick = function(e){ e.stopPropagation(); abrirEditor(divTemp.id, 'word'); };
+    actions.appendChild(btnWord);
+
+    var btnSheets = document.createElement('button');
+    btnSheets.className = 'msg-action-btn btn-extra';
+    btnSheets.innerHTML = '📊 Exportar para Planilha';
+    btnSheets.onclick = function(e){ e.stopPropagation(); exportarParaSheets(textoFinalLimpo, btnSheets); };
+    actions.appendChild(btnSheets);
+
+    var btnNotion = document.createElement('button');
+    btnNotion.className = 'msg-action-btn btn-extra';
+    btnNotion.innerHTML = '📓 Enviar p/ Notion';
+    btnNotion.onclick = function(e){ e.stopPropagation(); exportarParaNotion(btnNotion); };
+    actions.appendChild(btnNotion);
+
+    var btnCanva = document.createElement('button');
+    btnCanva.className = 'msg-action-btn btn-extra';
+    btnCanva.innerHTML = '📽️ Gerar Apresentação';
+    btnCanva.onclick = function(e){ e.stopPropagation(); gerarApresentacao(textoFinalLimpo, btnCanva); };
+    actions.appendChild(btnCanva);
+
+    // 4. Botão Ver Cláusulas (Apenas no Modo Análise - Também fica nos extras)
     if (modoAtual === 'leitura') {
         var btnClausulas = document.createElement('button');
-        btnClausulas.className = 'msg-action-btn';
+        btnClausulas.className = 'msg-action-btn btn-extra';
         btnClausulas.innerHTML = '📑 Ver Cláusulas';
         btnClausulas.style.background = 'rgba(79, 209, 197, 0.15)';
         btnClausulas.style.borderColor = '#4fd1c5';
@@ -3068,54 +3156,8 @@ var resposta = await fetch('/api/chat', {
         btnClausulas.onclick = function(e) { e.stopPropagation(); mostrarClausulasNoDrawer(contentBoxFinal.innerHTML); };
         actions.appendChild(btnClausulas);
     }
-
-    // 3. Botão Editar e Baixar PDF
-    var btnPDF = document.createElement('button');
-    btnPDF.className = 'msg-action-btn';
-    btnPDF.innerHTML = '📄 Editar e Baixar PDF';
-    btnPDF.onclick = function(e){ e.stopPropagation(); abrirEditor(divTemp.id, 'pdf'); };
-    actions.appendChild(btnPDF);
-
-    // 4. Botão Editar e Baixar Word
-    var btnWord = document.createElement('button');
-    btnWord.className = 'msg-action-btn';
-    btnWord.innerHTML = '📝 Editar e Baixar Word';
-    btnWord.onclick = function(e){ e.stopPropagation(); abrirEditor(divTemp.id, 'word'); };
-    actions.appendChild(btnWord);
-
-    // 5. Botão Exportar para Planilha
-    var btnSheets = document.createElement('button');
-    btnSheets.className = 'msg-action-btn';
-    btnSheets.innerHTML = '📊 Exportar para Planilha';
-    btnSheets.onclick = function(e){ 
-        e.stopPropagation(); 
-        exportarParaSheets(textoFinalLimpo, btnSheets); 
-    };
-    actions.appendChild(btnSheets);
-
-    // 6. Botão Enviar para Notion
-    var btnNotion = document.createElement('button');
-    btnNotion.className = 'msg-action-btn';
-    btnNotion.innerHTML = '⬛ Enviar p/ Notion';
-    btnNotion.onclick = function(e){ 
-        e.stopPropagation(); 
-        exportarParaNotion(btnNotion); 
-    };
-    actions.appendChild(btnNotion);
-
-    // 7. Botão Gerar Apresentação (Canva)
-    var btnCanva = document.createElement('button');
-    btnCanva.className = 'msg-action-btn';
-    btnCanva.innerHTML = '📊 Gerar Apresentação';
-    btnCanva.onclick = function(e){ 
-        e.stopPropagation(); 
-        gerarApresentacao(textoFinalLimpo, btnCanva); 
-    };
-    actions.appendChild(btnCanva);
     
-    // ==========================================
-    // INSERE OS BOTÕES NA TELA
-    // ==========================================
+    // Insere os botões na tela ANTES do tokenInfoDiv (se ele existir)
     var tokenInfoDiv = contentBoxFinal.querySelector('div[style*="border-top"]');
     if (tokenInfoDiv) {
         contentBoxFinal.insertBefore(actions, tokenInfoDiv);
@@ -3138,7 +3180,7 @@ var resposta = await fetch('/api/chat', {
       divTemp.innerHTML = '❌ Erro: ' + err.message;
     }
   }
-}
+  }
 function escolherObjetivo(objetivo){
 adicionarMensagemUsuario(objetivo);
 var prompt = '';
