@@ -1,21 +1,22 @@
+// api/lib/ai-engine.js
 
 const MODEL_MATRIX = {
   free: {
     padrao: 'gemini-3.8-flash',
     leitura: 'meta-llama/llama-3.3-70b-instruct:free', 
-    refinamento: 'meta-llama/llama-3.3-70b-instruct:free',
+    refinamento: 'gemini-3.8-flash', // Trocado para economizar
     premium: 'gemini-3.8-flash' 
   },
   essencial: {
     padrao: 'gemini-3.8-flash',
     leitura: 'deepseek/deepseek-chat', 
-    refinamento: 'openai/gpt-4o-mini', 
+    refinamento: 'gemini-3.8-flash', // Trocado de gpt-4o-mini para economizar
     premium: 'gemini-3.8-pro' 
   },
   profissional: {
     padrao: 'gemini-3.8-flash',
     leitura: 'anthropic/claude-3.5-sonnet', 
-    refinamento: 'anthropic/claude-3.5-sonnet',
+    refinamento: 'gemini-3.8-flash', // Trocado de sonnet para economizar
     premium: 'anthropic/claude-3-opus' 
   }
 };
@@ -49,7 +50,10 @@ function decidirModelo(planoUsuario, modoSelecionado, developerModel, isAdmin) {
   return { modelo: modeloEscolhido, isForced: false };
 }
 
-async function chamarModeloIA(modelo, messages, systemInstruction, res) {
+// ==========================================
+// 🔌 CONEXÃO COM AS IAs (Com Fallback)
+// ==========================================
+async function executarStream(modelo, messages, systemInstruction, res) {
   const isGoogleDirect = !modelo.includes('/');
   
   const url = isGoogleDirect 
@@ -141,6 +145,34 @@ async function chamarModeloIA(modelo, messages, systemInstruction, res) {
   if (tokensInfo) res.write(`\n\n<TOKENS_INFO>${JSON.stringify(tokensInfo)}</TOKENS_INFO>`);
   res.end();
   return tokensInfo;
+}
+
+async function chamarModeloIA(modelo, messages, systemInstruction, res) {
+  try {
+    // Tenta o modelo principal
+    return await executarStream(modelo, messages, systemInstruction, res);
+  } catch (error) {
+    console.error(`[Erro API] Falha no modelo principal (${modelo}):`, error.message);
+    
+    // Se já começou a enviar dados para o navegador, não podemos fazer fallback
+    if (res.headersSent) {
+      throw error;
+    }
+
+    // Se o modelo principal não for o Flash, tenta o Flash como plano B
+    const fallbackModel = 'gemini-3.8-flash';
+    if (modelo !== fallbackModel) {
+      console.log(`[Fallback] Tentando modelo de reserva: ${fallbackModel}`);
+      try {
+        return await executarStream(fallbackModel, messages, systemInstruction, res);
+      } catch (fallbackError) {
+        console.error(`[Erro Fallback] O modelo reserva também falhou:`, fallbackError.message);
+        throw new Error("Todos os modelos de IA estão indisponíveis no momento. Tente novamente mais tarde.");
+      }
+    }
+    
+    throw error;
+  }
 }
 
 module.exports = { decidirModelo, chamarModeloIA };
