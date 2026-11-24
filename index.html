@@ -960,127 +960,162 @@ p.lead{font-size:18px;color:rgba(255,255,255,.7);margin-top:20px;max-width:640px
 <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // ==========================================
-  // 1. INICIALIZAÇÃO DO SUPABASE E VARIÁVEIS
-  // ==========================================
-  var supabaseUrl = 'https://uzmmoypdllnoawunmnxg.supabase.co';
-  var supabaseKey = 'sb_publishable_h167SfQxm19PCEKFCcseSw_mgGxI9th';
- 
-  var supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
-  });
+// ==========================================
+// 1. INICIALIZAÇÃO DO SUPABASE E VARIÁVEIS
+// ==========================================
+var supabaseUrl = 'https://uzmmoypdllnoawunmnxg.supabase.co';
+var supabaseKey = 'sb_publishable_h167SfQxm19PCEKFCcseSw_mgGxI9th';
 
-  // ==========================================
-  // 2. CONFIGURAÇÃO DO PDF.JS
-  // ==========================================
-  if (typeof pdfjsLib !== 'undefined') {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+var supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
   }
+});
 
-  // ==========================================
-  // 3. LIMPADOR DE URL (Remove erros do OAuth)
-  // ==========================================
-  if (window.location.href.includes('error=') || window.location.hash.includes('error=')) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-      console.log("🧹 URL de erro do OAuth limpa com sucesso.");
-  }
+// Variáveis globais de controle
+window.forcedModel = ""; // Controla o seletor de modelos (Dev Mode)
 
-  // ==========================================
-  // 4. MONITOR DE LOGIN E SALVAMENTO DE TOKENS
-  // ==========================================
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    // Se a URL tiver erro, ignora o salvamento para não misturar tokens
-    if (window.location.href.includes('error=')) {
-        return;
-    }
+// ==========================================
+// 2. CONFIGURAÇÃO DO PDF.JS
+// ==========================================
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
-    // ==========================================
-    // 👇 CONTROLE DE VISIBILIDADE DO SELETOR (DEV MODE) 👇
-    // ==========================================
-    const devSelector = document.getElementById('dev-model-selector');
-    
-    if (session && session.user) {
-        try {
-            // Busca o perfil do usuário no Supabase para ver se é admin
-            // Certifique-se de que a coluna se chama 'role' ou 'is_admin'
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('role, is_admin') // Ajuste se sua coluna tiver outro nome
-                .eq('id', session.user.id)
-                .single();
+// ==========================================
+// 3. LIMPADOR DE URL (Remove erros do OAuth)
+// ==========================================
+if (window.location.href.includes('error=') || window.location.hash.includes('error=')) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    console.log("🧹 URL de erro do OAuth limpa com sucesso.");
+}
 
-            if (devSelector) {
-                // Se for admin, mostra o seletor. Se não, esconde.
-                if (profile && (profile.role === 'admin' || profile.is_admin === true)) {
-                    devSelector.style.display = 'block';
-                } else {
-                    devSelector.style.display = 'none';
-                }
-            }
-        } catch (err) {
-            console.error("Erro ao verificar permissão de admin:", err);
-            if (devSelector) devSelector.style.display = 'none'; // Esconde por segurança se der erro
-        }
+// ==========================================
+// 4. MONITOR DE LOGIN, SEGURANÇA E SALVAMENTO DE TOKENS
+// ==========================================
+supabase.auth.onAuthStateChange(async (event, session) => {
+  
+  // 🔐 BLOCO DE RECUPERAÇÃO DE SENHA
+  if (event === "PASSWORD_RECOVERY") {
+    var novaSenha = prompt("Digite a sua NOVA senha (mínimo 6 caracteres):");
+    if (novaSenha && novaSenha.length >= 6) {
+      const { data, error } = await supabase.auth.updateUser({ password: novaSenha });
+      if (error) alert("Erro ao atualizar a senha: " + error.message);
+      else { alert("✅ Sua senha foi atualizada!"); go('dashboard'); }
     } else {
-        // Se não tiver sessão, esconde
-        if (devSelector) devSelector.style.display = 'none';
+      alert("A senha deve ter pelo menos 6 caracteres.");
     }
-    // ==========================================
+  }
 
-    if (event === 'SIGNED_IN' && session) {
-        const { user } = session;
-        let updateData = {};
+  // Se a URL tiver erro, ignora o salvamento para não misturar tokens
+  if (window.location.href.includes('error=')) {
+      return;
+  }
 
-        const providers = session.user.app_metadata.providers || [];
-        const token = session.provider_token;
+  // ==========================================
+  // 🟢 LOGIN OU ATUALIZAÇÃO DE TOKEN
+  // ==========================================
+  if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+    if (session && session.user) {
+      
+      // 1. Salva ID localmente e atualiza UI básica
+      localStorage.setItem('contractai_user_id', session.user.id);
+      atualizarDadosUsuario(session.user.email);
+      renderizarHistorico();
+      
+      // 2. Sua trava de segurança: Mantém o usuário na tela atual (não chuta se estiver no chat)
+      var telaAtual = document.querySelector('.screen.active');
+      if (telaAtual && (telaAtual.id === 'screen-login' || telaAtual.id === 'screen-landing')) {
+          go('dashboard'); 
+      }
 
-        if (token) {
-            // Mapeamento escalável para o futuro (Canva, Microsoft, etc.)
-            const platformMap = {
-                'google': { tokenCol: 'google_token', refreshCol: 'google_refresh_token', prefix: 'ya29.' },
-                'notion': { tokenCol: 'notion_token', refreshCol: null, prefix: '' } 
-            };
+      // ==========================================
+      // 👇 VERIFICAÇÃO DE ADMIN (DEV MODE) 👇
+      // ==========================================
+      try {
+          const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+          
+          // Valida se é admin (verifica role, is_admin ou email de segurança)
+          const isAdmin = profile && (profile.role === 'admin' || profile.is_admin === true || session.user.email === 'jmf821507@gmail.com');
 
-            for (const [providerName, config] of Object.entries(platformMap)) {
-                if (providers.includes(providerName)) {
-                    let isTokenFromThisProvider = false;
-                    
-                    // Valida o token para não salvar o do Google no Notion
-                    if (providerName === 'google' && token.startsWith('ya29.')) {
-                        isTokenFromThisProvider = true;
-                    } else if (providerName === 'notion' && !token.startsWith('ya29.')) {
-                        isTokenFromThisProvider = true;
-                    } else if (providerName !== 'google' && providerName !== 'notion') {
-                        isTokenFromThisProvider = true; 
-                    }
+          // Mostra/Esconde o botão de Modelos no Chat (btn-model-selector)
+          const btnSelector = document.getElementById('btn-model-selector');
+          if (btnSelector) {
+              btnSelector.style.display = isAdmin ? 'grid' : 'none';
+          }
 
-                    if (isTokenFromThisProvider) {
-                        updateData[config.tokenCol] = token;
-                        if (config.refreshCol && session.provider_refresh_token) {
-                            updateData[config.refreshCol] = session.provider_refresh_token;
-                        }
-                    }
-                }
-            }
-        }
+          // Mostra/Esconde o Painel do Desenvolvedor nos Settings
+          const btnAdminPanel = document.getElementById('btnAdminPanel');
+          if (btnAdminPanel) {
+              btnAdminPanel.style.display = isAdmin ? 'flex' : 'none';
+          }
 
-        if (Object.keys(updateData).length > 0) {
-            try {
-                const { error } = await supabase.from('profiles').update(updateData).eq('id', user.id);
-                if (error) {
-                    console.error("❌ Erro ao salvar token no banco:", error);
-                } else {
-                    console.log("✅ Tokens salvos com sucesso na tabela profiles!", updateData);
-                }
-            } catch (err) {
-                console.error("❌ Erro de conexão ao salvar token:", err);
-            }
-        }
+      } catch (err) {
+          console.error("Erro ao verificar permissão de admin:", err);
+          const btnSelector = document.getElementById('btn-model-selector');
+          if (btnSelector) btnSelector.style.display = 'none'; 
+      }
+
+      // ==========================================
+      // 👇 SALVAMENTO DE TOKENS (GOOGLE E NOTION) 👇
+      // ==========================================
+      if (event === 'SIGNED_IN') {
+          let updateData = {};
+          const providers = session.user.app_metadata.providers || [];
+          const token = session.provider_token;
+
+          if (token) {
+              const platformMap = {
+                  'google': { tokenCol: 'google_token', refreshCol: 'google_refresh_token', prefix: 'ya29.' },
+                  'notion': { tokenCol: 'notion_token', refreshCol: null, prefix: '' } 
+              };
+
+              for (const [providerName, config] of Object.entries(platformMap)) {
+                  if (providers.includes(providerName)) {
+                      let isTokenFromThisProvider = false;
+                      
+                      // Valida o token para não salvar o do Google no Notion
+                      if (providerName === 'google' && token.startsWith('ya29.')) {
+                          isTokenFromThisProvider = true;
+                      } else if (providerName === 'notion' && !token.startsWith('ya29.')) {
+                          isTokenFromThisProvider = true;
+                      } else if (providerName !== 'google' && providerName !== 'notion') {
+                          isTokenFromThisProvider = true; 
+                      }
+
+                      if (isTokenFromThisProvider) {
+                          updateData[config.tokenCol] = token;
+                          if (config.refreshCol && session.provider_refresh_token) {
+                              updateData[config.refreshCol] = session.provider_refresh_token;
+                          }
+                      }
+                  }
+              }
+          }
+
+          if (Object.keys(updateData).length > 0) {
+              try {
+                  const { error } = await supabase.from('profiles').update(updateData).eq('id', session.user.id);
+                  if (error) console.error("❌ Erro ao salvar token no banco:", error);
+                  else console.log("✅ Tokens salvos com sucesso na tabela profiles!", updateData);
+              } catch (err) {
+                  console.error("❌ Erro de conexão ao salvar token:", err);
+              }
+          }
+      }
     }
+  } 
+  
+  // ==========================================
+  // 🔴 LOGOUT
+  // ==========================================
+  else if (event === 'SIGNED_OUT') {
+    localStorage.removeItem('contractai_user_id');
+    atualizarDadosUsuario(null);
+    go('landing'); 
+  }
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -3409,83 +3444,6 @@ function baixarWord(id) {
       saveAs(blob, 'Macrus_Analise.doc');
   }
 }
-async function submitLogin(e) {
-  if(e) e.preventDefault();
-  
-  var email = document.getElementById('loginEmail').value;
-  var senha = document.getElementById('loginSenha').value;
-  var btn = document.getElementById('btnLogin');
-  var fb = document.getElementById('loginFeedback');
-
-  if(!email || !senha) {
-    fb.style.color = '#fca5a5';
-    fb.textContent = 'Por favor, preencha e-mail e senha.';
-    return;
-  }
-
-  fb.style.color = '#7db4ff';
-  fb.textContent = 'Verificando dados...';
-  btn.disabled = true;
-  btn.textContent = 'Aguarde...';
-
-  // 1. Tenta fazer login
-  let { data, error } = await supabase.auth.signInWithPassword({
-    email: email,
-    password: senha
-  });
-
-  if (error) {
-    // Se a conta existe, mas o e-mail não foi confirmado
-    if (error.message.includes('Email not confirmed') || error.message.includes('not confirmed')) {
-      fb.style.color = '#fca5a5';
-      fb.textContent = 'Por favor, verifique seu e-mail para confirmar a conta antes de entrar.';
-      btn.disabled = false;
-      btn.textContent = 'Entrar / Criar Conta';
-      return; // Para o código aqui e não tenta criar de novo
-    }
-
-    // Se o erro for porque a conta não existe, aí sim tenta criar
-    let { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: email,
-      password: senha
-    });
-
-    if (signUpError) {
-      fb.style.color = '#fca5a5';
-      fb.textContent = 'Erro: ' + signUpError.message;
-      btn.disabled = false;
-      btn.textContent = 'Entrar / Criar Conta';
-      return;
-    }
-    
-    // Se o cadastro deu certo, pede para confirmar o e-mail
-    fb.style.color = '#4fd1c5';
-    fb.textContent = 'Conta criada! Verifique seu e-mail para ativar o acesso.';
-    btn.disabled = false;
-    btn.textContent = 'Entrar / Criar Conta';
-    
-  } else {
-    // Login feito com sucesso direto (e-mail já confirmado)
-    fb.style.color = '#4fd1c5';
-    fb.textContent = 'Login feito com sucesso! Entrando...';
-    
-      setTimeout(function() {
-    btn.disabled = false;
-    btn.textContent = 'Entrar / Criar Conta';
-    fb.textContent = '';
-    
-    supabase.auth.getUser().then(function(res) {
-        if(res.data.user) {
-            localStorage.setItem('contractai_user_id', res.data.user.id);
-            atualizarDadosUsuario(res.data.user.email);
-            carregarPersonalizacaoDoBanco(res.data.user.id); // <-- AQUI TAMBÉM
-            renderizarHistorico(); 
-        }
-        go('dashboard');
-    });
-  }, 1500);
-  }
-}
 async function esqueceuSenha(e) {
   if(e) e.preventDefault();
   
@@ -3927,44 +3885,7 @@ window.addEventListener('scroll', function() {
       }).catch(err => console.log('Erro no SW:', err));
     });
   }
-// Variável para controlar o monitoramento
-let monitorarPagamento = null;
 
-async function carregarDadosPlano() {
-  var userId = localStorage.getItem('contractai_user_id');
-  if (!userId) return;
-
-  try {
-    let { data } = await supabase.from('profiles').select('plan, credits').eq('id', userId).maybeSingle();
-    
-    if (data) {
-      document.getElementById('planName').textContent = data.plan === 'free' ? 'Gratuito' : data.plan;
-      
-      var creditos = data.credits || 0;
-      var limite = data.plan === 'free' ? 50 : (data.plan === 'essencial' ? 150 : 400);
-
-      document.getElementById('creditsText').textContent = creditos + ' / ' + limite;
-      
-      var porcento = (creditos / limite) * 100;
-      if (porcento > 100) porcento = 100;
-      
-      var barra = document.getElementById('creditsBar');
-      barra.style.width = porcento + '%';
-      
-      if (porcento <= 20) barra.style.background = '#ef4444';
-      else barra.style.background = 'linear-gradient(90deg, #4f8dff, #4fd1c5)';
-
-      // 👇 SE O PLANO FOR FREE, COMEÇA A MONITORAR O PAGAMENTO
-      if (data.plan === 'free') {
-        iniciarMonitoramentoPagamento(userId);
-      }
-    }
-  } catch (err) {
-    console.error("Erro ao carregar dados do plano:", err);
-  }
-}
-
-// Função que fica checando o banco a cada 3 segundos
 function iniciarMonitoramentoPagamento(userId) {
   // Se já estiver monitorando, não cria outro
   if (monitorarPagamento) clearInterval(monitorarPagamento);
@@ -4145,16 +4066,7 @@ window.addEventListener('DOMContentLoaded', function() {
   
   aplicarIdioma(idiomaSalvo);
 });
-// Verifica se o usuário logado é o administrador
-async function verificarAdmin(userId) {
-  let { data } = await supabase.from('profiles').select('is_admin').eq('id', userId).maybeSingle();
-  
-  if (data && data.is_admin) {
-    document.getElementById('btnAdminPanel').style.display = 'flex';
-  } else {
-    document.getElementById('btnAdminPanel').style.display = 'none';
-  }
-}
+
 async function carregarDadosAdmin() {
   try {
     // 1. MÉTRICAS DE USUÁRIOS E PLANOS
@@ -5237,36 +5149,6 @@ function selecionarModelo(modeloId) {
 
     fecharModalModelos();
 }
-
-// --- ATUALIZAÇÃO NO onAuthStateChange ---
-// Substitua a verificação de visibilidade por esta:
-supabase.auth.onAuthStateChange(async (event, session) => {
-    // ... (seu código de tokens) ...
-    
-    const btnSelector = document.getElementById('btn-model-selector');
-    
-    if (session && session.user) {
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        
-        // Libera o botão se for admin
-        if (profile && (profile.role === 'admin' || profile.is_admin === true || session.user.email === 'jmf821507@gmail.com')) {
-            if (btnSelector) btnSelector.style.display = 'grid'; // 'grid' para centralizar o SVG
-        } else {
-            if (btnSelector) btnSelector.style.display = 'none';
-        }
-    }
-  // Dentro do onAuthStateChange:
-const btnSelector = document.getElementById('btn-model-selector');
-if (session && session.user) {
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-    if (profile && (profile.role === 'admin' || profile.is_admin === true)) {
-        if (btnSelector) btnSelector.style.display = 'grid';
-    } else {
-        if (btnSelector) btnSelector.style.display = 'none';
-    }
-  }
-});
-window.forcedModel = "";
 
 function abrirModalModelos() {
     document.getElementById('modelSelectorOverlay').classList.add('open');
