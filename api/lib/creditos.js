@@ -11,23 +11,26 @@ async function verificarEDebitarCreditos(supabaseAdmin, userId, fileText, images
     }
 
     if (profile) {
-      // 1. Calcula o custo estimado baseado no tamanho do arquivo
-      const temUpload = (fileText && fileText.trim().length > 0) || (images && images.length > 0);
+      // 1. CÁLCULO DA RESERVA (ESTIMATIVA)
       let custoEstimado = 1;
-
-      if (temUpload) {
-        let tamanhoTexto = fileText ? fileText.length : 0;
-        if (tamanhoTexto < 50000) custoEstimado = 5;       // Até ~15 mil tokens
-        else if (tamanhoTexto < 150000) custoEstimado = 10; // Até ~45 mil tokens
-        else custoEstimado = 20;                            // 200+ páginas
+      
+      // Custo por imagem
+      if (images && images.length > 0) custoEstimado += (images.length * 5);
+      
+      // Custo por arquivo (1 crédito a cada 4.000 caracteres, com mínimo de 2)
+      if (fileText && fileText.trim().length > 0) {
+        custoEstimado += Math.max(2, Math.ceil(fileText.length / 4000));
       }
+
+      // Margem de segurança de 10% para não estourar o saldo durante o processamento
+      custoEstimado = Math.ceil(custoEstimado * 1.1);
 
       // 2. Verifica se tem saldo
       if (profile.credits < custoEstimado) {
         return { 
           profile: null, 
           custoEstimado: 0, 
-          error: `Créditos insuficientes. Esta operação custa ${custoEstimado} créditos, mas você tem ${profile.credits}. Faça upgrade.`
+          error: `Créditos insuficientes. Esta operação precisa de ${custoEstimado} créditos, mas você tem ${profile.credits}. Faça upgrade.`
         };
       }
 
@@ -48,32 +51,56 @@ async function verificarEDebitarCreditos(supabaseAdmin, userId, fileText, images
   }
 }
 
-async function registrarUsoTokens(supabaseAdmin, userId, tokensInfo, custoEstimado, profile) {
+async function registrarUsoTokens(supabaseAdmin, userId, tokensInfo, custoEstimado, profile, imagesCount = 0, modeloUsado = '') {
   if (!tokensInfo || !userId || !supabaseAdmin || !profile) return;
 
-  // Custo estimado pelo uso real dos tokens
-  const custoReal = Math.max(1, Math.ceil((tokensInfo.prompt + tokensInfo.output) / 10000));
-  const diferenca = custoEstimado - custoReal;
-  
-  let updateData = {};
-  if (diferenca > 0) {
-    updateData.credits = profile.credits + diferenca; // Devolve o troco
-  } else if (diferenca < 0) {
-    updateData.credits = Math.max(0, profile.credits + diferenca); // Cobra a diferença
-  }
+  try {
+    // 1. CÁLCULO DO CUSTO REAL (1 crédito = 1.000 tokens)
+    const tokensTotais = tokensInfo.prompt + tokensInfo.output;
+    let custoBase = Math.max(1, Math.ceil(tokensTotais / 1000)); 
 
-  if (Object.keys(updateData).length > 0) {
-    await supabaseAdmin.from('profiles').update(updateData).eq('id', userId);
-  }
+    // 2. APLICA O MULTIPLICADOR DO MODELO
+    let multiplicador = 1;
+    
+    if (modeloUsado.includes('opus') || modeloUsado.includes('sonnet') || modeloUsado.includes('gpt-4o')) {
+        multiplicador = 5; // Modelos Ultra Premium
+    } else if (modeloUsado.includes('gemini-3.8-pro') || modeloUsado.includes('deepseek-chat')) {
+        multiplicador = 3; // Modelos Avançados
+    }
+    // Gemini Flash e Llama ficam com multiplicador 1x (Econômicos)
 
-  // Salva no histórico (que o trigger vai copiar para usage_logs)
-  await supabaseAdmin.from('credit_history').insert({
-    user_id: userId,
-    action: 'Analise de IA',
-    tokens_in: tokensInfo.prompt,
-    tokens_out: tokensInfo.output,
-    cost_credits: custoReal
-  });
+    let custoRealTokens = custoBase * multiplicador;
+    let custoRealImagens = imagesCount * 5;
+    let custoRealTotal = custoRealTokens + custoRealImagens;
+
+    // 3. AJUSTE DE SALDO (Devolve troco ou cobra diferença)
+    const diferenca = custoEstimado - custoRealTotal;
+    let novoSaldo = profile.credits;
+
+    if (diferenca > 0) {
+      novoSaldo = profile.credits + diferenca;
+    } else if (diferenca < 0) {
+      novoSaldo = Math.max(0, profile.credits + diferenca); 
+    }
+
+    if (diferenca !== 0) {
+      await supabaseAdmin.from('profiles').update({ credits: novoSaldo }).eq('id', userId);
+    }
+
+    // 4. SALVA NO HISTÓRICO
+    await supabaseAdmin.from('credit_history').insert({
+      user_id: userId,
+      action: imagesCount > 0 ? 'Análise com Imagem' : (custoRealTotal > 10 ? 'Análise Pesada' : 'Conversa Padrão'),
+      tokens_in: tokensInfo.prompt,
+      tokens_out: tokensInfo.output,
+      cost_credits: custoRealTotal
+    });
+
+    console.log(`[Créditos] Modelo: ${modeloUsado} | Mult: ${multiplicador}x | Gasto: ${custoRealTotal} créditos | Saldo final: ${novoSaldo}`);
+
+  } catch (err) {
+    console.error("Erro ao registrar uso de tokens:", err);
+  }
 }
 
 module.exports = { verificarEDebitarCreditos, registrarUsoTokens };
