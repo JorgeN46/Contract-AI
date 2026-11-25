@@ -1,4 +1,4 @@
-const CACHE_NAME = 'macrus-v2'; // Mudamos a versão para forçar o celular a largar o cache antigo
+const CACHE_NAME = 'macrus-v2'; 
 
 // Instalação: Ativa o novo Service Worker imediatamente
 self.addEventListener('install', event => {
@@ -23,6 +23,20 @@ self.addEventListener('activate', event => {
 
 // Estratégia de Rede Primeiro (Network First)
 self.addEventListener('fetch', event => {
+  // 👇 A TRAVA DE SEGURANÇA AQUI 👇
+  const url = new URL(event.request.url);
+  
+  // Se não for http ou https (ex: chrome-extension://), ignora e sai da função
+  if (!url.protocol.startsWith('http')) {
+      return;
+  }
+
+  // Se for uma requisição de API (POST, etc) ou para o Supabase, não faz cache
+  if (event.request.method !== 'GET' || url.href.includes('supabase.co')) {
+      return; // Deixa o navegador lidar normalmente
+  }
+  // 👆 FIM DA TRAVA 👆
+
   event.respondWith(
     fetch(event.request)
       .then(response => {
@@ -30,7 +44,9 @@ self.addEventListener('fetch', event => {
         if (response && response.status === 200) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseClone);
+            cache.put(event.request, responseClone).catch(err => {
+                // Ignora erros de cache silenciosamente para não quebrar o site
+            });
           });
         }
         return response;
