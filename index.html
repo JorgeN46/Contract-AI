@@ -1135,8 +1135,50 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="https://github.com/user-attachments/assets/c9ae4cf3-7065-41cb-ab7d-c37a706b9847">
+
+<!-- DETECTOR DE ERROS (SCRIPT) -->
+<script>
+  window.onerror = function(message, source, lineno, colno, error) {
+      var painel = document.getElementById('error-screen');
+      if (painel) {
+          document.getElementById('err-msg').innerText = message;
+          var arquivo = source ? source.split('/').pop() : 'Desconhecido';
+          document.getElementById('err-line').innerText = "Linha " + lineno + " (Arquivo: " + arquivo + ")";
+          painel.style.display = 'flex';
+      }
+      return false; 
+  };
+
+  window.addEventListener('unhandledrejection', function(event) {
+      var painel = document.getElementById('error-screen');
+      if (painel) {
+          document.getElementById('err-msg').innerText = "Erro assíncrono: " + (event.reason?.message || event.reason);
+          document.getElementById('err-line').innerText = "Verifique funções async/await (fetch, supabase, etc).";
+          painel.style.display = 'flex';
+      }
+  });
+</script>
 </head>
+
 <body>
+<!-- DETECTOR DE ERROS (PAINEL VISUAL) -->
+<div id="error-screen" style="display: none; position: fixed; inset: 0; z-index: 99999; background: #070b14; color: #fff; padding: 20px; flex-direction: column; align-items: center; justify-content: center; font-family: monospace; text-align: left; overflow-y: auto;">
+    <div style="background: #1a0a0a; border: 1px solid #ef4444; border-radius: 12px; padding: 20px; width: 100%; max-width: 600px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+        <h2 style="color: #ef4444; margin-top: 0; font-family: sans-serif; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+            🚨 Erro Fatal Detectado
+        </h2>
+        <p style="font-size: 14px; color: #fca5a5; margin-bottom: 16px; font-family: sans-serif;">
+            O site quebrou e não conseguiu carregar. Aqui estão os detalhes do erro para você corrigir:
+        </p>
+        <div style="background: #000; padding: 12px; border-radius: 8px; border-left: 4px solid #ef4444;">
+            <p style="margin: 0 0 8px 0; font-size: 13px; color: #fff;"><b>Mensagem:</b> <span id="err-msg" style="color: #fca5a5;"></span></p>
+            <p style="margin: 0; font-size: 13px; color: #fff;"><b>Local:</b> <span id="err-line" style="color: #7db4ff;"></span></p>
+        </div>
+        <button onclick="location.reload()" style="margin-top: 20px; width: 100%; padding: 12px; background: #4f8dff; color: #fff; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-family: sans-serif;">
+            Recarregar Página
+        </button>
+    </div>
+</div>
 
   <!-- ============ TELA 1: LANDING ============ -->
 <div id="screen-landing" class="screen" style="display:none;">
