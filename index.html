@@ -5252,6 +5252,47 @@ async function verificarAdmin(userId) {
         if (btnAdminPanel) btnAdminPanel.style.display = 'none';
     }
 }
+// ==========================================
+// FUNÇÃO PARA CARREGAR DADOS DO PLANO (Recuperada)
+// ==========================================
+async function carregarDadosPlano() {
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('credits, plan')
+            .eq('id', session.user.id)
+            .single();
+
+        if (profile) {
+            // Atualiza o nome do plano
+            const planNameEl = document.getElementById('planName');
+            if (planNameEl) {
+                planNameEl.innerText = profile.plan === 'free' ? 'Gratuito' : 
+                                      profile.plan === 'essencial' ? 'Essencial' : 'Profissional';
+            }
+
+            // Atualiza a barra de créditos
+            const creditsTextEl = document.getElementById('creditsText');
+            const creditsBarEl = document.getElementById('creditsBar');
+            
+            if (creditsTextEl) {
+                const maxCredits = profile.plan === 'free' ? 100 : 
+                                  profile.plan === 'essencial' ? 8000 : 20000;
+                creditsTextEl.innerText = `${profile.credits} / ${maxCredits}`;
+                
+                if (creditsBarEl) {
+                    const percentage = (profile.credits / maxCredits) * 100;
+                    creditsBarEl.style.width = `${Math.min(percentage, 100)}%`;
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Erro ao carregar dados do plano:", err);
+    }
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
