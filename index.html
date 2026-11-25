@@ -5218,6 +5218,40 @@ function selecionarModelo(modeloId) {
     else { btn.style.color = '#4f8dff'; btn.style.borderColor = 'rgba(79,141,255,0.5)'; }
     fecharModalModelos();
   }
+  // ==========================================
+// FUNÇÃO PARA VERIFICAR SE É ADMIN (Recuperada)
+// ==========================================
+async function verificarAdmin(userId) {
+    try {
+        // Busca o perfil no banco de dados
+        const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+        
+        if (error) throw error;
+
+        // Verifica se é admin (via banco de dados ou e-mail de segurança)
+        const isAdmin = profile && (profile.role === 'admin' || profile.is_admin === true || profile.email === 'jmf821507@gmail.com');
+
+        // 1. Mostra/Esconde o botão de Modelos no Chat (Dev Mode)
+        const btnSelector = document.getElementById('btn-model-selector');
+        if (btnSelector) {
+            btnSelector.style.display = isAdmin ? 'grid' : 'none';
+        }
+
+        // 2. Mostra/Esconde o botão do Painel do Desenvolvedor nas Configurações
+        const btnAdminPanel = document.getElementById('btnAdminPanel');
+        if (btnAdminPanel) {
+            btnAdminPanel.style.display = isAdmin ? 'flex' : 'none';
+        }
+
+    } catch (err) {
+        console.error("Erro ao verificar permissão de admin:", err);
+        // Em caso de erro, esconde os botões por segurança
+        const btnSelector = document.getElementById('btn-model-selector');
+        if (btnSelector) btnSelector.style.display = 'none';
+        const btnAdminPanel = document.getElementById('btnAdminPanel');
+        if (btnAdminPanel) btnAdminPanel.style.display = 'none';
+    }
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
