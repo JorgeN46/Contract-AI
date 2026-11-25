@@ -2327,45 +2327,48 @@ async function abrirConversaAntiga(id) {
     });
 }
 async function salvarConversaAtual() {
-  if(conversaAtual.length === 0 || conversaAtual.length <= lastSavedIndex) return; 
+  if (!conversaAtual || conversaAtual.length === 0 || conversaAtual.length <= lastSavedIndex) return;
   
   try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session || !session.user) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || !session.user) return;
 
-      var primeiraMsg = conversaAtual.find(m => m.role === 'user');
-      var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
+    var primeiraMsg = conversaAtual.find(m => m.role === 'user');
+    var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
 
-      // 1. Cria a conversa (se não existir)
-      if (!idConversaAtual) {
-        let { data, error } = await supabase.from('conversations').insert([{ user_id: session.user.id, title: titulo }]).select();
-        if (error) { console.error("Erro ao criar conversa:", error); return; }
-        idConversaAtual = data[0].id; 
-      }
-
-      // 2. Salva as mensagens (AGORA COM O USER_ID)
-      var novas = conversaAtual.slice(lastSavedIndex);
-      const mensagensParaSalvar = novas.map(msg => ({
-          conversation_id: idConversaAtual, 
-          role: msg.role, 
-          content: msg.content,
-          user_id: session.user.id // 👈 AQUI ESTÁ A CORREÇÃO
-      }));
-
-      const { error: msgError } = await supabase.from('messages').insert(mensagensParaSalvar);
-      
-      if (msgError) { 
-          console.error("❌ Erro ao salvar mensagens:", msgError); 
+    // 1. Cria a conversa se não existir
+    if (!idConversaAtual) {
+      let { data, error } = await supabase.from('conversations').insert([{ user_id: session.user.id, title: titulo }]).select();
+      if (error) { 
+          console.error("❌ ERRO AO CRIAR CONVERSA:", error); 
           return; 
       }
-      
-      lastSavedIndex = conversaAtual.length;
-      console.log("✅ Mensagens salvas com sucesso!");
-      
-      if (typeof renderizarHistorico === 'function') renderizarHistorico();
-      
+      idConversaAtual = data[0].id; 
+      console.log("✅ Conversa criada com ID:", idConversaAtual);
+    }
+
+    // 2. Salva as mensagens novas
+    var novas = conversaAtual.slice(lastSavedIndex);
+    const mensagensParaSalvar = novas.map(msg => ({
+        conversation_id: idConversaAtual, 
+        role: msg.role, 
+        content: msg.content
+    }));
+
+    const { error: msgError } = await supabase.from('messages').insert(mensagensParaSalvar);
+    
+    if (msgError) { 
+        console.error("❌ ERRO AO SALVAR MENSAGENS:", msgError); 
+        return; 
+    }
+    
+    lastSavedIndex = conversaAtual.length;
+    console.log("✅ Mensagens salvas com sucesso!");
+    
+    if (typeof renderizarHistorico === 'function') renderizarHistorico();
+    
   } catch (err) {
-      console.error("❌ Erro inesperado:", err);
+    console.error("❌ Erro inesperado ao salvar:", err);
   }
 }
 async function renderizarHistorico(){
@@ -5293,6 +5296,44 @@ async function carregarDadosPlano() {
         console.error("Erro ao carregar dados do plano:", err);
     }
 }
+async function carregarDadosPlano() {
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('credits, plan')
+            .eq('id', session.user.id)
+            .single();
+
+        if (profile) {
+            // Atualiza o nome do plano
+            const planNameEl = document.getElementById('planName');
+            if (planNameEl) {
+                planNameEl.innerText = profile.plan === 'free' ? 'Gratuito' : 
+                                      profile.plan === 'essencial' ? 'Essencial' : 'Profissional';
+            }
+
+            // Atualiza a barra de créditos
+            const creditsTextEl = document.getElementById('creditsText');
+            const creditsBarEl = document.getElementById('creditsBar');
+            
+            if (creditsTextEl) {
+                const maxCredits = profile.plan === 'free' ? 100 : 
+                                  profile.plan === 'essencial' ? 8000 : 20000;
+                creditsTextEl.innerText = `${profile.credits} / ${maxCredits}`;
+                
+                if (creditsBarEl) {
+                    const percentage = (profile.credits / maxCredits) * 100;
+                    creditsBarEl.style.width = `${Math.min(percentage, 100)}%`;
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Erro ao carregar dados do plano:", err);
+    }
+}
 </script>
 <!-- Menu de Contexto do Histórico -->
 <div id="chatContextMenu" class="context-menu">
@@ -5409,5 +5450,22 @@ async function carregarDadosPlano() {
         </div>
     </div>
 </div>
+<script>
+  // Força a limpeza de Service Workers antigos e registra o novo
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+      for(let registration of registrations) {
+        registration.unregister();
+        console.log("Service Worker antigo removido.");
+      }
+      // Registra o novo
+      navigator.serviceWorker.register('/service-worker.js').then(function() {
+        console.log("Novo Service Worker registrado.");
+      }).catch(function(err) {
+        console.error("Erro ao registrar Service Worker:", err);
+      });
+    });
+  }
+</script>
 </body>
 </html>
