@@ -2341,13 +2341,13 @@ async function salvarConversaAtual() {
       let { data, error } = await supabase.from('conversations').insert([{ user_id: session.user.id, title: titulo }]).select();
       if (error) { 
           console.error("❌ ERRO AO CRIAR CONVERSA:", error); 
-          return; 
+          throw new Error("Falha ao criar conversa: " + error.message);
       }
       idConversaAtual = data[0].id; 
       console.log("✅ Conversa criada com ID:", idConversaAtual);
     }
 
-    // 2. Salva as mensagens novas
+    // 2. Salva as mensagens
     var novas = conversaAtual.slice(lastSavedIndex);
     const mensagensParaSalvar = novas.map(msg => ({
         conversation_id: idConversaAtual, 
@@ -2359,7 +2359,8 @@ async function salvarConversaAtual() {
     
     if (msgError) { 
         console.error("❌ ERRO AO SALVAR MENSAGENS:", msgError); 
-        return; 
+        // Isso vai forçar a caixa vermelha a aparecer na tela!
+        throw new Error("Falha ao salvar mensagens: " + msgError.message); 
     }
     
     lastSavedIndex = conversaAtual.length;
@@ -2368,9 +2369,11 @@ async function salvarConversaAtual() {
     if (typeof renderizarHistorico === 'function') renderizarHistorico();
     
   } catch (err) {
-    console.error("❌ Erro inesperado ao salvar:", err);
+    console.error("❌ Erro inesperado:", err);
+    // Se quiser ver o erro na tela, descomente a linha abaixo:
+    // window.dispatchEvent(new ErrorEvent('error', { message: err.message }));
   }
-}
+  }
 async function renderizarHistorico(){
   var container = document.getElementById('listaConversas');
   if(!container) return;
