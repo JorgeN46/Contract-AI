@@ -3,7 +3,9 @@
 const { createClient } = require('@supabase/supabase-js');
 const { promptAnalise, promptRefinamento, promptPadrao, promptMemoria } = require('./lib/prompts');
 const { verificarEDebitarCreditos, registrarUsoTokens } = require('./lib/creditos');
-const { decidirModelo, chamarModeloIA } = require('./lib/ai-engine'); // 👈 Importa o cérebro
+const { decidirModelo, chamarModeloIA } = require('./lib/ai-engine'); 
+// 👇 Importa a função de busca de leis (que criamos na pasta legal)
+const { buscarLeisRelevantes } = require('./lib/legal/mcp-client');
 
 const requestCache = new Map();
 
@@ -50,9 +52,10 @@ module.exports = async function handler(req, res) {
     const { profile, custoEstimado, error } = await verificarEDebitarCreditos(supabaseAdmin, userId, fileText, images);
     if (error) return res.status(403).json({ error });
 
-    // 5. Seleção de Prompt
+    // 5. Seleção de Prompt e Definição do Modo de Roteamento
     let basePrompt = '';
-    let modoParaRoteamento = mode || 'padrao';
+    let modoParaRoteamento = mode || 'padrao'; // 👈 Variável criada aqui!
+    
     if (mode === 'memoria') basePrompt = promptMemoria;
     else if (mode === 'leitura') basePrompt = promptAnalise;
     else if (mode === 'refinamento') basePrompt = promptRefinamento;
@@ -62,10 +65,35 @@ module.exports = async function handler(req, res) {
     // 6. Roteamento de Modelo (Chama o ai-engine)
     const planoUsuario = profile?.plan || 'free';
     const isAdmin = profile?.role === 'admin' || profile?.is_admin === true;
-    
     const { modelo: modeloEscolhido, isForced } = decidirModelo(planoUsuario, modoParaRoteamento, developerModel, isAdmin);
 
-    // 7. Montagem do Conteúdo
+    // ==========================================
+    // 👇 7. INTEGRAÇÃO COM O SERVIDOR DE LEIS (RAG) 👇
+    // ==========================================
+    // Só busca leis se for análise de documento (leitura ou premium) E se tiver arquivo
+    const isAnalise = (modoParaRoteamento === 'leitura' || mode === 'premium');
+    
+    if (isAnalise && fileText && fileText.trim().length > 0) {
+        console.log("⚖️ Buscando leis relevantes no servidor Railway...");
+        try {
+            // Pega um trecho do contrato (ex: 3.000 caracteres) para buscar as leis
+            const trechoContrato = fileText.substring(0, 3000); 
+            const leisEncontradas = await buscarLeisRelevantes(trechoContrato);
+            
+            if (leisEncontradas && leisEncontradas.length > 0) {
+                const textoLeis = leisEncontradas.map(l => `${l.norma} - ${l.citacao}: "${l.texto}"`).join('\n\n');
+                basePrompt += `\n\n⚖️ CONTEXTO JURÍDICO RELEVANTE (Use OBRIGATORIAMENTE essas leis para basear sua análise e cite os artigos):\n${textoLeis}`;
+                console.log(`✅ ${leisEncontradas.length} leis injetadas no prompt.`);
+            } else {
+                console.log("⚠️ Nenhuma lei específica encontrada.");
+            }
+        } catch (err) {
+            console.error("❌ Falha ao buscar leis, seguindo sem o contexto jurídico:", err);
+        }
+    }
+    // ==========================================
+
+    // 8. Montagem do Conteúdo Final
     let memoriaTexto = (memory && Array.isArray(memory) && memory.length > 0) ? "\n\nO que você já sabe sobre este usuário: " + memory.join(", ") + "." : "";
     let avisoPlano = (planoUsuario === 'free') ? "\n\nAVISO DO SISTEMA: O usuário está no plano gratuito. Se o documento for muito complexo, finalize a resposta com: '💡 Dica: Para análises mais profundas, faça upgrade para o Plano Pro.'" : "";
     const finalInstruction = (systemPrompt ? basePrompt + "\n\nPreferências do usuário: " + systemPrompt : basePrompt) + memoriaTexto + avisoPlano;
@@ -90,7 +118,7 @@ module.exports = async function handler(req, res) {
 
     messages.push({ role: 'user', content: userContent });
 
-    // 8. Chamada da IA (Chama o ai-engine) e Registro
+    // 9. Chamada da IA e Registro
     try {
         const tokensInfo = await chamarModeloIA(modeloEscolhido, messages, finalInstruction, res);
         if (tokensInfo) {
