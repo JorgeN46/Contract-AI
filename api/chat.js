@@ -68,40 +68,45 @@ module.exports = async function handler(req, res) {
     const { modelo: modeloEscolhido, isForced } = decidirModelo(planoUsuario, modoParaRoteamento, developerModel, isAdmin);
 
 // ==========================================
-// 👇 7. INTEGRAÇÃO COM O SERVIDOR DE LEIS (RAG TRIPLO) 👇
+// 👇 7. INTEGRAÇÃO COM O SERVIDOR DE LEIS (RAG DINÂMICO) 👇
 // ==========================================
 const isAnalise = (modoParaRoteamento === 'leitura' || mode === 'premium');
 
-if (isAnalise && fileText && fileText.trim().length > 3000) {
-    console.log("⚖️ Iniciando varredura cirúrgica de leis no contrato...");
+if (isAnalise && fileText && fileText.trim().length > 1000) {
+    console.log("⚖️ Iniciando varredura cirúrgica no contrato...");
     
     try {
-        // 1. Define os 3 trechos (Início, Meio, Fim)
-        const tamanhoTrecho = 3000;
-        const inicio = fileText.substring(0, tamanhoTrecho);
-        
-        const meioStart = Math.floor(fileText.length / 2) - (tamanhoTrecho / 2);
-        const meio = fileText.substring(meioStart, meioStart + tamanhoTrecho);
-        
-        const fim = fileText.substring(fileText.length - tamanhoTrecho);
-        
-        const trechos = [inicio, meio, fim];
-        let todasAsLeis = [];
+        const MAX_CHUNKS = 8; // Busca em 8 pontos diferentes do contrato
+        const CHUNK_SIZE = 3000; // 3.000 caracteres por ponto
+        let trechosParaBuscar = [];
 
-        // 2. Faz as buscas no Railway
-        for (let i = 0; i < trechos.length; i++) {
-            const leisEncontradas = await buscarLeisRelevantes(trechos[i]);
+        if (fileText.length <= CHUNK_SIZE) {
+            trechosParaBuscar.push(fileText);
+        } else {
+            // Distribui os pontos de busca do início ao fim do documento
+            const step = Math.floor(fileText.length / MAX_CHUNKS);
+            for (let i = 0; i < MAX_CHUNKS; i++) {
+                const start = i * step;
+                trechosParaBuscar.push(fileText.substring(start, start + CHUNK_SIZE));
+            }
+        }
+
+        let todasAsLeis = [];
+        console.log(`🔍 Buscando leis em ${trechosParaBuscar.length} pontos do documento...`);
+
+        // Faz as buscas no Railway
+        for (let i = 0; i < trechosParaBuscar.length; i++) {
+            const leisEncontradas = await buscarLeisRelevantes(trechosParaBuscar[i]);
             if (leisEncontradas && leisEncontradas.length > 0) {
                 todasAsLeis = todasAsLeis.concat(leisEncontradas);
             }
         }
 
-        // 3. Remove leis duplicadas (se a mesma lei foi achada em trechos diferentes)
+        // Remove leis duplicadas
         const leisUnicas = [];
         const leisVistas = new Set();
         
         todasAsLeis.forEach(lei => {
-            // Usamos a citação como chave única (ex: "Art. 477 - CLT")
             const chave = lei.citacao || lei.norma;
             if (!leisVistas.has(chave)) {
                 leisVistas.add(chave);
@@ -109,7 +114,7 @@ if (isAnalise && fileText && fileText.trim().length > 3000) {
             }
         });
 
-        // 4. Injeta no prompt
+        // Injeta no prompt
         if (leisUnicas.length > 0) {
             const textoLeis = leisUnicas.map(l => `${l.norma} - ${l.citacao}: "${l.texto}"`).join('\n\n');
             basePrompt += `\n\n⚖️ CONTEXTO JURÍDICO RELEVANTE (Use OBRIGATORIAMENTE essas leis para basear sua análise e cite os artigos):\n${textoLeis}`;
@@ -119,19 +124,10 @@ if (isAnalise && fileText && fileText.trim().length > 3000) {
         }
         
     } catch (err) {
-        console.error("❌ Falha ao buscar leis, seguindo sem o contexto jurídico:", err);
+        console.error("❌ Falha ao buscar leis:", err);
     }
-} else if (isAnalise && fileText) {
-    // Se o contrato for pequeno (menos de 3.000 caracteres), faz apenas uma busca
-    try {
-        const leis = await buscarLeisRelevantes(fileText);
-        if (leis && leis.length > 0) {
-            const textoLeis = leis.map(l => `${l.norma} - ${l.citacao}: "${l.texto}"`).join('\n\n');
-            basePrompt += `\n\n⚖️ CONTEXTO JURÍDICO RELEVANTE:\n${textoLeis}`;
-        }
-    } catch(e) { console.error(e); }
 }
-    // ==========================================
+// ==========================================
 
     // 8. Montagem do Conteúdo Final
     let memoriaTexto = (memory && Array.isArray(memory) && memory.length > 0) ? "\n\nO que você já sabe sobre este usuário: " + memory.join(", ") + "." : "";
