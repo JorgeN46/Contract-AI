@@ -67,30 +67,70 @@ module.exports = async function handler(req, res) {
     const isAdmin = profile?.role === 'admin' || profile?.is_admin === true;
     const { modelo: modeloEscolhido, isForced } = decidirModelo(planoUsuario, modoParaRoteamento, developerModel, isAdmin);
 
-    // ==========================================
-    // 👇 7. INTEGRAÇÃO COM O SERVIDOR DE LEIS (RAG) 👇
-    // ==========================================
-    // Só busca leis se for análise de documento (leitura ou premium) E se tiver arquivo
-    const isAnalise = (modoParaRoteamento === 'leitura' || mode === 'premium');
+// ==========================================
+// 👇 7. INTEGRAÇÃO COM O SERVIDOR DE LEIS (RAG TRIPLO) 👇
+// ==========================================
+const isAnalise = (modoParaRoteamento === 'leitura' || mode === 'premium');
+
+if (isAnalise && fileText && fileText.trim().length > 3000) {
+    console.log("⚖️ Iniciando varredura cirúrgica de leis no contrato...");
     
-    if (isAnalise && fileText && fileText.trim().length > 0) {
-        console.log("⚖️ Buscando leis relevantes no servidor Railway...");
-        try {
-            // Pega um trecho do contrato (ex: 3.000 caracteres) para buscar as leis
-            const trechoContrato = fileText.substring(0, 3000); 
-            const leisEncontradas = await buscarLeisRelevantes(trechoContrato);
-            
+    try {
+        // 1. Define os 3 trechos (Início, Meio, Fim)
+        const tamanhoTrecho = 3000;
+        const inicio = fileText.substring(0, tamanhoTrecho);
+        
+        const meioStart = Math.floor(fileText.length / 2) - (tamanhoTrecho / 2);
+        const meio = fileText.substring(meioStart, meioStart + tamanhoTrecho);
+        
+        const fim = fileText.substring(fileText.length - tamanhoTrecho);
+        
+        const trechos = [inicio, meio, fim];
+        let todasAsLeis = [];
+
+        // 2. Faz as buscas no Railway
+        for (let i = 0; i < trechos.length; i++) {
+            const leisEncontradas = await buscarLeisRelevantes(trechos[i]);
             if (leisEncontradas && leisEncontradas.length > 0) {
-                const textoLeis = leisEncontradas.map(l => `${l.norma} - ${l.citacao}: "${l.texto}"`).join('\n\n');
-                basePrompt += `\n\n⚖️ CONTEXTO JURÍDICO RELEVANTE (Use OBRIGATORIAMENTE essas leis para basear sua análise e cite os artigos):\n${textoLeis}`;
-                console.log(`✅ ${leisEncontradas.length} leis injetadas no prompt.`);
-            } else {
-                console.log("⚠️ Nenhuma lei específica encontrada.");
+                todasAsLeis = todasAsLeis.concat(leisEncontradas);
             }
-        } catch (err) {
-            console.error("❌ Falha ao buscar leis, seguindo sem o contexto jurídico:", err);
         }
+
+        // 3. Remove leis duplicadas (se a mesma lei foi achada em trechos diferentes)
+        const leisUnicas = [];
+        const leisVistas = new Set();
+        
+        todasAsLeis.forEach(lei => {
+            // Usamos a citação como chave única (ex: "Art. 477 - CLT")
+            const chave = lei.citacao || lei.norma;
+            if (!leisVistas.has(chave)) {
+                leisVistas.add(chave);
+                leisUnicas.push(lei);
+            }
+        });
+
+        // 4. Injeta no prompt
+        if (leisUnicas.length > 0) {
+            const textoLeis = leisUnicas.map(l => `${l.norma} - ${l.citacao}: "${l.texto}"`).join('\n\n');
+            basePrompt += `\n\n⚖️ CONTEXTO JURÍDICO RELEVANTE (Use OBRIGATORIAMENTE essas leis para basear sua análise e cite os artigos):\n${textoLeis}`;
+            console.log(`✅ ${leisUnicas.length} leis únicas encontradas e injetadas no prompt.`);
+        } else {
+            console.log("⚠️ Nenhuma lei específica encontrada.");
+        }
+        
+    } catch (err) {
+        console.error("❌ Falha ao buscar leis, seguindo sem o contexto jurídico:", err);
     }
+} else if (isAnalise && fileText) {
+    // Se o contrato for pequeno (menos de 3.000 caracteres), faz apenas uma busca
+    try {
+        const leis = await buscarLeisRelevantes(fileText);
+        if (leis && leis.length > 0) {
+            const textoLeis = leis.map(l => `${l.norma} - ${l.citacao}: "${l.texto}"`).join('\n\n');
+            basePrompt += `\n\n⚖️ CONTEXTO JURÍDICO RELEVANTE:\n${textoLeis}`;
+        }
+    } catch(e) { console.error(e); }
+}
     // ==========================================
 
     // 8. Montagem do Conteúdo Final
