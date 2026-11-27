@@ -1,4 +1,6 @@
 // api/lib/legal/mcp-client.js
+const { Client } = require("@modelcontextprotocol/sdk/client/index.js");
+const { StreamableHTTPClientTransport } = require("@modelcontextprotocol/sdk/client/streamableHttp.js");
 
 async function buscarLeisRelevantes(textoClausula) {
     const MCP_URL = process.env.LEIS_MCP_URL;
@@ -9,37 +11,45 @@ async function buscarLeisRelevantes(textoClausula) {
         return [];
     }
 
-    try {
-        // Faz a chamada HTTP para o servidor no Railway
-        const response = await fetch(`${MCP_URL}/mcp`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${MCP_API_KEY}` // A trava de segurança
-            },
-            body: JSON.stringify({
-                jsonrpc: '2.0',
-                id: 1,
-                method: 'tools/call',
-                params: {
-                    name: 'buscar_texto', // Nome da ferramenta do leis-mcp
-                    arguments: {
-                        consulta: textoClausula,
-                        limite: 3 // Traz os 3 artigos mais relevantes
-                    }
+    // Cria o transporte HTTP com a URL e a chave de segurança (Bearer Token)
+    const transport = new StreamableHTTPClientTransport(
+        new URL(MCP_URL),
+        {
+            requestInit: {
+                headers: {
+                    'Authorization': `Bearer ${MCP_API_KEY}`
                 }
-            })
+            }
+        }
+    );
+
+    // Cria o cliente MCP
+    const client = new Client(
+        { name: "macrus-backend", version: "1.0.0" },
+        { capabilities: {} }
+    );
+
+    try {
+        // Conecta (faz o handshake initialize)
+        await client.connect(transport);
+        
+        // Chama a ferramenta de busca
+        const result = await client.callTool({
+            name: "buscar_texto",
+            arguments: {
+                consulta: textoClausula,
+                limite: 3
+            }
         });
 
-        if (!response.ok) {
-            throw new Error(`Erro HTTP: ${response.status}`);
-        }
+        // Desconecta para liberar a sessão
+        await client.close();
 
-        const data = await response.json();
-        return data.result?.content || [];
+        // O SDK já retorna o conteúdo formatado em result.content
+        return result.content || [];
     } catch (error) {
-        console.error("❌ Erro ao buscar leis no MCP:", error.message);
-        return []; // Se falhar, o chat continua sem as leis
+        console.error("❌ Erro ao buscar leis no MCP via SDK:", error.message);
+        return [];
     }
 }
 
