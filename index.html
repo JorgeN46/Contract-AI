@@ -1126,6 +1126,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <!-- KaTeX para renderizar fórmulas matemáticas -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
@@ -2734,6 +2735,13 @@ let controllerResposta = null;
 function aoSelecionarArquivo(input){
   if(!input.files || input.files.length === 0) return;
 
+  // 👇 TRAVA DE SEGURANÇA: Se o PDF.js não carregou, avisa e para.
+  if (typeof pdfjsLib === 'undefined') {
+      alert("⚠️ O leitor de PDF ainda está carregando. Aguarde 2 segundos e tente novamente.");
+      input.value = '';
+      return;
+  }
+
   var files = Array.from(input.files);
   var numImages = files.filter(f => f.type.startsWith('image/')).length;
   
@@ -2796,16 +2804,27 @@ function aoSelecionarArquivo(input){
           } else if (file.type === 'application/pdf') {
                var reader = new FileReader();
                reader.onload = function() {
-                   pdfjsLib.getDocument(new Uint8Array(this.result)).promise.then(function(pdf) {
-                       var pagePromises = [];
-                       for (var i = 1; i <= pdf.numPages; i++) {
-                           pagePromises.push(pdf.getPage(i).then(p => p.getTextContent()).then(t => t.items.map(s => s.str).join(' ')));
-                       }
-                       Promise.all(pagePromises).then(texts => {
-                           var fullText = texts.map((t, i) => `\n--- ${file.name} - Página ${i+1} ---\n${t.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim()}`).join('\n');
-                           resolve(fullText);
+                   // Adicionado try/catch para evitar que PDFs corrompidos quebrem o site
+                   try {
+                       pdfjsLib.getDocument(new Uint8Array(this.result)).promise.then(function(pdf) {
+                           var pagePromises = [];
+                           for (var i = 1; i <= pdf.numPages; i++) {
+                               pagePromises.push(pdf.getPage(i).then(p => p.getTextContent()).then(t => t.items.map(s => s.str).join(' ')));
+                           }
+                           Promise.all(pagePromises).then(texts => {
+                               var fullText = texts.map((t, i) => `\n--- ${file.name} - Página ${i+1} ---\n${t.replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ').replace(/\s+/g, ' ').trim()}`).join('\n');
+                               resolve(fullText);
+                           }).catch(err => {
+                               console.error("Erro ao extrair texto:", err);
+                               resolve(`\n--- ${file.name} ---\n(Erro ao ler o texto deste PDF)`);
+                           });
+                       }).catch(err => {
+                           console.error("Erro ao abrir PDF:", err);
+                           resolve(`\n--- ${file.name} ---\n(PDF inválido ou protegido por senha)`);
                        });
-                   });
+                   } catch(err) {
+                       resolve(`\n--- ${file.name} ---\n(Falha ao processar arquivo)`);
+                   }
                };
                reader.readAsArrayBuffer(file);
           } else {
@@ -2817,23 +2836,22 @@ function aoSelecionarArquivo(input){
   Promise.all(promises).then(function(texts) {
       textoArquivoExtraido = texts.join('\n\n');
       
-      // 👇 AVISO DE CUSTO ESTIMADO ANTES DE ENVIAR
+      // Aviso de custo estimado baseado no backend (1 crédito = 1000 tokens)
       let tamanho = textoArquivoExtraido.length;
-      let custo = 5;
-      let faixa = "Padrão";
+      let tokensEstimados = Math.ceil(tamanho / 4);
+      let custoEstimadoBase = Math.max(2, Math.ceil(tokensEstimados / 1000)); // Mínimo de 2 créditos para arquivo
       
+      let faixa = "Padrão";
       if (tamanho > 150000) { 
-          custo = 20; 
           faixa = "Avançada"; 
       } else if (tamanho > 50000) { 
-          custo = 10; 
           faixa = "Extensa"; 
       }
       
-      document.getElementById('attachName').textContent = arquivoAnexado + ` (Pronto - Análise ${faixa}: ~${custo} créditos)`;
+      document.getElementById('attachName').textContent = arquivoAnexado + ` (Pronto - ~${custoEstimadoBase} créditos base)`;
   });
   input.value = '';
-}
+  }
   
 function removerAnexo(){
   arquivoAnexado = null;
