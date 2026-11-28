@@ -2244,6 +2244,7 @@ function novoChat(){
   var area = document.getElementById('chatMessages');
   var welcome = document.getElementById('dashWelcome');
   
+  // 1. Limpa a tela do chat e mostra a tela de boas-vindas
   if(area){ 
       area.classList.remove('active'); 
       area.innerHTML = ''; 
@@ -2252,25 +2253,25 @@ function novoChat(){
       welcome.style.display = ''; 
   }
   
+  // 2. Limpa o campo de digitação e anexos
   var inp = document.querySelector('.chat-input');
+  if (inp) inp.value = ''; // Limpa o texto visualmente
   if (typeof limparInput === 'function') limparInput(); 
 
-  // Limpa os anexos e variáveis de controle
   textoArquivoExtraido = "";
   arquivoAnexado = null;
   if (typeof removerAnexo === 'function') removerAnexo(); 
   
-  // 👇 O SEGREDO DO HISTÓRICO ESTÁ AQUI 👇
+  // 3. 👇 O SEGREDO DO HISTÓRICO: Reseta as variáveis para não salvar em cima da antiga
   conversaAtual = []; 
   idConversaAtual = null; 
   lastSavedIndex = 0;
 
   // ==========================================
-  // 👇 RESETA O SELETOR DE MODELO (DEV MODE) PARA O MODO AUTOMÁTICO 👇
+  // 4. RESETA O SELETOR DE MODELO (DEV MODE)
   // ==========================================
   window.forcedModel = "";
 
-  // Reseta os cartões do modal visualmente
   document.querySelectorAll('.model-card').forEach(card => {
       card.classList.remove('active');
       const check = card.querySelector('.model-check');
@@ -2284,7 +2285,6 @@ function novoChat(){
       if (checkAuto) checkAuto.style.display = 'block';
   }
 
-  // Reseta a cor do botão de modelos na barra de chat para Laranja (Automático)
   const btnSelector = document.getElementById('btn-model-selector');
   if (btnSelector) {
       btnSelector.style.color = '#f59e0b';
@@ -2292,7 +2292,7 @@ function novoChat(){
   }
   // ==========================================
 
-  // Fecha a barra lateral se ela estiver aberta (bom para celular)
+  // 5. Fecha a barra lateral se ela estiver aberta (celular)
   var sidebar = document.getElementById('sidebar');
   var overlay = document.getElementById('sidebarOverlay');
   if(sidebar && sidebar.classList.contains('open')) {
@@ -2300,33 +2300,6 @@ function novoChat(){
       if (overlay) overlay.classList.remove('open');
   }
   }
-async function abrirConversaAntiga(id) {
-    conversaAtualId = id; // Define a conversa atual
-    
-    // Limpa a tela
-    document.getElementById('chatMessages').innerHTML = '';
-    document.getElementById('dashWelcome').style.display = 'none';
-    document.getElementById('chatMessages').classList.add('active');
-    
-    // Fecha a sidebar no celular
-    if(window.innerWidth < 768) toggleSidebar();
-
-    // Busca as mensagens no banco
-    const { data: mensagens } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', id)
-        .order('created_at', { ascending: true });
-
-    // Renderiza na tela
-    mensagens.forEach(msg => {
-        if (msg.role === 'user') {
-            adicionarMensagemUsuario(msg.content);
-        } else {
-            adicionarMensagemIA(msg.content); // Sua função que adiciona a bolha da IA
-        }
-    });
-}
 async function salvarConversaAtual() {
   if (!conversaAtual || conversaAtual.length === 0) return;
   
@@ -2340,7 +2313,7 @@ async function salvarConversaAtual() {
     var primeiraMsg = conversaAtual.find(m => m.role === 'user');
     var titulo = primeiraMsg ? primeiraMsg.content.substring(0, 30) + '...' : 'Nova conversa';
 
-    // 1. Cria a conversa se não existir
+    // Cria a conversa
     if (!idConversaAtual) {
       let { data, error } = await supabase.from('conversations').insert([{ user_id: session.user.id, title: titulo }]).select();
       
@@ -2351,7 +2324,7 @@ async function salvarConversaAtual() {
       idConversaAtual = data[0].id; 
     }
 
-    // 2. Salva as mensagens
+    // Salva as mensagens novas
     var novas = conversaAtual.slice(lastSavedIndex);
     if (novas.length > 0) {
         const mensagensParaSalvar = novas.map(msg => ({
@@ -2363,7 +2336,7 @@ async function salvarConversaAtual() {
         const { error: msgError } = await supabase.from('messages').insert(mensagensParaSalvar);
         
         if (msgError) { 
-            alert("❌ Erro ao salvar as mensagens: " + msgError.message);
+            alert("❌ Erro ao salvar mensagens: " + msgError.message);
             return; 
         }
         
